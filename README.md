@@ -37,4 +37,4 @@
 
 * **Mobile Framework:** Flutter (Dart)
 * **Database:** MySQL
-* **Architecture:** Clean Architecture & Modular Folder Structure
+* **Architecture:** Feature-First / Domain-Driven Structure
