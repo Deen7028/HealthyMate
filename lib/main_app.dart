@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/theme/app_theme.dart';
-import 'package:healthymate/features/dashboard/screens/dashboard_screen.dart';
+import 'package:healthymate/features/dashboard/dashboard_page.dart';
 import 'package:healthymate/features/health_calculator/screens/health_calculator_screen.dart';
 import 'package:healthymate/features/health_calculator/state/health_calculator_state.dart';
+import 'package:healthymate/features/practice/routine_notification_page.dart';
 import 'package:healthymate/shared/widgets/vitality_bottom_nav_bar.dart';
 
 class MainAppShell extends StatefulWidget {
@@ -76,16 +77,18 @@ class _MainAppShellState extends State<MainAppShell> {
         index: _currentIndex,
         children: [
           // 0: Dashboard (หน้าหลัก)
-          DashboardScreen(
+          DashboardPage(
             state: _healthState,
             onNavigateToCalculator: () => _onTabTapped(2),
+            onNavigateToPractice: () => _onTabTapped(3),
+            onNavigateToWorkout: () => _onTabTapped(1),
           ),
           // 1: Workout (ออกกำลังกาย)
           _buildPlaceholderTab('ออกกำลังกาย', Icons.fitness_center_rounded),
           // 2: Health Calculator (สุขภาพ)
           HealthCalculatorScreen(state: _healthState),
           // 3: Routine (กิจวัตร)
-          _buildPlaceholderTab('กิจวัตรประจำวัน', Icons.calendar_month_outlined),
+          const RoutineNotificationPage(),
           // 4: Profile (โปรไฟล์)
           _buildPlaceholderTab('โปรไฟล์ส่วนตัว', Icons.person_outline_rounded),
         ],

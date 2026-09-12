@@ -1,17 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:healthymate/features/health_calculator/state/health_calculator_state.dart';
 import 'models/dashboard_data.dart';
 import 'widgets/activity_progress_ring.dart';
 import 'widgets/daily_routine_checklist.dart';
 import 'widgets/key_stats_grid.dart';
 
 class DashboardPage extends StatefulWidget {
-  final VoidCallback? onStartWorkout;
+  final HealthCalculatorState? state;
+  final VoidCallback? onNavigateToCalculator;
   final VoidCallback? onNavigateToPractice;
+  final VoidCallback? onNavigateToWorkout;
+  final VoidCallback? onStartWorkout;
 
   const DashboardPage({
     super.key,
-    this.onStartWorkout,
+    this.state,
+    this.onNavigateToCalculator,
     this.onNavigateToPractice,
+    this.onNavigateToWorkout,
+    this.onStartWorkout,
   });
 
   @override
@@ -86,7 +93,9 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   void _handleStartWorkout() {
-    if (widget.onStartWorkout != null) {
+    if (widget.onNavigateToWorkout != null) {
+      widget.onNavigateToWorkout!();
+    } else if (widget.onStartWorkout != null) {
       widget.onStartWorkout!();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
