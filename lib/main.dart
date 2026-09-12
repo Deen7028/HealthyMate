@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/theme/app_theme.dart';
-import 'package:healthymate/main_app.dart';
+import 'package:healthymate/features/register/register_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,7 +16,7 @@ class HealthyMateApp extends StatelessWidget {
       title: 'HealthyMate',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: const MainAppShell(),
+      home: const RegisterScreen(),
     );
   }
 }

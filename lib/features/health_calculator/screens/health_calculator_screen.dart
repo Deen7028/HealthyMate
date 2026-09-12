@@ -1,20 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/theme/app_theme.dart';
 import 'package:healthymate/features/health_calculator/state/health_calculator_state.dart';
-import 'package:healthymate/features/health_calculator/widgets/activity_level_picker.dart';
-import 'package:healthymate/features/health_calculator/widgets/bmi_indicator_bar.dart';
-import 'package:healthymate/features/health_calculator/widgets/calorie_target_card.dart';
-import 'package:healthymate/features/health_calculator/widgets/gender_selector.dart';
-import 'package:healthymate/features/health_calculator/widgets/history_bottom_sheet.dart';
-import 'package:healthymate/features/health_calculator/widgets/result_card.dart';
+import 'package:healthymate/features/health_calculator/widgets/index.dart';
 
 class HealthCalculatorScreen extends StatefulWidget {
   final HealthCalculatorState state;
 
-  const HealthCalculatorScreen({
-    super.key,
-    required this.state,
-  });
+  const HealthCalculatorScreen({super.key, required this.state});
 
   @override
   State<HealthCalculatorScreen> createState() => _HealthCalculatorScreenState();
@@ -29,8 +21,12 @@ class _HealthCalculatorScreenState extends State<HealthCalculatorScreen> {
   void initState() {
     super.initState();
     _ageController = TextEditingController(text: widget.state.age.toString());
-    _heightController = TextEditingController(text: widget.state.height.toStringAsFixed(0));
-    _weightController = TextEditingController(text: widget.state.weight.toStringAsFixed(0));
+    _heightController = TextEditingController(
+      text: widget.state.height.toStringAsFixed(0),
+    );
+    _weightController = TextEditingController(
+      text: widget.state.weight.toStringAsFixed(0),
+    );
     widget.state.addListener(_syncControllersWithState);
   }
 
@@ -58,8 +54,10 @@ class _HealthCalculatorScreenState extends State<HealthCalculatorScreen> {
 
   void _onCalculate() {
     final age = int.tryParse(_ageController.text) ?? widget.state.age;
-    final height = double.tryParse(_heightController.text) ?? widget.state.height;
-    final weight = double.tryParse(_weightController.text) ?? widget.state.weight;
+    final height =
+        double.tryParse(_heightController.text) ?? widget.state.height;
+    final weight =
+        double.tryParse(_weightController.text) ?? widget.state.weight;
 
     widget.state.setAge(age);
     widget.state.setHeight(height);
@@ -80,8 +78,10 @@ class _HealthCalculatorScreenState extends State<HealthCalculatorScreen> {
 
   void _onSaveToDashboard() {
     final age = int.tryParse(_ageController.text) ?? widget.state.age;
-    final height = double.tryParse(_heightController.text) ?? widget.state.height;
-    final weight = double.tryParse(_weightController.text) ?? widget.state.weight;
+    final height =
+        double.tryParse(_heightController.text) ?? widget.state.height;
+    final weight =
+        double.tryParse(_weightController.text) ?? widget.state.weight;
 
     widget.state.setAge(age);
     widget.state.setHeight(height);
@@ -140,171 +140,176 @@ class _HealthCalculatorScreenState extends State<HealthCalculatorScreen> {
               onRefresh: () => widget.state.loadData(),
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header Section
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
-                            Text(
-                              'เครื่องคำนวณสุขภาพ',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w800,
-                                color: AppTheme.textPrimary,
-                                letterSpacing: -0.5,
+                  children: [
+                    // Header Section
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: const [
+                              Text(
+                                'เครื่องคำนวณสุขภาพ',
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppTheme.textPrimary,
+                                  letterSpacing: -0.5,
+                                ),
                               ),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              'ติดตามและคำนวณ BMI, BMR และ TDEE ของคุณ',
-                              style: TextStyle(
-                                fontSize: 13.5,
-                                color: AppTheme.textSecondary,
+                              SizedBox(height: 4),
+                              Text(
+                                'ติดตามและคำนวณ BMI, BMR และ TDEE ของคุณ',
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  color: AppTheme.textSecondary,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // History Button (TbCalculationHistory)
-                      InkWell(
-                        onTap: _openHistorySheet,
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          width: 42,
-                          height: 42,
-                          decoration: BoxDecoration(
-                            color: AppTheme.subtleSurface,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: AppTheme.borderLight),
-                          ),
-                          child: const Icon(
-                            Icons.history_rounded,
-                            color: AppTheme.textPrimary,
-                            size: 22,
+                            ],
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Gender Selector
-                  GenderSelector(
-                    selectedGender: state.gender,
-                    onGenderChanged: (gender) => state.setGender(gender),
-                  ),
-
-                  const SizedBox(height: 18),
-
-                  // Age Input
-                  _buildInputField(
-                    label: 'อายุ',
-                    controller: _ageController,
-                    suffixText: 'ปี',
-                    keyboardType: TextInputType.number,
-                  ),
-
-                  const SizedBox(height: 18),
-
-                  // Height Input
-                  _buildInputField(
-                    label: 'ส่วนสูง',
-                    controller: _heightController,
-                    suffixText: 'ซม.',
-                    keyboardType: TextInputType.number,
-                  ),
-
-                  const SizedBox(height: 18),
-
-                  // Weight Input
-                  _buildInputField(
-                    label: 'น้ำหนัก',
-                    controller: _weightController,
-                    suffixText: 'กก.',
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  ),
-
-                  const SizedBox(height: 22),
-
-                  // Activity Level Picker
-                  ActivityLevelPicker(
-                    selectedLevel: state.activityLevel,
-                    onLevelChanged: (level) => state.setActivityLevel(level),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Calculate Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton.icon(
-                      onPressed: _onCalculate,
-                      icon: const Icon(Icons.calculate_outlined, size: 22),
-                      label: const Text(
-                        'คำนวณค่า BMR, TDEE & BMI',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
+                        // History Button (TbCalculationHistory)
+                        InkWell(
+                          onTap: _openHistorySheet,
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: AppTheme.subtleSurface,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: AppTheme.borderLight),
+                            ),
+                            child: const Icon(
+                              Icons.history_rounded,
+                              color: AppTheme.textPrimary,
+                              size: 22,
+                            ),
+                          ),
                         ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryGreen,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 0,
+                      ],
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Gender Selector
+                    GenderSelector(
+                      selectedGender: state.gender,
+                      onGenderChanged: (gender) => state.setGender(gender),
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    // Age Input
+                    _buildInputField(
+                      label: 'อายุ',
+                      controller: _ageController,
+                      suffixText: 'ปี',
+                      keyboardType: TextInputType.number,
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    // Height Input
+                    _buildInputField(
+                      label: 'ส่วนสูง',
+                      controller: _heightController,
+                      suffixText: 'ซม.',
+                      keyboardType: TextInputType.number,
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    // Weight Input
+                    _buildInputField(
+                      label: 'น้ำหนัก',
+                      controller: _weightController,
+                      suffixText: 'กก.',
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
                       ),
                     ),
-                  ),
 
-                  const SizedBox(height: 32),
+                    const SizedBox(height: 22),
 
-                  // Results Container
-                  _buildResultSection(state),
+                    // Activity Level Picker
+                    ActivityLevelPicker(
+                      selectedLevel: state.activityLevel,
+                      onLevelChanged: (level) => state.setActivityLevel(level),
+                    ),
 
-                  const SizedBox(height: 20),
+                    const SizedBox(height: 24),
 
-                  // Save to Dashboard Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton.icon(
-                      onPressed: _onSaveToDashboard,
-                      icon: const Icon(Icons.cloud_upload_outlined, size: 22),
-                      label: const Text(
-                        'บันทึกและอัปเดตข้อมูลเข้า Dashboard',
-                        style: TextStyle(
-                          fontSize: 15.5,
-                          fontWeight: FontWeight.w700,
+                    // Calculate Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton.icon(
+                        onPressed: _onCalculate,
+                        icon: const Icon(Icons.calculate_outlined, size: 22),
+                        label: const Text(
+                          'คำนวณค่า BMR, TDEE & BMI',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1E3A24),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryGreen,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
                         ),
-                        elevation: 1,
                       ),
                     ),
-                  ),
 
-                  const SizedBox(height: 30),
-                ],
+                    const SizedBox(height: 32),
+
+                    // Results Container
+                    _buildResultSection(state),
+
+                    const SizedBox(height: 20),
+
+                    // Save to Dashboard Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton.icon(
+                        onPressed: _onSaveToDashboard,
+                        icon: const Icon(Icons.cloud_upload_outlined, size: 22),
+                        label: const Text(
+                          'บันทึกและอัปเดตข้อมูลเข้า Dashboard',
+                          style: TextStyle(
+                            fontSize: 15.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1E3A24),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 1,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 30),
+                  ],
+                ),
               ),
             ),
-          ),
           ),
         );
       },
@@ -421,7 +426,10 @@ class _HealthCalculatorScreenState extends State<HealthCalculatorScreen> {
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFE8F3EB),
                   borderRadius: BorderRadius.circular(20),

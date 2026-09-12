@@ -6,3 +6,4 @@ export 'package:healthymate/features/health_calculator/state/health_calculator_s
 export 'package:healthymate/features/health_calculator/screens/health_calculator_screen.dart';
 export 'package:healthymate/features/dashboard/dashboard_page.dart';
 export 'package:healthymate/features/practice/routine_notification_page.dart';
+export 'package:healthymate/features/register/register_screen.dart';

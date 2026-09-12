@@ -1,13 +1,16 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:healthymate/features/health_calculator/models/health_record_model.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
+import 'package:path/path.dart' as p;
+import 'package:sqflite_common_ffi/sqflite_common_ffi.dart';
 
-/// Database Manager เชื่อมต่อโครงสร้างฐานข้อมูล `6620310001_HealthMateDB.sql`
+/// Database Manager เชื่อมต่อโครงสร้างฐานข้อมูล SQLite ตาม `6620310001_HealthMateDB.sql`
 class AppDatabase {
   static final AppDatabase instance = AppDatabase._internal();
   AppDatabase._internal();
+
+  static const String _dbName = '6620310001_HealthMateDB.db';
 
   // Table Names matching 6620310001_HealthMateDB.sql
   static const String tableUsers = 'TbUsers';
@@ -20,76 +23,149 @@ class AppDatabase {
   static const String tableUserBadges = 'TbUserBadges';
   static const String tableHealthIntegrations = 'TbHealthIntegrations';
 
-  File? _dbFile;
-  Map<String, dynamic> _databaseStore = {
-    tableUsers: <Map<String, dynamic>>[],
-    tableHealthRecords: <Map<String, dynamic>>[],
-    tableWorkouts: <Map<String, dynamic>>[],
-    tableNutritionLogs: <Map<String, dynamic>>[],
-    tableRoutines: <Map<String, dynamic>>[],
-    tableRoutineLogs: <Map<String, dynamic>>[],
-    tableBadges: <Map<String, dynamic>>[],
-    tableUserBadges: <Map<String, dynamic>>[],
-    tableHealthIntegrations: <Map<String, dynamic>>[],
-  };
+  Database? _db;
 
-  bool _isInitialized = false;
-
-  /// สร้าง Table Schema และโหลดข้อมูล
-  Future<void> init() async {
-    if (_isInitialized) return;
-
-    try {
-      final directory = Directory.current;
-      final dataDir = Directory('${directory.path}/.data');
-      if (!dataDir.existsSync()) {
-        dataDir.createSync(recursive: true);
-      }
-      _dbFile = File('${dataDir.path}/6620310001_HealthMateDB.json');
-
-      if (_dbFile!.existsSync()) {
-        final content = await _dbFile!.readAsString();
-        if (content.isNotEmpty) {
-          final decoded = jsonDecode(content);
-          if (decoded is Map<String, dynamic>) {
-            _databaseStore = decoded;
-            _ensureTablesExist();
-          }
-        }
-      } else {
-        _initSampleData();
-        await _flush();
-      }
-    } catch (e) {
-      debugPrint('Database init fallback: $e');
-      _initSampleData();
-    }
-
-    _isInitialized = true;
+  Future<Database> get database async {
+    if (_db != null && _db!.isOpen) return _db!;
+    _db = await _initDatabase();
+    return _db!;
   }
 
-  void _ensureTablesExist() {
-    for (final table in [
-      tableUsers,
-      tableHealthRecords,
-      tableWorkouts,
-      tableNutritionLogs,
-      tableRoutines,
-      tableRoutineLogs,
-      tableBadges,
-      tableUserBadges,
-      tableHealthIntegrations
-    ]) {
-      if (!_databaseStore.containsKey(table) || _databaseStore[table] == null) {
-        _databaseStore[table] = <Map<String, dynamic>>[];
-      }
+  Future<Database> _initDatabase() async {
+    // กำหนด FFI factory เมื่อรันบน Windows, macOS หรือ Linux desktop
+    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
     }
+
+    final dbPath = await getDatabasesPath();
+    final path = p.join(dbPath, _dbName);
+
+    return await openDatabase(
+      path,
+      version: 1,
+      onCreate: _onCreate,
+    );
   }
 
-  void _initSampleData() {
+  /// สร้าง Table Schema ทั้งหมดตาม 6620310001_HealthMateDB.sql
+  Future<void> _onCreate(Database db, int version) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $tableUsers (
+        nUserId INTEGER PRIMARY KEY AUTOINCREMENT,
+        sEmail TEXT NOT NULL UNIQUE,
+        sPasswordHash TEXT NOT NULL,
+        sFullName TEXT NOT NULL,
+        nAge INTEGER,
+        nHeight REAL,
+        nWeight REAL,
+        sGender TEXT,
+        sActivityLevel TEXT,
+        isDarkMode INTEGER DEFAULT 0,
+        dtCreatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $tableBadges (
+        nBadgeId INTEGER PRIMARY KEY AUTOINCREMENT,
+        sBadgeName TEXT NOT NULL,
+        sDescription TEXT,
+        sIconUrl TEXT
+      );
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $tableHealthIntegrations (
+        nIntegrationId INTEGER PRIMARY KEY AUTOINCREMENT,
+        nUserId INTEGER NOT NULL,
+        sProviderName TEXT NOT NULL,
+        isSynced INTEGER DEFAULT 0,
+        dtLastSyncedAt TEXT,
+        FOREIGN KEY (nUserId) REFERENCES $tableUsers (nUserId) ON DELETE CASCADE
+      );
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $tableHealthRecords (
+        nRecordId INTEGER PRIMARY KEY AUTOINCREMENT,
+        nUserId INTEGER NOT NULL,
+        nWeight REAL,
+        nHeight REAL,
+        nBmi REAL,
+        nTdee REAL,
+        computedBmr REAL,
+        activityLevelTitle TEXT,
+        dtRecordedAt TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (nUserId) REFERENCES $tableUsers (nUserId) ON DELETE CASCADE
+      );
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $tableNutritionLogs (
+        nNutritionId INTEGER PRIMARY KEY AUTOINCREMENT,
+        nUserId INTEGER NOT NULL,
+        sMealType TEXT NOT NULL,
+        sFoodName TEXT NOT NULL,
+        nCalories INTEGER NOT NULL,
+        dtLoggedAt TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (nUserId) REFERENCES $tableUsers (nUserId) ON DELETE CASCADE
+      );
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $tableRoutines (
+        nRoutineId INTEGER PRIMARY KEY AUTOINCREMENT,
+        nUserId INTEGER NOT NULL,
+        sTitle TEXT NOT NULL,
+        sTime TEXT,
+        isNotificationActive INTEGER DEFAULT 1,
+        dtCreatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (nUserId) REFERENCES $tableUsers (nUserId) ON DELETE CASCADE
+      );
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $tableRoutineLogs (
+        nLogId INTEGER PRIMARY KEY AUTOINCREMENT,
+        nRoutineId INTEGER NOT NULL,
+        isCompleted INTEGER DEFAULT 0,
+        dtLogDate TEXT NOT NULL,
+        FOREIGN KEY (nRoutineId) REFERENCES $tableRoutines (nRoutineId) ON DELETE CASCADE
+      );
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $tableUserBadges (
+        nUserBadgeId INTEGER PRIMARY KEY AUTOINCREMENT,
+        nUserId INTEGER NOT NULL,
+        nBadgeId INTEGER NOT NULL,
+        dtEarnedAt TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (nUserId) REFERENCES $tableUsers (nUserId) ON DELETE CASCADE,
+        FOREIGN KEY (nBadgeId) REFERENCES $tableBadges (nBadgeId) ON DELETE CASCADE
+      );
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $tableWorkouts (
+        nWorkoutId INTEGER PRIMARY KEY AUTOINCREMENT,
+        nUserId INTEGER NOT NULL,
+        sType TEXT NOT NULL,
+        nDistance REAL DEFAULT 0.00,
+        nDuration INTEGER DEFAULT 0,
+        nCaloriesBurned REAL DEFAULT 0.00,
+        dtWorkoutDate TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (nUserId) REFERENCES $tableUsers (nUserId) ON DELETE CASCADE
+      );
+    ''');
+
+    // ใส่ข้อมูลเริ่มต้นสำหรับการทดสอบ
+    await _insertInitialData(db);
+  }
+
+  Future<void> _insertInitialData(Database db) async {
     final now = DateTime.now();
 
-    // Default User in TbUsers
     final defaultUser = TbUser(
       nUserId: 1,
       sEmail: 'user@healthymate.app',
@@ -104,10 +180,13 @@ class AppDatabase {
       dtCreatedAt: now.subtract(const Duration(days: 60)),
     );
 
-    _databaseStore[tableUsers] = [defaultUser.toMap()];
+    await db.insert(
+      tableUsers,
+      defaultUser.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
 
-    // Sample Health Records in TbHealthRecords
-    _databaseStore[tableHealthRecords] = [
+    final sampleRecords = [
       TbHealthRecord(
         nRecordId: 1,
         nUserId: 1,
@@ -118,7 +197,7 @@ class AppDatabase {
         dtRecordedAt: now.subtract(const Duration(days: 30)),
         computedBmr: 1683.0,
         activityLevelTitle: 'ไม่ออกกำลังกายเลย',
-      ).toMap(),
+      ),
       TbHealthRecord(
         nRecordId: 2,
         nUserId: 1,
@@ -129,7 +208,7 @@ class AppDatabase {
         dtRecordedAt: now.subtract(const Duration(days: 20)),
         computedBmr: 1668.0,
         activityLevelTitle: 'ออกกำลังกายเบาๆ',
-      ).toMap(),
+      ),
       TbHealthRecord(
         nRecordId: 3,
         nUserId: 1,
@@ -140,7 +219,7 @@ class AppDatabase {
         dtRecordedAt: now.subtract(const Duration(days: 10)),
         computedBmr: 1658.0,
         activityLevelTitle: 'ออกกำลังกายเบาๆ',
-      ).toMap(),
+      ),
       TbHealthRecord(
         nRecordId: 4,
         nUserId: 1,
@@ -151,17 +230,15 @@ class AppDatabase {
         dtRecordedAt: now.subtract(const Duration(days: 2)),
         computedBmr: 1648.0,
         activityLevelTitle: 'ออกกำลังกายเบาๆ',
-      ).toMap(),
+      ),
     ];
-  }
 
-  Future<void> _flush() async {
-    try {
-      if (_dbFile != null) {
-        await _dbFile!.writeAsString(jsonEncode(_databaseStore), flush: true);
-      }
-    } catch (e) {
-      debugPrint('Error saving database: $e');
+    for (final record in sampleRecords) {
+      await db.insert(
+        tableHealthRecords,
+        record.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
     }
   }
 
@@ -169,29 +246,84 @@ class AppDatabase {
   // TbUsers CRUD Operations
   // ==========================================
 
-  /// ดึงข้อมูลผู้ใช้จาก `TbUsers` ตาม nUserId (เริ่มต้นคือ 1)
+  /// ดึงข้อมูลผู้ใช้จาก `TbUsers` ตาม nUserId
   Future<TbUser?> getUser({int userId = 1}) async {
-    await init();
-    final list = _databaseStore[tableUsers] as List<dynamic>? ?? [];
-    for (final item in list) {
-      if (item['nUserId'] == userId) {
-        return TbUser.fromMap(Map<String, dynamic>.from(item as Map));
-      }
+    final db = await database;
+    final maps = await db.query(
+      tableUsers,
+      where: 'nUserId = ?',
+      whereArgs: [userId],
+    );
+
+    if (maps.isNotEmpty) {
+      return TbUser.fromMap(maps.first);
     }
     return null;
   }
 
+  /// ตรวจสอบว่ามีอีเมลนี้อยู่ใน `TbUsers` แล้วหรือไม่
+  Future<bool> isEmailExists(String email) async {
+    final db = await database;
+    final maps = await db.query(
+      tableUsers,
+      where: 'LOWER(sEmail) = ?',
+      whereArgs: [email.trim().toLowerCase()],
+    );
+    return maps.isNotEmpty;
+  }
+
+  /// สมัครสมาชิกบันทึกผู้ใช้ใหม่ลงในตาราง `TbUsers`
+  Future<TbUser> registerUser({
+    required String firstName,
+    required String lastName,
+    required String email,
+    required String password,
+  }) async {
+    final db = await database;
+    final fullName = '${firstName.trim()} ${lastName.trim()}'.trim();
+
+    final userMap = {
+      'sEmail': email.trim(),
+      'sPasswordHash': password,
+      'sFullName': fullName,
+      'nAge': 25,
+      'nHeight': 170.0,
+      'nWeight': 65.0,
+      'sGender': 'male',
+      'sActivityLevel': 'light',
+      'isDarkMode': 0,
+      'dtCreatedAt': DateTime.now().toIso8601String(),
+    };
+
+    final id = await db.insert(
+      tableUsers,
+      userMap,
+      conflictAlgorithm: ConflictAlgorithm.fail,
+    );
+
+    return TbUser(
+      nUserId: id,
+      sEmail: email.trim(),
+      sPasswordHash: password,
+      sFullName: fullName,
+      nAge: 25,
+      nHeight: 170.0,
+      nWeight: 65.0,
+      sGender: 'male',
+      sActivityLevel: 'light',
+      isDarkMode: false,
+      dtCreatedAt: DateTime.now(),
+    );
+  }
+
   /// อัปเดตข้อมูลผู้ใช้ใน `TbUsers`
   Future<void> updateUser(TbUser user) async {
-    await init();
-    final list = _databaseStore[tableUsers] as List<dynamic>;
-    final index = list.indexWhere((item) => item['nUserId'] == user.nUserId);
-    if (index >= 0) {
-      list[index] = user.toMap();
-    } else {
-      list.add(user.toMap());
-    }
-    await _flush();
+    final db = await database;
+    await db.insert(
+      tableUsers,
+      user.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   // ==========================================
@@ -200,22 +332,33 @@ class AppDatabase {
 
   /// ดึงรายการประวัติทั้งหมดจาก `TbHealthRecords`
   Future<List<TbHealthRecord>> getHealthRecords({int userId = 1}) async {
-    await init();
-    final list = _databaseStore[tableHealthRecords] as List<dynamic>? ?? [];
-    return list
-        .map((item) => TbHealthRecord.fromMap(Map<String, dynamic>.from(item as Map)))
-        .where((record) => record.nUserId == userId)
-        .toList()
-      ..sort((a, b) => b.dtRecordedAt.compareTo(a.dtRecordedAt));
+    final db = await database;
+    final maps = await db.query(
+      tableHealthRecords,
+      where: 'nUserId = ?',
+      whereArgs: [userId],
+      orderBy: 'dtRecordedAt DESC',
+    );
+
+    return maps.map((map) => TbHealthRecord.fromMap(map)).toList();
   }
 
   /// เพิ่มบันทึกใหม่ใน `TbHealthRecords`
   Future<TbHealthRecord> insertHealthRecord(TbHealthRecord record) async {
-    await init();
-    final list = _databaseStore[tableHealthRecords] as List<dynamic>;
-    final newId = DateTime.now().millisecondsSinceEpoch % 1000000;
-    final newRecord = TbHealthRecord(
-      nRecordId: record.nRecordId == 0 ? newId : record.nRecordId,
+    final db = await database;
+    final recordMap = record.toMap();
+    if (record.nRecordId == 0) {
+      recordMap.remove('nRecordId');
+    }
+
+    final id = await db.insert(
+      tableHealthRecords,
+      recordMap,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+
+    return TbHealthRecord(
+      nRecordId: id,
       nUserId: record.nUserId,
       nWeight: record.nWeight,
       nHeight: record.nHeight,
@@ -225,23 +368,21 @@ class AppDatabase {
       computedBmr: record.computedBmr,
       activityLevelTitle: record.activityLevelTitle,
     );
-    list.insert(0, newRecord.toMap());
-    await _flush();
-    return newRecord;
   }
 
   /// ลบบันทึกจาก `TbHealthRecords` ตาม Record ID
   Future<void> deleteHealthRecord(int recordId) async {
-    await init();
-    final list = _databaseStore[tableHealthRecords] as List<dynamic>;
-    list.removeWhere((item) => item['nRecordId'] == recordId);
-    await _flush();
+    final db = await database;
+    await db.delete(
+      tableHealthRecords,
+      where: 'nRecordId = ?',
+      whereArgs: [recordId],
+    );
   }
 
   /// ล้างข้อมูล `TbHealthRecords` ทั้งหมด
   Future<void> clearHealthRecords() async {
-    await init();
-    _databaseStore[tableHealthRecords] = <Map<String, dynamic>>[];
-    await _flush();
+    final db = await database;
+    await db.delete(tableHealthRecords);
   }
 }

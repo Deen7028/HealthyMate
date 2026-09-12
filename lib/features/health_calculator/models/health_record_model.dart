@@ -36,6 +36,8 @@ class TbHealthRecord {
       'nHeight': nHeight,
       'nBmi': nBmi,
       'nTdee': nTdee,
+      'computedBmr': computedBmr,
+      'activityLevelTitle': activityLevelTitle,
       'dtRecordedAt': dtRecordedAt.toIso8601String(),
     };
   }
