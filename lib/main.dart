@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:healthymate/core/theme/app_theme.dart';
+import 'package:healthymate/main_app.dart';
 
 void main() {
-  runApp(const MainApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const HealthyMateApp());
 }
 
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
+class HealthyMateApp extends StatelessWidget {
+  const HealthyMateApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: Scaffold(
-        body: Center(
-          child: Text('Hello World!'),
-        ),
-      ),
+    return MaterialApp(
+      title: 'HealthyMate',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
+      home: const MainAppShell(),
     );
   }
 }
