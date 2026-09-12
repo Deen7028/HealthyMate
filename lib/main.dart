@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/auth_service.dart';
 import 'package:healthymate/core/theme/app_theme.dart';
 import 'package:healthymate/features/login/login_screen.dart';
 import 'package:healthymate/main_app.dart';
-import 'package:healthymate/features/register/register_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  AppDatabase.ensureInitialized();
   await AuthService.instance.init();
   runApp(const HealthyMateApp());
 }

@@ -22,30 +22,54 @@ class AppDatabase {
   static const String tableBadges = 'TbBadges';
   static const String tableUserBadges = 'TbUserBadges';
   static const String tableHealthIntegrations = 'TbHealthIntegrations';
+  static const String tableSession = 'TbSession';
 
   Database? _db;
 
-  Future<Database> get database async {
+  // Web Fallback Storage
+  final List<Map<String, dynamic>> _webUsers = [];
+  final List<Map<String, dynamic>> _webHealthRecords = [];
+  Map<String, dynamic>? _webSession;
+
+  static void ensureInitialized() {
+    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+    }
+  }
+
+  Future<Database?> get database async {
+    if (kIsWeb) return null;
     if (_db != null && _db!.isOpen) return _db!;
     _db = await _initDatabase();
     return _db!;
   }
 
-  Future<Database> _initDatabase() async {
-    // กำหนด FFI factory เมื่อรันบน Windows, macOS หรือ Linux desktop
-    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
-      sqfliteFfiInit();
-      databaseFactory = databaseFactoryFfi;
-    }
+  Future<Database?> _initDatabase() async {
+    if (kIsWeb) return null;
 
-    final dbPath = await getDatabasesPath();
+    ensureInitialized();
+
+    final dbPath = await databaseFactory.getDatabasesPath();
     final path = p.join(dbPath, _dbName);
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      try {
+        await db.execute('ALTER TABLE $tableUsers ADD COLUMN sFirstName TEXT DEFAULT ""');
+        await db.execute('ALTER TABLE $tableUsers ADD COLUMN sLastName TEXT DEFAULT ""');
+      } catch (e) {
+        debugPrint('Migration note: $e');
+      }
+    }
   }
 
   /// สร้าง Table Schema ทั้งหมดตาม 6620310001_HealthMateDB.sql
@@ -55,7 +79,8 @@ class AppDatabase {
         nUserId INTEGER PRIMARY KEY AUTOINCREMENT,
         sEmail TEXT NOT NULL UNIQUE,
         sPasswordHash TEXT NOT NULL,
-        sFullName TEXT NOT NULL,
+        sFirstName TEXT NOT NULL,
+        sLastName TEXT NOT NULL,
         nAge INTEGER,
         nHeight REAL,
         nWeight REAL,
@@ -63,6 +88,15 @@ class AppDatabase {
         sActivityLevel TEXT,
         isDarkMode INTEGER DEFAULT 0,
         dtCreatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $tableSession (
+        nSessionId INTEGER PRIMARY KEY DEFAULT 1,
+        isLoggedIn INTEGER DEFAULT 0,
+        sEmail TEXT,
+        dtUpdatedAt TEXT
       );
     ''');
 
@@ -170,7 +204,8 @@ class AppDatabase {
       nUserId: 1,
       sEmail: 'user@healthymate.app',
       sPasswordHash: 'hash_secret',
-      sFullName: 'ผู้ใช้งาน',
+      sFirstName: 'ผู้ใช้งาน',
+      sLastName: '',
       nAge: 28,
       nHeight: 175.0,
       nWeight: 70.0,
@@ -185,61 +220,6 @@ class AppDatabase {
       defaultUser.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-
-    final sampleRecords = [
-      TbHealthRecord(
-        nRecordId: 1,
-        nUserId: 1,
-        nWeight: 73.5,
-        nHeight: 175.0,
-        nBmi: 24.0,
-        nTdee: 2020.0,
-        dtRecordedAt: now.subtract(const Duration(days: 30)),
-        computedBmr: 1683.0,
-        activityLevelTitle: 'ไม่ออกกำลังกายเลย',
-      ),
-      TbHealthRecord(
-        nRecordId: 2,
-        nUserId: 1,
-        nWeight: 72.0,
-        nHeight: 175.0,
-        nBmi: 23.5,
-        nTdee: 2294.0,
-        dtRecordedAt: now.subtract(const Duration(days: 20)),
-        computedBmr: 1668.0,
-        activityLevelTitle: 'ออกกำลังกายเบาๆ',
-      ),
-      TbHealthRecord(
-        nRecordId: 3,
-        nUserId: 1,
-        nWeight: 71.0,
-        nHeight: 175.0,
-        nBmi: 23.2,
-        nTdee: 2280.0,
-        dtRecordedAt: now.subtract(const Duration(days: 10)),
-        computedBmr: 1658.0,
-        activityLevelTitle: 'ออกกำลังกายเบาๆ',
-      ),
-      TbHealthRecord(
-        nRecordId: 4,
-        nUserId: 1,
-        nWeight: 70.0,
-        nHeight: 175.0,
-        nBmi: 22.9,
-        nTdee: 2266.0,
-        dtRecordedAt: now.subtract(const Duration(days: 2)),
-        computedBmr: 1648.0,
-        activityLevelTitle: 'ออกกำลังกายเบาๆ',
-      ),
-    ];
-
-    for (final record in sampleRecords) {
-      await db.insert(
-        tableHealthRecords,
-        record.toMap(),
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-    }
   }
 
   // ==========================================
@@ -248,7 +228,32 @@ class AppDatabase {
 
   /// ดึงข้อมูลผู้ใช้จาก `TbUsers` ตาม nUserId
   Future<TbUser?> getUser({int userId = 1}) async {
+    if (kIsWeb) {
+      if (_webUsers.isEmpty) {
+        final defaultUser = TbUser(
+          nUserId: 1,
+          sEmail: 'user@healthymate.app',
+          sPasswordHash: 'hash_secret',
+          sFirstName: 'ผู้ใช้งาน',
+          sLastName: '',
+          nAge: 28,
+          nHeight: 175.0,
+          nWeight: 70.0,
+          sGender: 'male',
+          sActivityLevel: 'light',
+        );
+        _webUsers.add(defaultUser.toMap());
+      }
+      final map = _webUsers.firstWhere(
+        (item) => item['nUserId'] == userId,
+        orElse: () => _webUsers.first,
+      );
+      return TbUser.fromMap(map);
+    }
+
     final db = await database;
+    if (db == null) return null;
+
     final maps = await db.query(
       tableUsers,
       where: 'nUserId = ?',
@@ -263,11 +268,18 @@ class AppDatabase {
 
   /// ตรวจสอบว่ามีอีเมลนี้อยู่ใน `TbUsers` แล้วหรือไม่
   Future<bool> isEmailExists(String email) async {
+    final cleanEmail = email.trim().toLowerCase();
+    if (kIsWeb) {
+      return _webUsers.any((u) => u['sEmail']?.toString().toLowerCase() == cleanEmail);
+    }
+
     final db = await database;
+    if (db == null) return false;
+
     final maps = await db.query(
       tableUsers,
       where: 'LOWER(sEmail) = ?',
-      whereArgs: [email.trim().toLowerCase()],
+      whereArgs: [cleanEmail],
     );
     return maps.isNotEmpty;
   }
@@ -279,13 +291,36 @@ class AppDatabase {
     required String email,
     required String password,
   }) async {
-    final db = await database;
-    final fullName = '${firstName.trim()} ${lastName.trim()}'.trim();
+    final cleanEmail = email.trim();
+    final cleanFirstName = firstName.trim();
+    final cleanLastName = lastName.trim();
 
+    if (kIsWeb) {
+      final id = _webUsers.length + 1;
+      final user = TbUser(
+        nUserId: id,
+        sEmail: cleanEmail,
+        sPasswordHash: password,
+        sFirstName: cleanFirstName,
+        sLastName: cleanLastName,
+        nAge: 25,
+        nHeight: 170.0,
+        nWeight: 65.0,
+        sGender: 'male',
+        sActivityLevel: 'light',
+        isDarkMode: false,
+        dtCreatedAt: DateTime.now(),
+      );
+      _webUsers.add(user.toMap());
+      return user;
+    }
+
+    final db = await database;
     final userMap = {
-      'sEmail': email.trim(),
+      'sEmail': cleanEmail,
       'sPasswordHash': password,
-      'sFullName': fullName,
+      'sFirstName': cleanFirstName,
+      'sLastName': cleanLastName,
       'nAge': 25,
       'nHeight': 170.0,
       'nWeight': 65.0,
@@ -295,7 +330,7 @@ class AppDatabase {
       'dtCreatedAt': DateTime.now().toIso8601String(),
     };
 
-    final id = await db.insert(
+    final id = await db!.insert(
       tableUsers,
       userMap,
       conflictAlgorithm: ConflictAlgorithm.fail,
@@ -303,9 +338,10 @@ class AppDatabase {
 
     return TbUser(
       nUserId: id,
-      sEmail: email.trim(),
+      sEmail: cleanEmail,
       sPasswordHash: password,
-      sFullName: fullName,
+      sFirstName: cleanFirstName,
+      sLastName: cleanLastName,
       nAge: 25,
       nHeight: 170.0,
       nWeight: 65.0,
@@ -318,7 +354,18 @@ class AppDatabase {
 
   /// อัปเดตข้อมูลผู้ใช้ใน `TbUsers`
   Future<void> updateUser(TbUser user) async {
+    if (kIsWeb) {
+      final index = _webUsers.indexWhere((u) => u['nUserId'] == user.nUserId);
+      if (index >= 0) {
+        _webUsers[index] = user.toMap();
+      } else {
+        _webUsers.add(user.toMap());
+      }
+      return;
+    }
+
     final db = await database;
+    if (db == null) return;
     await db.insert(
       tableUsers,
       user.toMap(),
@@ -332,7 +379,17 @@ class AppDatabase {
 
   /// ดึงรายการประวัติทั้งหมดจาก `TbHealthRecords`
   Future<List<TbHealthRecord>> getHealthRecords({int userId = 1}) async {
+    if (kIsWeb) {
+      return _webHealthRecords
+          .map((item) => TbHealthRecord.fromMap(item))
+          .where((record) => record.nUserId == userId)
+          .toList()
+        ..sort((a, b) => b.dtRecordedAt.compareTo(a.dtRecordedAt));
+    }
+
     final db = await database;
+    if (db == null) return [];
+
     final maps = await db.query(
       tableHealthRecords,
       where: 'nUserId = ?',
@@ -345,13 +402,30 @@ class AppDatabase {
 
   /// เพิ่มบันทึกใหม่ใน `TbHealthRecords`
   Future<TbHealthRecord> insertHealthRecord(TbHealthRecord record) async {
+    if (kIsWeb) {
+      final newId = DateTime.now().millisecondsSinceEpoch % 1000000;
+      final newRecord = TbHealthRecord(
+        nRecordId: record.nRecordId == 0 ? newId : record.nRecordId,
+        nUserId: record.nUserId,
+        nWeight: record.nWeight,
+        nHeight: record.nHeight,
+        nBmi: record.nBmi,
+        nTdee: record.nTdee,
+        dtRecordedAt: record.dtRecordedAt,
+        computedBmr: record.computedBmr,
+        activityLevelTitle: record.activityLevelTitle,
+      );
+      _webHealthRecords.insert(0, newRecord.toMap());
+      return newRecord;
+    }
+
     final db = await database;
     final recordMap = record.toMap();
     if (record.nRecordId == 0) {
       recordMap.remove('nRecordId');
     }
 
-    final id = await db.insert(
+    final id = await db!.insert(
       tableHealthRecords,
       recordMap,
       conflictAlgorithm: ConflictAlgorithm.replace,
@@ -372,7 +446,13 @@ class AppDatabase {
 
   /// ลบบันทึกจาก `TbHealthRecords` ตาม Record ID
   Future<void> deleteHealthRecord(int recordId) async {
+    if (kIsWeb) {
+      _webHealthRecords.removeWhere((item) => item['nRecordId'] == recordId);
+      return;
+    }
+
     final db = await database;
+    if (db == null) return;
     await db.delete(
       tableHealthRecords,
       where: 'nRecordId = ?',
@@ -382,35 +462,90 @@ class AppDatabase {
 
   /// ล้างข้อมูล `TbHealthRecords` ทั้งหมด
   Future<void> clearHealthRecords() async {
+    if (kIsWeb) {
+      _webHealthRecords.clear();
+      return;
+    }
+
     final db = await database;
+    if (db == null) return;
     await db.delete(tableHealthRecords);
   }
 
+  // ==========================================
+  // Auth Session Operations
+  // ==========================================
+
   /// ดึงสถานะการล็อกอินปัจจุบัน
   Future<bool> getLoginStatus() async {
-    await init();
-    final session = _databaseStore['session'] as Map<String, dynamic>?;
-    return session?['isLoggedIn'] == true;
+    if (kIsWeb) {
+      return _webSession?['isLoggedIn'] == true;
+    }
+
+    final db = await database;
+    if (db == null) return false;
+    final maps = await db.query(tableSession, where: 'nSessionId = 1');
+    if (maps.isNotEmpty) {
+      return (maps.first['isLoggedIn'] as num?)?.toInt() == 1;
+    }
+    return false;
   }
 
   /// บันทึกสถานะการล็อกอิน
   Future<void> setLoginStatus(bool isLoggedIn, {String? email}) async {
-    await init();
-    _databaseStore['session'] = {
-      'isLoggedIn': isLoggedIn,
-      'email': email ?? '',
-      'updatedAt': DateTime.now().toIso8601String(),
-    };
-    await _flush();
+    if (kIsWeb) {
+      _webSession = {
+        'nSessionId': 1,
+        'isLoggedIn': isLoggedIn,
+        'sEmail': email ?? '',
+        'dtUpdatedAt': DateTime.now().toIso8601String(),
+      };
+      return;
+    }
+
+    final db = await database;
+    if (db == null) return;
+    await db.insert(
+      tableSession,
+      {
+        'nSessionId': 1,
+        'isLoggedIn': isLoggedIn ? 1 : 0,
+        'sEmail': email ?? '',
+        'dtUpdatedAt': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   /// ตรวจสอบการเข้าสู่ระบบ
   Future<bool> authenticateUser(String email, String password) async {
-    await init();
-    final users = _databaseStore[tableUsers] as List<dynamic>? ?? [];
-    if (users.isEmpty) return true; // หากยังไม่มีผู้ใช้ในระบบ ให้ผ่านได้
+    final cleanEmail = email.trim().toLowerCase();
+    if (kIsWeb) {
+      if (_webUsers.isEmpty) return true;
+      final user = _webUsers.firstWhere(
+        (u) => u['sEmail']?.toString().toLowerCase() == cleanEmail,
+        orElse: () => {},
+      );
+      if (user.isNotEmpty && user['sPasswordHash'] != null) {
+        return user['sPasswordHash'] == password;
+      }
+      return true;
+    }
 
-    // ตรวจสอบกับข้อมูลใน TbUsers หรือให้เข้าสู่ระบบได้เสมอถ้ากรอกข้อมูล
+    final db = await database;
+    if (db == null) return true;
+    final maps = await db.query(
+      tableUsers,
+      where: 'LOWER(sEmail) = ?',
+      whereArgs: [cleanEmail],
+    );
+
+    if (maps.isNotEmpty) {
+      final storedHash = maps.first['sPasswordHash']?.toString();
+      if (storedHash != null && storedHash.isNotEmpty) {
+        return storedHash == password;
+      }
+    }
     return true;
   }
 }

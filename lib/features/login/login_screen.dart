@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/theme/app_theme.dart';
 import 'package:healthymate/core/services/auth_service.dart';
+import 'package:healthymate/features/register/register_screen.dart';
 import 'package:healthymate/main_app.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -533,6 +534,45 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                   ],
                                 ),
+
+                                const SizedBox(height: 28),
+
+                                // Register Navigation Link
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Text(
+                                      'ยังไม่มีบัญชีสมาชิก? ',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: AppTheme.textSecondary,
+                                      ),
+                                    ),
+                                    GestureDetector(
+                                      onTap: () {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (context) => RegisterScreen(
+                                              onLoginTap: () {
+                                                Navigator.of(context).pop();
+                                              },
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      child: const Text(
+                                        'สมัครสมาชิกที่นี่',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppTheme.primaryGreen,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                const SizedBox(height: 16),
 
                                 const SizedBox(height: 16),
                               ],

@@ -6,7 +6,8 @@ class TbUser {
   final int nUserId;
   final String sEmail;
   final String sPasswordHash;
-  final String sFullName;
+  final String sFirstName;
+  final String sLastName;
   final int nAge;
   final double nHeight;
   final double nWeight;
@@ -19,7 +20,8 @@ class TbUser {
     required this.nUserId,
     required this.sEmail,
     required this.sPasswordHash,
-    required this.sFullName,
+    required this.sFirstName,
+    required this.sLastName,
     required this.nAge,
     required this.nHeight,
     required this.nWeight,
@@ -28,6 +30,8 @@ class TbUser {
     this.isDarkMode = false,
     DateTime? dtCreatedAt,
   }) : dtCreatedAt = dtCreatedAt ?? DateTime.now();
+
+  String get sFullName => '$sFirstName $sLastName'.trim();
 
   Gender get genderEnum => sGender == 'female' ? Gender.female : Gender.male;
 
@@ -41,7 +45,8 @@ class TbUser {
       'nUserId': nUserId,
       'sEmail': sEmail,
       'sPasswordHash': sPasswordHash,
-      'sFullName': sFullName,
+      'sFirstName': sFirstName,
+      'sLastName': sLastName,
       'nAge': nAge,
       'nHeight': nHeight,
       'nWeight': nWeight,
@@ -53,11 +58,20 @@ class TbUser {
   }
 
   factory TbUser.fromMap(Map<String, dynamic> map) {
+    String firstName = map['sFirstName']?.toString() ?? '';
+    String lastName = map['sLastName']?.toString() ?? '';
+    if (firstName.isEmpty && lastName.isEmpty && map['sFullName'] != null) {
+      final parts = map['sFullName'].toString().split(' ');
+      firstName = parts.isNotEmpty ? parts.first : 'ผู้ใช้งาน';
+      lastName = parts.length > 1 ? parts.sublist(1).join(' ') : '';
+    }
+
     return TbUser(
       nUserId: (map['nUserId'] as num?)?.toInt() ?? 1,
       sEmail: map['sEmail'] ?? 'user@healthymate.app',
       sPasswordHash: map['sPasswordHash'] ?? '',
-      sFullName: map['sFullName'] ?? 'ผู้ใช้งาน',
+      sFirstName: firstName.isNotEmpty ? firstName : 'ผู้ใช้งาน',
+      sLastName: lastName,
       nAge: (map['nAge'] as num?)?.toInt() ?? 28,
       nHeight: (map['nHeight'] as num?)?.toDouble() ?? 175.0,
       nWeight: (map['nWeight'] as num?)?.toDouble() ?? 70.0,
@@ -68,4 +82,3 @@ class TbUser {
     );
   }
 }
-
