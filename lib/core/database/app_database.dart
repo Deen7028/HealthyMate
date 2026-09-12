@@ -40,25 +40,29 @@ class AppDatabase {
     if (_isInitialized) return;
 
     try {
-      final directory = Directory.current;
-      final dataDir = Directory('${directory.path}/.data');
-      if (!dataDir.existsSync()) {
-        dataDir.createSync(recursive: true);
-      }
-      _dbFile = File('${dataDir.path}/6620310001_HealthMateDB.json');
-
-      if (_dbFile!.existsSync()) {
-        final content = await _dbFile!.readAsString();
-        if (content.isNotEmpty) {
-          final decoded = jsonDecode(content);
-          if (decoded is Map<String, dynamic>) {
-            _databaseStore = decoded;
-            _ensureTablesExist();
-          }
-        }
-      } else {
+      if (kIsWeb) {
         _initSampleData();
-        await _flush();
+      } else {
+        final directory = Directory.current;
+        final dataDir = Directory('${directory.path}/.data');
+        if (!dataDir.existsSync()) {
+          dataDir.createSync(recursive: true);
+        }
+        _dbFile = File('${dataDir.path}/6620310001_HealthMateDB.json');
+
+        if (_dbFile!.existsSync()) {
+          final content = await _dbFile!.readAsString();
+          if (content.isNotEmpty) {
+            final decoded = jsonDecode(content);
+            if (decoded is Map<String, dynamic>) {
+              _databaseStore = decoded;
+              _ensureTablesExist();
+            }
+          }
+        } else {
+          _initSampleData();
+          await _flush();
+        }
       }
     } catch (e) {
       debugPrint('Database init fallback: $e');
@@ -109,10 +113,9 @@ class AppDatabase {
   }
 
   Future<void> _flush() async {
+    if (kIsWeb || _dbFile == null) return;
     try {
-      if (_dbFile != null) {
-        await _dbFile!.writeAsString(jsonEncode(_databaseStore), flush: true);
-      }
+      await _dbFile!.writeAsString(jsonEncode(_databaseStore), flush: true);
     } catch (e) {
       debugPrint('Error saving database: $e');
     }
