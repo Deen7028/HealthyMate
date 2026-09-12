@@ -4,6 +4,7 @@ import 'package:healthymate/features/dashboard/dashboard_page.dart';
 import 'package:healthymate/features/health_calculator/screens/health_calculator_screen.dart';
 import 'package:healthymate/features/health_calculator/state/health_calculator_state.dart';
 import 'package:healthymate/features/practice/routine_notification_page.dart';
+import 'package:healthymate/core/services/auth_service.dart';
 import 'package:healthymate/shared/widgets/vitality_bottom_nav_bar.dart';
 
 class MainAppShell extends StatefulWidget {
@@ -14,7 +15,8 @@ class MainAppShell extends StatefulWidget {
 }
 
 class _MainAppShellState extends State<MainAppShell> {
-  int _currentIndex = 2; // Default to Health Calculator tab (index 2) as in prototype
+  int _currentIndex =
+      2; // Default to Health Calculator tab (index 2) as in prototype
   final HealthCalculatorState _healthState = HealthCalculatorState();
 
   @override
@@ -31,10 +33,7 @@ class _MainAppShellState extends State<MainAppShell> {
 
   Widget _buildPlaceholderTab(String title, IconData icon) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(title),
-        centerTitle: false,
-      ),
+      appBar: AppBar(title: Text(title), centerTitle: false),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -59,9 +58,76 @@ class _MainAppShellState extends State<MainAppShell> {
             const SizedBox(height: 8),
             const Text(
               'กำลังพัฒนาฟังก์ชันเพิ่มเติมเร็วๆ นี้',
-              style: TextStyle(
-                fontSize: 14,
-                color: AppTheme.textSecondary,
+              style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileTab() {
+    return Scaffold(
+      appBar: AppBar(title: const Text('โปรไฟล์ส่วนตัว'), centerTitle: false),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            const SizedBox(height: 20),
+            const Center(
+              child: CircleAvatar(
+                radius: 44,
+                backgroundColor: AppTheme.primaryGreenLight,
+                child: Icon(
+                  Icons.person_rounded,
+                  size: 52,
+                  color: AppTheme.primaryGreen,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Center(
+              child: Text(
+                AuthService.instance.currentUserEmail.isNotEmpty
+                    ? AuthService.instance.currentUserEmail
+                    : 'ผู้ใช้งาน HealthyMate',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Center(
+              child: Text(
+                'สถานะ: เข้าสู่ระบบแล้ว',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppTheme.primaryGreen,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(height: 36),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  await AuthService.instance.logout();
+                },
+                icon: const Icon(Icons.logout_rounded, color: Colors.white),
+                label: const Text(
+                  'ออกจากระบบ',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFD93838),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
               ),
             ),
           ],
@@ -90,7 +156,7 @@ class _MainAppShellState extends State<MainAppShell> {
           // 3: Routine (กิจวัตร)
           const RoutineNotificationPage(),
           // 4: Profile (โปรไฟล์)
-          _buildPlaceholderTab('โปรไฟล์ส่วนตัว', Icons.person_outline_rounded),
+          _buildProfileTab(),
         ],
       ),
       // ใช้งาน VitalityBottomNavBar ที่แยกออกมาเป็นคอมโพเนนต์อิสระ

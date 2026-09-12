@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:healthymate/core/services/auth_service.dart';
 import 'package:healthymate/core/theme/app_theme.dart';
+import 'package:healthymate/features/login/login_screen.dart';
 import 'package:healthymate/main_app.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AuthService.instance.init();
   runApp(const HealthyMateApp());
 }
 
@@ -16,7 +19,15 @@ class HealthyMateApp extends StatelessWidget {
       title: 'HealthyMate',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: const MainAppShell(),
+      home: ListenableBuilder(
+        listenable: AuthService.instance,
+        builder: (context, _) {
+          if (!AuthService.instance.isLoggedIn) {
+            return const LoginScreen();
+          }
+          return const MainAppShell();
+        },
+      ),
     );
   }
 }

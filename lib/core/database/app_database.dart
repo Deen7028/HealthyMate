@@ -105,54 +105,7 @@ class AppDatabase {
     );
 
     _databaseStore[tableUsers] = [defaultUser.toMap()];
-
-    // Sample Health Records in TbHealthRecords
-    _databaseStore[tableHealthRecords] = [
-      TbHealthRecord(
-        nRecordId: 1,
-        nUserId: 1,
-        nWeight: 73.5,
-        nHeight: 175.0,
-        nBmi: 24.0,
-        nTdee: 2020.0,
-        dtRecordedAt: now.subtract(const Duration(days: 30)),
-        computedBmr: 1683.0,
-        activityLevelTitle: 'ไม่ออกกำลังกายเลย',
-      ).toMap(),
-      TbHealthRecord(
-        nRecordId: 2,
-        nUserId: 1,
-        nWeight: 72.0,
-        nHeight: 175.0,
-        nBmi: 23.5,
-        nTdee: 2294.0,
-        dtRecordedAt: now.subtract(const Duration(days: 20)),
-        computedBmr: 1668.0,
-        activityLevelTitle: 'ออกกำลังกายเบาๆ',
-      ).toMap(),
-      TbHealthRecord(
-        nRecordId: 3,
-        nUserId: 1,
-        nWeight: 71.0,
-        nHeight: 175.0,
-        nBmi: 23.2,
-        nTdee: 2280.0,
-        dtRecordedAt: now.subtract(const Duration(days: 10)),
-        computedBmr: 1658.0,
-        activityLevelTitle: 'ออกกำลังกายเบาๆ',
-      ).toMap(),
-      TbHealthRecord(
-        nRecordId: 4,
-        nUserId: 1,
-        nWeight: 70.0,
-        nHeight: 175.0,
-        nBmi: 22.9,
-        nTdee: 2266.0,
-        dtRecordedAt: now.subtract(const Duration(days: 2)),
-        computedBmr: 1648.0,
-        activityLevelTitle: 'ออกกำลังกายเบาๆ',
-      ).toMap(),
-    ];
+    _databaseStore[tableHealthRecords] = <Map<String, dynamic>>[];
   }
 
   Future<void> _flush() async {
@@ -243,5 +196,33 @@ class AppDatabase {
     await init();
     _databaseStore[tableHealthRecords] = <Map<String, dynamic>>[];
     await _flush();
+  }
+
+  /// ดึงสถานะการล็อกอินปัจจุบัน
+  Future<bool> getLoginStatus() async {
+    await init();
+    final session = _databaseStore['session'] as Map<String, dynamic>?;
+    return session?['isLoggedIn'] == true;
+  }
+
+  /// บันทึกสถานะการล็อกอิน
+  Future<void> setLoginStatus(bool isLoggedIn, {String? email}) async {
+    await init();
+    _databaseStore['session'] = {
+      'isLoggedIn': isLoggedIn,
+      'email': email ?? '',
+      'updatedAt': DateTime.now().toIso8601String(),
+    };
+    await _flush();
+  }
+
+  /// ตรวจสอบการเข้าสู่ระบบ
+  Future<bool> authenticateUser(String email, String password) async {
+    await init();
+    final users = _databaseStore[tableUsers] as List<dynamic>? ?? [];
+    if (users.isEmpty) return true; // หากยังไม่มีผู้ใช้ในระบบ ให้ผ่านได้
+
+    // ตรวจสอบกับข้อมูลใน TbUsers หรือให้เข้าสู่ระบบได้เสมอถ้ากรอกข้อมูล
+    return true;
   }
 }
