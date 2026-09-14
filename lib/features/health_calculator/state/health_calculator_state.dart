@@ -6,44 +6,36 @@ import 'package:healthymate/features/health_calculator/models/activity_level.dar
 import 'package:healthymate/features/health_calculator/models/health_record_model.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
 
+import 'package:healthymate/core/services/auth_service.dart';
+
 class HealthCalculatorState extends ChangeNotifier {
   final AppDatabase _db = AppDatabase.instance;
+  bool _isDisposed = false;
 
-  // Active User in TbUsers
-  TbUser _currentUser = TbUser(
-    nUserId: 1,
-    sEmail: 'user@healthymate.app',
-    sPasswordHash: '',
-    sFirstName: 'ผู้ใช้งาน',
-    sLastName: '',
-    nAge: 28,
-    nHeight: 175.0,
-    nWeight: 70.0,
-    sGender: 'male',
-    sActivityLevel: 'light',
-  );
+  // Active User in TbUsers (starts unpopulated until loadData)
+  TbUser? _currentUser;
 
   // Form input state
   Gender _gender = Gender.male;
-  int _age = 28;
-  double _height = 175.0;
-  double _weight = 70.0;
+  int _age = 0;
+  double _height = 0.0;
+  double _weight = 0.0;
   ActivityLevel _activityLevel = ActivityLevel.options[1]; // light (1-3 days/week)
 
   // Calculated values
-  double _bmi = 22.9;
-  double _bmr = 1648.0;
-  double _tdee = 2266.0;
+  double _bmi = 0.0;
+  double _bmr = 0.0;
+  double _tdee = 0.0;
   CalorieTargets _targets = const CalorieTargets(
-    fatLoss: 1766,
-    maintain: 2266,
-    muscleGain: 2566,
+    fatLoss: 0,
+    maintain: 0,
+    muscleGain: 0,
   );
   late BMICategory _bmiCategory;
 
   // Synced profile data for Dashboard
-  bool _isSyncedToDashboard = true;
-  DateTime? _lastSyncedAt = DateTime.now();
+  bool _isSyncedToDashboard = false;
+  DateTime? _lastSyncedAt;
 
   // Calculation History (TbHealthRecords)
   List<TbHealthRecord> _historyList = [];
@@ -51,53 +43,95 @@ class HealthCalculatorState extends ChangeNotifier {
   String _dataSource = "Database Server";
 
   HealthCalculatorState() {
-    _bmiCategory = HealthCalculator.getBMICategory(22.9);
+    _bmiCategory = HealthCalculator.getBMICategory(0.0);
     loadData();
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
+  }
+
+  void _safeNotifyListeners() {
+    if (!_isDisposed && hasListeners) {
+      notifyListeners();
+    }
   }
 
   Future<void> loadData() async {
     _isLoading = true;
-    notifyListeners();
+    _safeNotifyListeners();
 
     try {
-      // 1. พยายามดึงข้อมูลสดจาก PHP Database Server ก่อน
-      final serverRecords = await HealthApiService.fetchHealthRecords(userId: 1);
+      // 1. ระบุผู้ใช้ปัจจุบันจาก Session / AuthService
+      String? loggedInEmail = AuthService.instance.currentUserEmail;
+      if (loggedInEmail.isEmpty) {
+        loggedInEmail = await _db.getLoggedInUserEmail();
+      }
+
+      TbUser? user;
+      if (loggedInEmail != null && loggedInEmail.isNotEmpty) {
+        user = await _db.getUserByEmail(loggedInEmail);
+      }
+
+      // ถ้ายังไม่พบ ให้ดึง user คนแรกใน DB หรือ fallback
+      user ??= await _db.getUser(userId: 1);
+
+      if (user != null) {
+        _currentUser = user;
+        _gender = user.genderEnum;
+        _age = user.nAge;
+        _height = user.nHeight;
+        _weight = user.nWeight;
+        _activityLevel = user.activityLevelObj;
+      }
+
+      final activeUserId = _currentUser?.nUserId ?? 1;
+
+      // 2. ดึงประวัติสุขภาพของคนนั้นๆ (แยกตาม userId)
+      final serverRecords = await HealthApiService.fetchHealthRecords(userId: activeUserId);
       if (serverRecords.isNotEmpty) {
         _historyList = serverRecords;
-        _dataSource = "PHP MySQL Server (172.18.111.42)";
+        _dataSource = "PHP MySQL Server";
 
         // ดึงค่าน้ำหนักล่าสุดจาก Database มาใส่ฟอร์ม
         final latest = serverRecords.first;
         _weight = latest.nWeight;
         _height = latest.nHeight;
       } else {
-        // 2. ถ้าเซิร์ฟเวอร์ยังไม่เปิด ให้ดึงจาก Local Database Cache
-        _historyList = await _db.getHealthRecords(userId: _currentUser.nUserId);
+        // ดึงจาก Local Database Cache ตาม userId ของแต่ละคน
+        _historyList = await _db.getHealthRecords(userId: activeUserId);
         _dataSource = "Local Database Cache";
 
-        final user = await _db.getUser(userId: 1);
-        if (user != null) {
-          _currentUser = user;
-          _gender = user.genderEnum;
-          _age = user.nAge;
-          _height = user.nHeight;
-          _weight = user.nWeight;
-          _activityLevel = user.activityLevelObj;
+        if (_historyList.isNotEmpty) {
+          final latest = _historyList.first;
+          _weight = latest.nWeight;
+          _height = latest.nHeight;
         }
       }
 
-      // คำนวณผลลัพธ์จากข้อมูลจริงใน Database
-      calculate(recordHistory: false, syncToDb: false);
+      // 3. คำนวณผลลัพธ์จากข้อมูลจริงของผู้ใช้คนนั้น
+      if (_weight > 0 && _height > 0 && _age > 0) {
+        calculate(recordHistory: false, syncToDb: false);
+      } else {
+        _bmi = 0.0;
+        _bmr = 0.0;
+        _tdee = 0.0;
+        _targets = const CalorieTargets(fatLoss: 0, maintain: 0, muscleGain: 0);
+        _bmiCategory = HealthCalculator.getBMICategory(0.0);
+      }
     } catch (e) {
       debugPrint('Error loading state from database: $e');
     } finally {
       _isLoading = false;
-      notifyListeners();
+      _safeNotifyListeners();
     }
   }
 
   // Getters
-  TbUser get currentUser => _currentUser;
+  // Getters
+  TbUser? get currentUser => _currentUser;
   Gender get gender => _gender;
   int get age => _age;
   double get height => _height;
@@ -118,28 +152,28 @@ class HealthCalculatorState extends ChangeNotifier {
   void setGender(Gender gender) {
     if (_gender != gender) {
       _gender = gender;
-      notifyListeners();
+      _safeNotifyListeners();
     }
   }
 
   void setAge(int age) {
     _age = age;
-    notifyListeners();
+    _safeNotifyListeners();
   }
 
   void setHeight(double height) {
     _height = height;
-    notifyListeners();
+    _safeNotifyListeners();
   }
 
   void setWeight(double weight) {
     _weight = weight;
-    notifyListeners();
+    _safeNotifyListeners();
   }
 
   void setActivityLevel(ActivityLevel level) {
     _activityLevel = level;
-    notifyListeners();
+    _safeNotifyListeners();
   }
 
   void calculate({bool recordHistory = false, bool syncToDb = false}) {
@@ -166,10 +200,12 @@ class HealthCalculatorState extends ChangeNotifier {
     _bmiCategory = HealthCalculator.getBMICategory(_bmi);
     _targets = HealthCalculator.calculateTargets(_tdee);
 
+    final activeUserId = _currentUser?.nUserId ?? 1;
+
     if (recordHistory) {
       final newRecord = TbHealthRecord(
         nRecordId: 0,
-        nUserId: _currentUser.nUserId,
+        nUserId: activeUserId,
         nWeight: _weight,
         nHeight: _height,
         nBmi: _bmi,
@@ -181,44 +217,44 @@ class HealthCalculatorState extends ChangeNotifier {
 
       _historyList.insert(0, newRecord);
 
-      // บันทึกลง Local Database & ยิงไปบันทึกบน PHP Database Server
+      // บันทึกลง Local Database & ยิงไปบันทึกบน PHP Database Server ตาม userId ของคนนั้นๆ
       _db.insertHealthRecord(newRecord);
       HealthApiService.saveHealthRecord(newRecord);
     }
 
     if (syncToDb) {
       _currentUser = TbUser(
-        nUserId: _currentUser.nUserId,
-        sEmail: _currentUser.sEmail,
-        sPasswordHash: _currentUser.sPasswordHash,
-        sFirstName: _currentUser.sFirstName,
-        sLastName: _currentUser.sLastName,
+        nUserId: activeUserId,
+        sEmail: _currentUser?.sEmail ?? AuthService.instance.currentUserEmail,
+        sPasswordHash: _currentUser?.sPasswordHash ?? '',
+        sFirstName: _currentUser?.sFirstName ?? 'ผู้ใช้งาน',
+        sLastName: _currentUser?.sLastName ?? '',
         nAge: _age,
         nHeight: _height,
         nWeight: _weight,
         sGender: _gender.name,
         sActivityLevel: _activityLevel.id,
-        isDarkMode: _currentUser.isDarkMode,
+        isDarkMode: _currentUser?.isDarkMode ?? false,
       );
 
-      // อัปเดตลง Local Database & ส่งไปอัปเดตบน PHP Database Server
-      _db.updateUser(_currentUser);
-      HealthApiService.updateUserProfile(_currentUser);
+      // อัปเดตลง Local Database & ส่งไปอัปเดตบน PHP Database Server ตาม userId ของคนนั้นๆ
+      _db.updateUser(_currentUser!);
+      HealthApiService.updateUserProfile(_currentUser!);
     }
 
-    notifyListeners();
+    _safeNotifyListeners();
   }
 
   void saveToProfileAndDashboard() {
     calculate(recordHistory: true, syncToDb: true);
     _isSyncedToDashboard = true;
     _lastSyncedAt = DateTime.now();
-    notifyListeners();
+    _safeNotifyListeners();
   }
 
   Future<void> deleteHistoryItem(int recordId) async {
     _historyList.removeWhere((item) => item.nRecordId == recordId);
-    notifyListeners();
+    _safeNotifyListeners();
     await _db.deleteHealthRecord(recordId);
   }
 }

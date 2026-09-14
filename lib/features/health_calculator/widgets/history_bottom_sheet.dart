@@ -50,7 +50,7 @@ class HistoryBottomSheet extends StatelessWidget {
                     ),
                     SizedBox(width: 8),
                     Text(
-                      'ประวัติการคำนวณย้อนหลัง (TbHealthRecords)',
+                      'ประวัติการคำนวณย้อนหลัง',
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,

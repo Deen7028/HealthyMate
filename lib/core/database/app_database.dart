@@ -228,6 +228,49 @@ class AppDatabase {
     return null;
   }
 
+  /// ดึงข้อมูลผู้ใช้ตาม Email
+  Future<TbUser?> getUserByEmail(String email) async {
+    final cleanEmail = email.trim().toLowerCase();
+    if (kIsWeb) {
+      final map = _webUsers.cast<Map<String, dynamic>?>().firstWhere(
+        (item) => item?['sEmail']?.toString().toLowerCase() == cleanEmail,
+        orElse: () => null,
+      );
+      if (map != null) {
+        return TbUser.fromMap(map);
+      }
+      return null;
+    }
+
+    final db = await database;
+    if (db == null) return null;
+
+    final maps = await db.query(
+      tableUsers,
+      where: 'LOWER(sEmail) = ?',
+      whereArgs: [cleanEmail],
+    );
+
+    if (maps.isNotEmpty) {
+      return TbUser.fromMap(maps.first);
+    }
+    return null;
+  }
+
+  /// ดึงอีเมลผู้ใช้ที่ล็อกอินอยู่ใน Session
+  Future<String?> getLoggedInUserEmail() async {
+    if (kIsWeb) {
+      return _webSession?['sEmail']?.toString();
+    }
+    final db = await database;
+    if (db == null) return null;
+    final maps = await db.query(tableSession, where: 'nSessionId = 1');
+    if (maps.isNotEmpty) {
+      return maps.first['sEmail']?.toString();
+    }
+    return null;
+  }
+
   /// ตรวจสอบว่ามีอีเมลนี้อยู่ใน `TbUsers` แล้วหรือไม่
   Future<bool> isEmailExists(String email) async {
     final cleanEmail = email.trim().toLowerCase();
@@ -265,9 +308,9 @@ class AppDatabase {
         sPasswordHash: password,
         sFirstName: cleanFirstName,
         sLastName: cleanLastName,
-        nAge: 25,
-        nHeight: 170.0,
-        nWeight: 65.0,
+        nAge: 0,
+        nHeight: 0.0,
+        nWeight: 0.0,
         sGender: 'male',
         sActivityLevel: 'light',
         isDarkMode: false,
@@ -283,9 +326,9 @@ class AppDatabase {
       'sPasswordHash': password,
       'sFirstName': cleanFirstName,
       'sLastName': cleanLastName,
-      'nAge': 25,
-      'nHeight': 170.0,
-      'nWeight': 65.0,
+      'nAge': 0,
+      'nHeight': 0.0,
+      'nWeight': 0.0,
       'sGender': 'male',
       'sActivityLevel': 'light',
       'isDarkMode': 0,
@@ -304,9 +347,9 @@ class AppDatabase {
       sPasswordHash: password,
       sFirstName: cleanFirstName,
       sLastName: cleanLastName,
-      nAge: 25,
-      nHeight: 170.0,
-      nWeight: 65.0,
+      nAge: 0,
+      nHeight: 0.0,
+      nWeight: 0.0,
       sGender: 'male',
       sActivityLevel: 'light',
       isDarkMode: false,

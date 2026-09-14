@@ -17,6 +17,9 @@ class AuthService extends ChangeNotifier {
     if (_isInitialized) return;
     try {
       _isLoggedIn = await AppDatabase.instance.getLoginStatus();
+      if (_isLoggedIn) {
+        _currentUserEmail = await AppDatabase.instance.getLoggedInUserEmail() ?? '';
+      }
     } catch (e) {
       debugPrint('Error initializing auth state: $e');
       _isLoggedIn = false;

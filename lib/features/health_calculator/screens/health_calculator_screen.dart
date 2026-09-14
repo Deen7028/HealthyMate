@@ -20,26 +20,40 @@ class _HealthCalculatorScreenState extends State<HealthCalculatorScreen> {
   @override
   void initState() {
     super.initState();
-    _ageController = TextEditingController(text: widget.state.age.toString());
+    _ageController = TextEditingController(
+      text: widget.state.age > 0 ? widget.state.age.toString() : '',
+    );
     _heightController = TextEditingController(
-      text: widget.state.height.toStringAsFixed(0),
+      text: widget.state.height > 0
+          ? widget.state.height.toStringAsFixed(0)
+          : '',
     );
     _weightController = TextEditingController(
-      text: widget.state.weight.toStringAsFixed(0),
+      text: widget.state.weight > 0
+          ? widget.state.weight.toStringAsFixed(0)
+          : '',
     );
     widget.state.addListener(_syncControllersWithState);
   }
 
   void _syncControllersWithState() {
     if (!mounted) return;
-    if (_ageController.text != widget.state.age.toString()) {
-      _ageController.text = widget.state.age.toString();
+    final stateAge = widget.state.age > 0 ? widget.state.age.toString() : '';
+    final stateHeight = widget.state.height > 0
+        ? widget.state.height.toStringAsFixed(0)
+        : '';
+    final stateWeight = widget.state.weight > 0
+        ? widget.state.weight.toStringAsFixed(0)
+        : '';
+
+    if (_ageController.text != stateAge && stateAge.isNotEmpty) {
+      _ageController.text = stateAge;
     }
-    if (_heightController.text != widget.state.height.toStringAsFixed(0)) {
-      _heightController.text = widget.state.height.toStringAsFixed(0);
+    if (_heightController.text != stateHeight && stateHeight.isNotEmpty) {
+      _heightController.text = stateHeight;
     }
-    if (_weightController.text != widget.state.weight.toStringAsFixed(0)) {
-      _weightController.text = widget.state.weight.toStringAsFixed(0);
+    if (_weightController.text != stateWeight && stateWeight.isNotEmpty) {
+      _weightController.text = stateWeight;
     }
   }
 
@@ -53,11 +67,23 @@ class _HealthCalculatorScreenState extends State<HealthCalculatorScreen> {
   }
 
   void _onCalculate() {
-    final age = int.tryParse(_ageController.text) ?? widget.state.age;
-    final height =
-        double.tryParse(_heightController.text) ?? widget.state.height;
-    final weight =
-        double.tryParse(_weightController.text) ?? widget.state.weight;
+    final age = int.tryParse(_ageController.text) ?? 0;
+    final height = double.tryParse(_heightController.text) ?? 0.0;
+    final weight = double.tryParse(_weightController.text) ?? 0.0;
+
+    if (age <= 0 || height <= 0 || weight <= 0) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('กรุณากรอกอายุ ส่วนสูง และน้ำหนักให้ครบถ้วน'),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
 
     widget.state.setAge(age);
     widget.state.setHeight(height);
@@ -77,11 +103,23 @@ class _HealthCalculatorScreenState extends State<HealthCalculatorScreen> {
   }
 
   void _onSaveToDashboard() {
-    final age = int.tryParse(_ageController.text) ?? widget.state.age;
-    final height =
-        double.tryParse(_heightController.text) ?? widget.state.height;
-    final weight =
-        double.tryParse(_weightController.text) ?? widget.state.weight;
+    final age = int.tryParse(_ageController.text) ?? 0;
+    final height = double.tryParse(_heightController.text) ?? 0.0;
+    final weight = double.tryParse(_weightController.text) ?? 0.0;
+
+    if (age <= 0 || height <= 0 || weight <= 0) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('กรุณากรอกข้อมูลส่วนตัวให้ครบถ้วนก่อนบันทึก'),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
 
     widget.state.setAge(age);
     widget.state.setHeight(height);
@@ -155,8 +193,8 @@ class _HealthCalculatorScreenState extends State<HealthCalculatorScreen> {
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
-                              Text(
+                            children: [
+                              const Text(
                                 'เครื่องคำนวณสุขภาพ',
                                 style: TextStyle(
                                   fontSize: 24,
@@ -166,11 +204,14 @@ class _HealthCalculatorScreenState extends State<HealthCalculatorScreen> {
                                 ),
                               ),
                               SizedBox(height: 4),
-                              Text(
-                                'ติดตามและคำนวณ BMI, BMR และ TDEE ของคุณ',
-                                style: TextStyle(
+                               Text(
+                                state.currentUser != null
+                                    ? 'ข้อมูลของคุณ (${state.currentUser!.sFirstName})'
+                                    : 'ติดตามและคำนวณ BMI, BMR และ TDEE ของคุณ',
+                                style: const TextStyle(
                                   fontSize: 13.5,
                                   color: AppTheme.textSecondary,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ],
