@@ -92,7 +92,8 @@ class HealthCalculatorState extends ChangeNotifier {
       debugPrint('Error loading state from database: $e');
     } finally {
       _isLoading = false;
-      notifyListeners();
+      
+    notifyListeners();
     }
   }
 

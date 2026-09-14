@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:io';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:healthymate/features/health_calculator/models/health_record_model.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
@@ -9,6 +11,13 @@ import 'package:sqflite_common_ffi/sqflite_common_ffi.dart';
 class AppDatabase {
   static final AppDatabase instance = AppDatabase._internal();
   AppDatabase._internal();
+
+  /// เข้ารหัสรหัสผ่านด้วย SHA-256
+  static String hashPassword(String password) {
+    final bytes = utf8.encode(password);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
+  }
 
   static const String _dbName = '6620310001_HealthMateDB.db';
 
@@ -256,13 +265,14 @@ class AppDatabase {
     final cleanEmail = email.trim();
     final cleanFirstName = firstName.trim();
     final cleanLastName = lastName.trim();
+    final hashedPassword = hashPassword(password);
 
     if (kIsWeb) {
       final id = _webUsers.length + 1;
       final user = TbUser(
         nUserId: id,
         sEmail: cleanEmail,
-        sPasswordHash: password,
+        sPasswordHash: hashedPassword,
         sFirstName: cleanFirstName,
         sLastName: cleanLastName,
         nAge: 25,
@@ -280,7 +290,7 @@ class AppDatabase {
     final db = await database;
     final userMap = {
       'sEmail': cleanEmail,
-      'sPasswordHash': password,
+      'sPasswordHash': hashedPassword,
       'sFirstName': cleanFirstName,
       'sLastName': cleanLastName,
       'nAge': 25,
@@ -301,7 +311,7 @@ class AppDatabase {
     return TbUser(
       nUserId: id,
       sEmail: cleanEmail,
-      sPasswordHash: password,
+      sPasswordHash: hashedPassword,
       sFirstName: cleanFirstName,
       sLastName: cleanLastName,
       nAge: 25,
@@ -482,6 +492,7 @@ class AppDatabase {
   /// ตรวจสอบการเข้าสู่ระบบ
   Future<bool> authenticateUser(String email, String password) async {
     final cleanEmail = email.trim().toLowerCase();
+    final inputHash = hashPassword(password);
     if (kIsWeb) {
       if (_webUsers.isEmpty) return true;
       final user = _webUsers.firstWhere(
@@ -489,7 +500,8 @@ class AppDatabase {
         orElse: () => {},
       );
       if (user.isNotEmpty && user['sPasswordHash'] != null) {
-        return user['sPasswordHash'] == password;
+        final stored = user['sPasswordHash'].toString();
+        return stored == inputHash || stored == password;
       }
       return true;
     }
@@ -505,7 +517,7 @@ class AppDatabase {
     if (maps.isNotEmpty) {
       final storedHash = maps.first['sPasswordHash']?.toString();
       if (storedHash != null && storedHash.isNotEmpty) {
-        return storedHash == password;
+        return storedHash == inputHash || storedHash == password;
       }
     }
     return true;
