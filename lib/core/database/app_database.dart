@@ -193,33 +193,7 @@ class AppDatabase {
       );
     ''');
 
-    // ใส่ข้อมูลเริ่มต้นสำหรับการทดสอบ
-    await _insertInitialData(db);
-  }
-
-  Future<void> _insertInitialData(Database db) async {
-    final now = DateTime.now();
-
-    final defaultUser = TbUser(
-      nUserId: 1,
-      sEmail: 'user@healthymate.app',
-      sPasswordHash: 'hash_secret',
-      sFirstName: 'ผู้ใช้งาน',
-      sLastName: '',
-      nAge: 28,
-      nHeight: 175.0,
-      nWeight: 70.0,
-      sGender: 'male',
-      sActivityLevel: 'light',
-      isDarkMode: false,
-      dtCreatedAt: now.subtract(const Duration(days: 60)),
-    );
-
-    await db.insert(
-      tableUsers,
-      defaultUser.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    // สร้าง Table เสร็จเรียบร้อย (ไม่มีการใส่ข้อมูล mock)
   }
 
   // ==========================================
@@ -229,26 +203,14 @@ class AppDatabase {
   /// ดึงข้อมูลผู้ใช้จาก `TbUsers` ตาม nUserId
   Future<TbUser?> getUser({int userId = 1}) async {
     if (kIsWeb) {
-      if (_webUsers.isEmpty) {
-        final defaultUser = TbUser(
-          nUserId: 1,
-          sEmail: 'user@healthymate.app',
-          sPasswordHash: 'hash_secret',
-          sFirstName: 'ผู้ใช้งาน',
-          sLastName: '',
-          nAge: 28,
-          nHeight: 175.0,
-          nWeight: 70.0,
-          sGender: 'male',
-          sActivityLevel: 'light',
-        );
-        _webUsers.add(defaultUser.toMap());
-      }
-      final map = _webUsers.firstWhere(
-        (item) => item['nUserId'] == userId,
-        orElse: () => _webUsers.first,
+      final map = _webUsers.cast<Map<String, dynamic>?>().firstWhere(
+        (item) => item?['nUserId'] == userId,
+        orElse: () => null,
       );
-      return TbUser.fromMap(map);
+      if (map != null) {
+        return TbUser.fromMap(map);
+      }
+      return null;
     }
 
     final db = await database;
