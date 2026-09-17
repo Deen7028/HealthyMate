@@ -8,3 +8,4 @@ export 'package:healthymate/features/dashboard/dashboard_page.dart';
 export 'package:healthymate/features/practice/routine_notification_page.dart';
 export 'package:healthymate/features/login/index.dart';
 export 'package:healthymate/features/register/register_screen.dart';
+export 'package:healthymate/features/profile/profile_screen.dart';

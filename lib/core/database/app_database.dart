@@ -56,7 +56,7 @@ class AppDatabase {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 5,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -84,6 +84,38 @@ class AppDatabase {
         debugPrint('Migration note v3: $e');
       }
     }
+    if (oldVersion < 4) {
+      try {
+        await db.execute(
+          'ALTER TABLE $tableUsers ADD COLUMN sProfileImagePath TEXT DEFAULT ""',
+        );
+      } catch (e) {
+        debugPrint('Migration note v4: $e');
+      }
+    }
+    if (oldVersion < 5) {
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS TbGoals (
+            nGoalId INTEGER PRIMARY KEY AUTOINCREMENT,
+            nUserId INTEGER NOT NULL,
+            sTitle TEXT NOT NULL,
+            nProgress REAL DEFAULT 0.0,
+            sRemainingText TEXT,
+            dtUpdatedAt TEXT
+          );
+        ''');
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS TbUserPreferences (
+            nUserId INTEGER PRIMARY KEY,
+            sUnitSystem TEXT DEFAULT "metric",
+            sUnitLabel TEXT DEFAULT "Kilometers, Kilograms"
+          );
+        ''');
+      } catch (e) {
+        debugPrint('Migration note v5: $e');
+      }
+    }
   }
 
   /// สร้าง Table Schema ทั้งหมดตาม 6620310001_HealthMateDB.sql
@@ -101,7 +133,27 @@ class AppDatabase {
         sGender TEXT,
         sActivityLevel TEXT,
         isDarkMode INTEGER DEFAULT 0,
+        sProfileImagePath TEXT DEFAULT "",
         dtCreatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS TbGoals (
+        nGoalId INTEGER PRIMARY KEY AUTOINCREMENT,
+        nUserId INTEGER NOT NULL,
+        sTitle TEXT NOT NULL,
+        nProgress REAL DEFAULT 0.0,
+        sRemainingText TEXT,
+        dtUpdatedAt TEXT
+      );
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS TbUserPreferences (
+        nUserId INTEGER PRIMARY KEY,
+        sUnitSystem TEXT DEFAULT "metric",
+        sUnitLabel TEXT DEFAULT "Kilometers, Kilograms"
       );
     ''');
 
@@ -608,5 +660,88 @@ class AppDatabase {
       }
     }
     return false;
+  }
+
+  // ==========================================
+  // Goal Operations (TbGoals)
+  // ==========================================
+
+  Future<Map<String, dynamic>?> getUserGoal(int userId) async {
+    final db = await database;
+    if (db == null) return null;
+    final maps = await db.query(
+      'TbGoals',
+      where: 'nUserId = ?',
+      whereArgs: [userId],
+      orderBy: 'nGoalId DESC',
+      limit: 1,
+    );
+    if (maps.isNotEmpty) return maps.first;
+    return null;
+  }
+
+  Future<void> saveUserGoal({
+    required int userId,
+    required String title,
+    required double progress,
+    required String remainingText,
+  }) async {
+    final db = await database;
+    if (db == null) return;
+    final existing = await getUserGoal(userId);
+    if (existing != null) {
+      await db.update(
+        'TbGoals',
+        {
+          'sTitle': title,
+          'nProgress': progress,
+          'sRemainingText': remainingText,
+          'dtUpdatedAt': DateTime.now().toIso8601String(),
+        },
+        where: 'nGoalId = ?',
+        whereArgs: [existing['nGoalId']],
+      );
+    } else {
+      await db.insert('TbGoals', {
+        'nUserId': userId,
+        'sTitle': title,
+        'nProgress': progress,
+        'sRemainingText': remainingText,
+        'dtUpdatedAt': DateTime.now().toIso8601String(),
+      });
+    }
+  }
+
+  // ==========================================
+  // Preferences Operations (TbUserPreferences)
+  // ==========================================
+
+  Future<String> getUserUnitPreference(int userId) async {
+    final db = await database;
+    if (db == null) return 'Kilometers, Kilograms';
+    final maps = await db.query(
+      'TbUserPreferences',
+      where: 'nUserId = ?',
+      whereArgs: [userId],
+      limit: 1,
+    );
+    if (maps.isNotEmpty && maps.first['sUnitLabel'] != null) {
+      return maps.first['sUnitLabel'].toString();
+    }
+    return 'Kilometers, Kilograms';
+  }
+
+  Future<void> saveUserUnitPreference(int userId, String unitLabel) async {
+    final db = await database;
+    if (db == null) return;
+    await db.insert(
+      'TbUserPreferences',
+      {
+        'nUserId': userId,
+        'sUnitSystem': unitLabel.startsWith('Kilo') ? 'metric' : 'imperial',
+        'sUnitLabel': unitLabel,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 }

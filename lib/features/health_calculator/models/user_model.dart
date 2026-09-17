@@ -14,6 +14,7 @@ class TbUser {
   final String sGender; // 'male' / 'female'
   final String sActivityLevel; // 'sedentary', 'light', 'moderate', 'heavy', 'very_heavy'
   final bool isDarkMode;
+  final String sProfileImagePath; // เก็บ path รูปโปรไฟล์ (ถ้าไม่มีจะเป็นค่าว่าง)
   final DateTime dtCreatedAt;
 
   TbUser({
@@ -28,12 +29,45 @@ class TbUser {
     required this.sGender,
     required this.sActivityLevel,
     this.isDarkMode = false,
+    this.sProfileImagePath = '',
     DateTime? dtCreatedAt,
   }) : dtCreatedAt = dtCreatedAt ?? DateTime.now();
 
   String get sFullName => '$sFirstName $sLastName'.trim();
 
   Gender get genderEnum => sGender == 'female' ? Gender.female : Gender.male;
+
+  TbUser copyWith({
+    int? nUserId,
+    String? sEmail,
+    String? sPasswordHash,
+    String? sFirstName,
+    String? sLastName,
+    int? nAge,
+    double? nHeight,
+    double? nWeight,
+    String? sGender,
+    String? sActivityLevel,
+    bool? isDarkMode,
+    String? sProfileImagePath,
+    DateTime? dtCreatedAt,
+  }) {
+    return TbUser(
+      nUserId: nUserId ?? this.nUserId,
+      sEmail: sEmail ?? this.sEmail,
+      sPasswordHash: sPasswordHash ?? this.sPasswordHash,
+      sFirstName: sFirstName ?? this.sFirstName,
+      sLastName: sLastName ?? this.sLastName,
+      nAge: nAge ?? this.nAge,
+      nHeight: nHeight ?? this.nHeight,
+      nWeight: nWeight ?? this.nWeight,
+      sGender: sGender ?? this.sGender,
+      sActivityLevel: sActivityLevel ?? this.sActivityLevel,
+      isDarkMode: isDarkMode ?? this.isDarkMode,
+      sProfileImagePath: sProfileImagePath ?? this.sProfileImagePath,
+      dtCreatedAt: dtCreatedAt ?? this.dtCreatedAt,
+    );
+  }
 
   ActivityLevel get activityLevelObj => ActivityLevel.options.firstWhere(
         (opt) => opt.id == sActivityLevel,
@@ -53,6 +87,7 @@ class TbUser {
       'sGender': sGender,
       'sActivityLevel': sActivityLevel,
       'isDarkMode': isDarkMode ? 1 : 0,
+      'sProfileImagePath': sProfileImagePath,
       'dtCreatedAt': dtCreatedAt.toIso8601String(),
     };
   }
@@ -78,6 +113,7 @@ class TbUser {
       sGender: map['sGender'] ?? 'male',
       sActivityLevel: map['sActivityLevel'] ?? 'light',
       isDarkMode: (map['isDarkMode'] as num?)?.toInt() == 1,
+      sProfileImagePath: map['sProfileImagePath']?.toString() ?? '',
       dtCreatedAt: DateTime.tryParse(map['dtCreatedAt']?.toString() ?? '') ?? DateTime.now(),
     );
   }

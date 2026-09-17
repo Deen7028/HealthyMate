@@ -111,6 +111,9 @@ class WorkoutTrackingState extends ChangeNotifier {
   }
 
   void startWorkout() {
+    if (!_isGpsEnabled) {
+      return;
+    }
     _status = WorkoutState.running;
     _safeNotifyListeners();
 

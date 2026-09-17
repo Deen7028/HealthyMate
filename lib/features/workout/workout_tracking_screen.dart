@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:healthymate/features/workout/models/workout_models.dart';
-import 'package:healthymate/features/workout/screens/workout_history_screen.dart';
 import 'package:healthymate/features/workout/state/workout_tracking_state.dart';
 import 'package:healthymate/features/workout/widgets/workout_dialog_utils.dart';
+import 'package:healthymate/features/workout/widgets/category_selection_view.dart';
+import 'package:healthymate/features/workout/widgets/workout_top_stats_card.dart';
+import 'package:healthymate/features/workout/widgets/workout_bottom_controls.dart';
+import 'package:healthymate/features/workout/widgets/map_floating_buttons.dart';
+import 'package:healthymate/features/workout/widgets/workout_map_view.dart';
 
 /// หน้าจอ Workout Tracking 
 /// Logic การคำนวณและ State ทั้งหมดจะถูก Delegate ไปยัง [WorkoutTrackingState]
@@ -39,8 +43,8 @@ class _WorkoutTrackingScreenState extends State<WorkoutTrackingScreen>
     _initCurrentLocation();
   }
 
-  /// ขอสิทธิ์และดึงตำแหน่ง GPS จริง
-  Future<void> _initCurrentLocation() async {
+  /// ขอสิทธิ์และดึงตำแหน่ง GPS จริง คืนค่า true ถ้ามีสิทธิ์และ GPS พร้อมใช้งาน
+  Future<bool> _initCurrentLocation() async {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
@@ -60,7 +64,7 @@ class _WorkoutTrackingScreenState extends State<WorkoutTrackingScreen>
           );
         }
         await Geolocator.openLocationSettings();
-        return;
+        return false;
       }
 
       LocationPermission permission = await Geolocator.checkPermission();
@@ -70,13 +74,13 @@ class _WorkoutTrackingScreenState extends State<WorkoutTrackingScreen>
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('คุณปฏิเสธการให้สิทธิ์ตำแหน่ง GPS'),
+                content: Text('คุณปฏิเสธการให้สิทธิ์ตำแหน่ง GPS จึงไม่สามารถเริ่มจับเวลาออกกำลังกายได้'),
                 backgroundColor: Colors.redAccent,
                 behavior: SnackBarBehavior.floating,
               ),
             );
           }
-          return;
+          return false;
         }
       }
 
@@ -84,7 +88,7 @@ class _WorkoutTrackingScreenState extends State<WorkoutTrackingScreen>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('สิทธิ์ตำแหน่งถูกปิดถาวร กรุณาอนุญาตในตั้งค่าแอป'),
+              content: const Text('สิทธิ์ตำแหน่งถูกปิดถาวร กรุณาอนุญาตในตั้งค่าแอปก่อนเริ่มออกกำลังกาย'),
               action: SnackBarAction(
                 label: 'ไปที่ตั้งค่า',
                 textColor: Colors.amberAccent,
@@ -95,7 +99,7 @@ class _WorkoutTrackingScreenState extends State<WorkoutTrackingScreen>
             ),
           );
         }
-        return;
+        return false;
       }
 
       _state.enableGps();
@@ -110,8 +114,10 @@ class _WorkoutTrackingScreenState extends State<WorkoutTrackingScreen>
         });
         _moveToCurrentLocation();
       }
+      return true;
     } catch (e) {
       debugPrint('Error getting location: $e');
+      return false;
     }
   }
 
@@ -166,7 +172,10 @@ class _WorkoutTrackingScreenState extends State<WorkoutTrackingScreen>
 
   Future<void> _handleStartWorkout() async {
     if (!_state.isGpsEnabled) {
-      await _initCurrentLocation();
+      final hasGps = await _initCurrentLocation();
+      if (!hasGps) {
+        return;
+      }
     }
     _state.startWorkout();
   }
@@ -222,20 +231,8 @@ class _WorkoutTrackingScreenState extends State<WorkoutTrackingScreen>
           ),
         );
       },
-      onResume: () => _state.resumeWorkout(),
+      onResume: () => _handleStartWorkout(),
     );
-  }
-
-  /// ฟังก์ชันแปลงประเภทแผนที่ของแอป ให้ตรงกับ Google Maps API
-  MapType _getGoogleMapType(AppMapType type) {
-    switch (type) {
-      case AppMapType.standard:
-        return MapType.normal;
-      case AppMapType.satellite:
-        return MapType.satellite;
-      case AppMapType.hybrid:
-        return MapType.hybrid;
-    }
   }
 
   @override
@@ -244,7 +241,11 @@ class _WorkoutTrackingScreenState extends State<WorkoutTrackingScreen>
       listenable: _state,
       builder: (context, _) {
         if (_state.status == WorkoutState.selectingCategory) {
-          return _buildCategorySelectionScreen();
+          return CategorySelectionView(
+            selectedCategory: _state.selectedCategory,
+            userId: _state.userId,
+            onSelectCategory: (category) => _state.selectCategory(category),
+          );
         }
 
         return Scaffold(
@@ -253,52 +254,58 @@ class _WorkoutTrackingScreenState extends State<WorkoutTrackingScreen>
             children: [
               // 1. พื้นหลังแผนที่ Google Maps จริง
               Positioned.fill(
-                child: _buildMapBackground(),
+                child: WorkoutMapView(
+                  mapType: _state.currentMapType,
+                  showTraffic: _state.showTraffic,
+                  isGpsEnabled: _state.isGpsEnabled,
+                  routePoints: _state.routePoints,
+                  initialPosition: _currentPosition,
+                  onMapCreated: (controller) {
+                    _mapController = controller;
+                    if (_currentPosition != null) {
+                      _moveToCurrentLocation();
+                    }
+                  },
+                ),
               ),
 
               // 2. ปุ่มลอยเลือกประเภทแผนที่ (Layers) & ตำแหน่งปัจจุบัน (My Location)
               Positioned(
                 right: 20,
                 top: 250,
-                child: Column(
-                  children: [
-                    _buildMapFloatingButton(
-                      icon: Icons.layers_rounded,
-                      badgeText: WorkoutDialogUtils.getShortMapName(_state.currentMapType),
-                      onTap: () => WorkoutDialogUtils.openMapTypeSelector(
-                        context: context,
-                        currentType: _state.currentMapType,
-                        showTraffic: _state.showTraffic,
-                        onSelectType: (type) => _state.setMapType(type),
-                        onToggleTraffic: (val) => _state.toggleTraffic(val),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _buildMapFloatingButton(
-                      icon: Icons.my_location_rounded,
-                      onTap: () async {
-                        await _moveToCurrentLocation();
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Row(
-                                children: [
-                                  Icon(Icons.gps_fixed_rounded, color: Colors.white, size: 18),
-                                  SizedBox(width: 8),
-                                  Text('จัดตำแหน่งปัจจุบันอยู่กึ่งกลางแล้ว'),
-                                ],
-                              ),
-                              backgroundColor: const Color(0xFF2E5327),
-                              behavior: SnackBarBehavior.floating,
-                              duration: const Duration(seconds: 1),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
-                          );
-                        }
-                      },
-                    ),
-                  ],
+                child: MapFloatingButtons(
+                  mapTypeBadgeText:
+                      WorkoutDialogUtils.getShortMapName(_state.currentMapType),
+                  onLayersTap: () => WorkoutDialogUtils.openMapTypeSelector(
+                    context: context,
+                    currentType: _state.currentMapType,
+                    showTraffic: _state.showTraffic,
+                    onSelectType: (type) => _state.setMapType(type),
+                    onToggleTraffic: (val) => _state.toggleTraffic(val),
+                  ),
+                  onMyLocationTap: () async {
+                    await _moveToCurrentLocation();
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Row(
+                            children: [
+                              Icon(Icons.gps_fixed_rounded, color: Colors.white, size: 18),
+                              SizedBox(width: 8),
+                              Text('จัดตำแหน่งปัจจุบันอยู่กึ่งกลางแล้ว'),
+                            ],
+                          ),
+                          backgroundColor: const Color(0xFF2E5327),
+                          behavior: SnackBarBehavior.floating,
+                          duration: const Duration(seconds: 1),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      );
+                    }
+                  },
                 ),
               ),
 
@@ -308,9 +315,17 @@ class _WorkoutTrackingScreenState extends State<WorkoutTrackingScreen>
                 left: 0,
                 right: 0,
                 child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-                    child: _buildTopStatsCard(),
+                  child: WorkoutTopStatsCard(
+                    category: _state.selectedCategory,
+                    isRunning: _state.isRunning,
+                    mapType: _state.currentMapType,
+                    formattedTime: _state.formatTime(_state.secondsElapsed),
+                    distanceKm: _state.distanceKm,
+                    caloriesBurned: _state.caloriesBurned,
+                    pulseAnimation: _pulseController,
+                    onChangeCategoryTap: !_state.isRunning
+                        ? () => _state.returnToCategorySelection()
+                        : null,
                   ),
                 ),
               ),
@@ -320,585 +335,19 @@ class _WorkoutTrackingScreenState extends State<WorkoutTrackingScreen>
                 bottom: 0,
                 left: 0,
                 right: 0,
-                child: _buildBottomControls(),
+                child: WorkoutBottomControls(
+                  isRunning: _state.isRunning,
+                  isPaused: _state.isPaused,
+                  canStop: _state.status != WorkoutState.initial,
+                  onStartOrResume: _handleStartWorkout,
+                  onPause: () => _state.pauseWorkout(),
+                  onStop: _handleStopWorkout,
+                ),
               ),
             ],
           ),
         );
       },
-    );
-  }
-
-  /// หน้าจอเลือกหมวดหมู่การออกกำลังกาย
-  Widget _buildCategorySelectionScreen() {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF3F6F2),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 10),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          'เลือกหมวดหมู่การออกกำลังกาย',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF1C2819),
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'เลือกประเภทกิจกรรมก่อนเริ่มตรวจวัดและคำนวณแคลอรี',
-                          style: TextStyle(fontSize: 13.5, color: Color(0xFF677366)),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // ปุ่มไอคอนประวัติการออกกำลังกาย มุมขวาบน
-                  InkWell(
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => WorkoutHistoryScreen(userId: _state.userId),
-                        ),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFE2E9E0), width: 1.2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.04),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: const Tooltip(
-                        message: 'ประวัติการออกกำลังกาย',
-                        child: Icon(
-                          Icons.history_rounded,
-                          color: Color(0xFF2E5327),
-                          size: 26,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-
-              ...WorkoutCategory.categories.map((category) {
-                final isSelected = _state.selectedCategory.id == category.id;
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 14),
-                  child: InkWell(
-                    onTap: () => _state.selectCategory(category),
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      padding: const EdgeInsets.all(18),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: isSelected ? const Color(0xFF2E5327) : const Color(0xFFE2E9E0),
-                          width: isSelected ? 2 : 1.2,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.03),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 52,
-                            height: 52,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE8F3EB),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Icon(category.icon, color: const Color(0xFF2E5327), size: 28),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  category.title,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                    color: Color(0xFF1C2819),
-                                  ),
-                                ),
-                                const SizedBox(height: 3),
-                                Text(
-                                  category.subtitle,
-                                  style: const TextStyle(fontSize: 12.5, color: Color(0xFF677366)),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Color(0xFF8B9889)),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              }),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTopStatsCard() {
-    // ปรับเงื่อนไขสี Dark Mode ให้เข้ากับ Hybrid และ Satellite
-    final isDarkModeMap = _state.currentMapType == AppMapType.hybrid || _state.currentMapType == AppMapType.satellite;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-      decoration: BoxDecoration(
-        color: isDarkModeMap
-            ? const Color(0xFF1E281F).withValues(alpha: 0.95)
-            : const Color(0xFFF7FAF7).withValues(alpha: 0.96),
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
-          ),
-        ],
-        border: Border.all(color: isDarkModeMap ? Colors.white24 : Colors.white, width: 1.5),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              InkWell(
-                onTap: !_state.isRunning ? () => _state.returnToCategorySelection() : null,
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-                  decoration: BoxDecoration(
-                    color: isDarkModeMap
-                        ? const Color(0xFF74B46E).withValues(alpha: 0.25)
-                        : const Color(0xFF2E5327).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        _state.selectedCategory.icon,
-                        size: 16,
-                        color: isDarkModeMap ? const Color(0xFF90DB89) : const Color(0xFF2E5327),
-                      ),
-                      const SizedBox(width: 2),
-                      Text(
-                        _state.selectedCategory.title,
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w700,
-                          color: isDarkModeMap ? const Color(0xFF90DB89) : const Color(0xFF2E5327),
-                        ),
-                      ),
-                      if (!_state.isRunning) ...[
-                        const SizedBox(width: 2),
-                        Icon(
-                          Icons.swap_horiz_rounded,
-                          size: 16,
-                          color: isDarkModeMap ? const Color(0xFF90DB89) : const Color(0xFF2E5327),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-              if (_state.isRunning)
-                FadeTransition(
-                  opacity: _pulseController,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.redAccent.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: const [
-                        CircleAvatar(radius: 4, backgroundColor: Colors.redAccent),
-                        SizedBox(width: 6),
-                        Text(
-                          'กำลังบันทึก',
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.redAccent,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-            ],
-          ),
-
-          const SizedBox(height: 8),
-
-          Text(
-            'เวลา',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: isDarkModeMap ? const Color(0xFFA0ACA0) : const Color(0xFF5A665A),
-              letterSpacing: 0.2,
-            ),
-          ),
-
-          Text(
-            _state.formatTime(_state.secondsElapsed),
-            style: TextStyle(
-              fontSize: 38,
-              fontWeight: FontWeight.w900,
-              color: isDarkModeMap ? Colors.white : const Color(0xFF1E281F),
-              letterSpacing: -1,
-            ),
-          ),
-
-          Divider(height: 1, color: isDarkModeMap ? Colors.white12 : const Color(0xFFE4ECE2)),
-
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  children: [
-                    Text(
-                      'ระยะทาง',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: isDarkModeMap ? const Color(0xFFA0ACA0) : const Color(0xFF677366),
-                      ),
-                    ),
-                    RichText(
-                      text: TextSpan(
-                        text: _state.distanceKm.toStringAsFixed(2),
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.w900,
-                          color: isDarkModeMap ? const Color(0xFF90DB89) : const Color(0xFF2E5327),
-                          letterSpacing: -0.5,
-                        ),
-                        children: [
-                          TextSpan(
-                            text: ' km',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: isDarkModeMap ? const Color(0xFFA0ACA0) : const Color(0xFF5A665A),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              Container(
-                height: 36,
-                width: 1,
-                color: isDarkModeMap ? Colors.white12 : const Color(0xFFE4ECE2),
-              ),
-
-              Expanded(
-                child: Column(
-                  children: [
-                    Text(
-                      'แคลอรี',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: isDarkModeMap ? const Color(0xFFA0ACA0) : const Color(0xFF677366),
-                      ),
-                    ),
-                    RichText(
-                      text: TextSpan(
-                        text: _state.caloriesBurned.toStringAsFixed(0),
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.w900,
-                          color: isDarkModeMap ? Colors.white : const Color(0xFF1E281F),
-                          letterSpacing: -0.5,
-                        ),
-                        children: [
-                          TextSpan(
-                            text: ' kcal',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: isDarkModeMap ? const Color(0xFFA0ACA0) : const Color(0xFF5A665A),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// เปลี่ยนไปใช้วิดเจต GoogleMap แทน CustomPainter
-  Widget _buildMapBackground() {
-    return GoogleMap(
-      initialCameraPosition: const CameraPosition(
-        target: LatLng(13.7563, 100.5018), // พิกัดเริ่มต้น
-        zoom: 15.0,
-      ),
-      mapType: _getGoogleMapType(_state.currentMapType),
-      trafficEnabled: _state.showTraffic,
-      myLocationEnabled: _state.isGpsEnabled, // จะแสดงหมุดสีฟ้าเมื่อเปิด GPS และให้สิทธิ์แล้ว
-      myLocationButtonEnabled: false, // ปิดปุ่ม Default ของ Google Maps เพื่อใช้ปุ่ม UI ของเราเอง
-      zoomControlsEnabled: false, // ปิดปุ่ม Zoom (+/-) เพื่อให้ UI สะอาดตา
-      compassEnabled: false,
-      polylines: _state.routePoints.length >= 2
-          ? {
-              Polyline(
-                polylineId: const PolylineId('live_workout_route'),
-                color: const Color(0xFFFC5200),
-                width: 5,
-                points: _state.routePoints,
-              ),
-            }
-          : {},
-      onMapCreated: (GoogleMapController controller) {
-        _mapController = controller;
-        if (_currentPosition != null) {
-          _moveToCurrentLocation();
-        }
-      },
-    );
-  }
-
-  Widget _buildBottomControls() {
-    return Container(
-      padding: const EdgeInsets.only(left: 28, right: 28, top: 22, bottom: 30),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF9FAF8).withValues(alpha: 0.97),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.07),
-            blurRadius: 20,
-            offset: const Offset(0, -4),
-          ),
-        ],
-        border: Border.all(color: Colors.white, width: 1.2),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          _buildActionButton(
-            label: 'หยุด',
-            icon: Icons.stop_rounded,
-            color: const Color(0xFFFEE6E6),
-            iconColor: const Color(0xFFD32F2F),
-            size: 58,
-            iconSize: 28,
-            enabled: _state.status != WorkoutState.initial,
-            onTap: _state.status != WorkoutState.initial ? _handleStopWorkout : null,
-          ),
-          _buildMainCenterButton(),
-          _buildActionButton(
-            label: 'ชั่วคราว',
-            icon: Icons.pause_rounded,
-            color: const Color(0xFFEAEFEA),
-            iconColor: const Color(0xFF5A665A),
-            size: 58,
-            iconSize: 28,
-            enabled: _state.isRunning,
-            onTap: _state.isRunning ? () => _state.pauseWorkout() : null,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMainCenterButton() {
-    final bool isRunning = _state.isRunning;
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        GestureDetector(
-          onTap: () {
-            if (isRunning) {
-              _state.pauseWorkout();
-            } else if (_state.isPaused) {
-              _state.resumeWorkout();
-            } else {
-              _handleStartWorkout();
-            }
-          },
-          child: Container(
-            width: 82,
-            height: 82,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0xFF2E5327),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF2E5327).withValues(alpha: 0.35),
-                  blurRadius: 18,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: Icon(
-              isRunning ? Icons.pause_rounded : Icons.play_arrow_rounded,
-              color: Colors.white,
-              size: 44,
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          isRunning ? 'พักชั่วคราว' : (_state.isPaused ? 'ทำต่อ' : 'เริ่ม'),
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w800,
-            color: Color(0xFF2E5327),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionButton({
-    required String label,
-    required IconData icon,
-    required Color color,
-    required Color iconColor,
-    required double size,
-    required double iconSize,
-    required bool enabled,
-    VoidCallback? onTap,
-  }) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        GestureDetector(
-          onTap: enabled ? onTap : null,
-          child: AnimatedOpacity(
-            duration: const Duration(milliseconds: 200),
-            opacity: enabled ? 1.0 : 0.4,
-            child: Container(
-              width: size,
-              height: size,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: color,
-                boxShadow: enabled
-                    ? [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ]
-                    : null,
-              ),
-              child: Icon(icon, color: iconColor, size: iconSize),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: enabled ? const Color(0xFF5A665A) : const Color(0xFFA0ACA0),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMapFloatingButton({
-    required IconData icon,
-    String? badgeText,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.95),
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.12),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Stack(
-          alignment: Alignment.center,
-          clipBehavior: Clip.none,
-          children: [
-            Icon(icon, color: const Color(0xFF2E5327), size: 24),
-            if (badgeText != null)
-              Positioned(
-                top: -18,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2E5327),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    badgeText,
-                    style: const TextStyle(fontSize: 9.5, color: Colors.white, fontWeight: FontWeight.w700),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
     );
   }
 }
