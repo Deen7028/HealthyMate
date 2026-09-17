@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/auth_service.dart';
 import '../models/workout_models.dart';
@@ -13,6 +14,8 @@ class WorkoutTrackingState extends ChangeNotifier {
   bool _isGpsEnabled = false;
 
   Timer? _timer;
+  StreamSubscription<Position>? _positionStreamSub;
+  Position? _lastPosition;
   int _secondsElapsed = 0;
   double _distanceKm = 0.0;
   double _caloriesBurned = 0.0;
@@ -41,6 +44,7 @@ class WorkoutTrackingState extends ChangeNotifier {
   void dispose() {
     _isDisposed = true;
     _timer?.cancel();
+    _positionStreamSub?.cancel();
     super.dispose();
   }
 
@@ -104,21 +108,68 @@ class WorkoutTrackingState extends ChangeNotifier {
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       _secondsElapsed++;
-      final speedMultiplier = _selectedCategory.id == 'walking'
-          ? 0.0014
-          : (_selectedCategory.id == 'cycling' ? 0.0055 : 0.0024);
-      _distanceKm += speedMultiplier;
-
-      final calPerSecond =
-          (_selectedCategory.metValue * 3.5 * _userWeightKg / 200.0) / 60.0;
-      _caloriesBurned += calPerSecond;
-
       _safeNotifyListeners();
+    });
+
+    // 2. ฟังพิกัด GPS จริง เพื่อคำนวณระยะทางและแคลอรีเฉพาะเมื่อมีการเคลื่อนที่จริงๆ
+    _startLocationUpdates();
+  }
+
+  void _startLocationUpdates() {
+    _positionStreamSub?.cancel();
+
+    // รับตำแหน่งปัจจุบันเริ่มต้นเป็นจุดอ้างอิง
+    Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+    ).then((pos) {
+      _lastPosition = pos;
+    }).catchError((_) {});
+
+    const locationSettings = LocationSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 3, // อัปเดตเมื่อขยับเกิน 3 เมตร ป้องกัน GPS drift ตอนยืนนิ่ง
+    );
+
+    _positionStreamSub = Geolocator.getPositionStream(
+      locationSettings: locationSettings,
+    ).listen((Position position) {
+      if (_status != WorkoutState.running) return;
+
+      if (_lastPosition != null) {
+        // คำนวณระยะห่างระหว่างพิกัดเดิมกับพิกัดใหม่ (หน่วยเป็นเมตร)
+        final distanceInMeters = Geolocator.distanceBetween(
+          _lastPosition!.latitude,
+          _lastPosition!.longitude,
+          position.latitude,
+          position.longitude,
+        );
+
+        // กรองสัญญาณ GPS แกว่ง (GPS Jitter / Noise):
+        // ถ้าขยับน้อยกว่า 2.5 เมตร หรือค่าความแม่นยำแย่เกินไป ให้ข้ามไป ไม่นับเป็นระยะทาง
+        final accuracy = position.accuracy;
+        if (distanceInMeters >= 2.5 && distanceInMeters < 150 && accuracy < 35) {
+          final addedKm = distanceInMeters / 1000.0;
+          _distanceKm += addedKm;
+
+          // คำนวณแคลอรีจากการเคลื่อนที่จริง:
+          // แคลอรีตามระยะทาง: Calorie = ระยะทาง (km) * น้ำหนัก (kg) * ค่าแฟกเตอร์ของแต่ละกิจกรรม
+          final calorieFactorPerKm = _selectedCategory.id == 'walking'
+              ? 0.75
+              : (_selectedCategory.id == 'cycling' ? 0.35 : 1.03); // running
+          _caloriesBurned += addedKm * _userWeightKg * calorieFactorPerKm;
+
+          _lastPosition = position;
+          _safeNotifyListeners();
+        }
+      } else {
+        _lastPosition = position;
+      }
     });
   }
 
   void pauseWorkout() {
     _timer?.cancel();
+    _positionStreamSub?.cancel();
     _status = WorkoutState.paused;
     _safeNotifyListeners();
   }
@@ -130,6 +181,7 @@ class WorkoutTrackingState extends ChangeNotifier {
   /// บันทึกกิจกรรมลงฐานข้อมูลตาราง TbWorkouts
   Future<bool> saveWorkout() async {
     _timer?.cancel();
+    _positionStreamSub?.cancel();
 
     final savedDuration = _secondsElapsed;
     final savedDistance = double.parse(_distanceKm.toStringAsFixed(2));
@@ -152,6 +204,8 @@ class WorkoutTrackingState extends ChangeNotifier {
   /// ละทิ้งกิจกรรม
   void discardWorkout() {
     _timer?.cancel();
+    _positionStreamSub?.cancel();
+    _lastPosition = null;
     returnToCategorySelection();
   }
 

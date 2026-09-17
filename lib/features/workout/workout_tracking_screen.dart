@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:healthymate/features/workout/models/workout_models.dart';
 import 'package:healthymate/features/workout/state/workout_tracking_state.dart';
@@ -22,6 +23,7 @@ class _WorkoutTrackingScreenState extends State<WorkoutTrackingScreen>
   
   // Controller สำหรับควบคุม Google Maps
   GoogleMapController? _mapController;
+  LatLng? _currentPosition;
 
   @override
   void initState() {
@@ -31,6 +33,126 @@ class _WorkoutTrackingScreenState extends State<WorkoutTrackingScreen>
       vsync: this,
       duration: const Duration(seconds: 1),
     )..repeat(reverse: true);
+
+    // ดึงพิกัดตำแหน่งจริงทันทีเมื่อเข้าหน้าจอ
+    _initCurrentLocation();
+  }
+
+  /// ขอสิทธิ์และดึงตำแหน่ง GPS จริง
+  Future<void> _initCurrentLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        // ถ้าผู้ใช้ยังไม่ได้เปิด GPS ในเครื่อง ให้แจ้งเตือนและพาไปเปิด
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('กรุณาเปิดบริการตำแหน่ง (GPS) บนอุปกรณ์'),
+              action: SnackBarAction(
+                label: 'เปิด GPS',
+                textColor: Colors.amberAccent,
+                onPressed: () => Geolocator.openLocationSettings(),
+              ),
+              backgroundColor: const Color(0xFF2E5327),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        await Geolocator.openLocationSettings();
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('คุณปฏิเสธการให้สิทธิ์ตำแหน่ง GPS'),
+                backgroundColor: Colors.redAccent,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('สิทธิ์ตำแหน่งถูกปิดถาวร กรุณาอนุญาตในตั้งค่าแอป'),
+              action: SnackBarAction(
+                label: 'ไปที่ตั้งค่า',
+                textColor: Colors.amberAccent,
+                onPressed: () => Geolocator.openAppSettings(),
+              ),
+              backgroundColor: Colors.redAccent,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      }
+
+      _state.enableGps();
+
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+
+      if (mounted) {
+        setState(() {
+          _currentPosition = LatLng(pos.latitude, pos.longitude);
+        });
+        _moveToCurrentLocation();
+      }
+    } catch (e) {
+      debugPrint('Error getting location: $e');
+    }
+  }
+
+  /// เลื่อนกล้องแผนที่ไปหาตำแหน่งปัจจุบัน
+  Future<void> _moveToCurrentLocation() async {
+    try {
+      Position pos;
+      if (_currentPosition != null) {
+        pos = Position(
+          latitude: _currentPosition!.latitude,
+          longitude: _currentPosition!.longitude,
+          timestamp: DateTime.now(),
+          accuracy: 0,
+          altitude: 0,
+          heading: 0,
+          speed: 0,
+          speedAccuracy: 0,
+          altitudeAccuracy: 0,
+          headingAccuracy: 0,
+        );
+      } else {
+        pos = await Geolocator.getCurrentPosition();
+        if (mounted) {
+          setState(() {
+            _currentPosition = LatLng(pos.latitude, pos.longitude);
+          });
+        }
+      }
+
+      _state.enableGps();
+
+      _mapController?.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: LatLng(pos.latitude, pos.longitude),
+            zoom: 16.5,
+          ),
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error moving to location: $e');
+    }
   }
 
   @override
@@ -43,14 +165,9 @@ class _WorkoutTrackingScreenState extends State<WorkoutTrackingScreen>
 
   Future<void> _handleStartWorkout() async {
     if (!_state.isGpsEnabled) {
-      final granted = await WorkoutDialogUtils.showGpsPermissionDialog(context);
-      if (granted == true) {
-        _state.enableGps();
-        _state.startWorkout();
-      }
-    } else {
-      _state.startWorkout();
+      await _initCurrentLocation();
     }
+    _state.startWorkout();
   }
 
   void _handleStopWorkout() {
@@ -158,24 +275,26 @@ class _WorkoutTrackingScreenState extends State<WorkoutTrackingScreen>
                     const SizedBox(height: 12),
                     _buildMapFloatingButton(
                       icon: Icons.my_location_rounded,
-                      onTap: () {
-                        // TODO: สั่งให้กล้องของแผนที่เลื่อนไปหาตำแหน่งปัจจุบันจริงๆ เมื่อต่อ Location Service ได้
-                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Row(
-                              children: [
-                                Icon(Icons.gps_fixed_rounded, color: Colors.white, size: 18),
-                                SizedBox(width: 8),
-                                Text('จัดตำแหน่งปัจจุบันอยู่กึ่งกลางแล้ว'),
-                              ],
+                      onTap: () async {
+                        await _moveToCurrentLocation();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Row(
+                                children: [
+                                  Icon(Icons.gps_fixed_rounded, color: Colors.white, size: 18),
+                                  SizedBox(width: 8),
+                                  Text('จัดตำแหน่งปัจจุบันอยู่กึ่งกลางแล้ว'),
+                                ],
+                              ),
+                              backgroundColor: const Color(0xFF2E5327),
+                              behavior: SnackBarBehavior.floating,
+                              duration: const Duration(seconds: 1),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             ),
-                            backgroundColor: const Color(0xFF2E5327),
-                            behavior: SnackBarBehavior.floating,
-                            duration: const Duration(seconds: 1),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                        );
+                          );
+                        }
                       },
                     ),
                   ],
@@ -525,6 +644,9 @@ class _WorkoutTrackingScreenState extends State<WorkoutTrackingScreen>
       compassEnabled: false,
       onMapCreated: (GoogleMapController controller) {
         _mapController = controller;
+        if (_currentPosition != null) {
+          _moveToCurrentLocation();
+        }
       },
     );
   }
