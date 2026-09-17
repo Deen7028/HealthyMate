@@ -32,7 +32,8 @@ class AppDatabase {
   Map<String, dynamic>? _webSession;
 
   static void ensureInitialized() {
-    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+    if (!kIsWeb &&
+        (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
       sqfliteFfiInit();
       databaseFactory = databaseFactoryFfi;
     }
@@ -64,8 +65,12 @@ class AppDatabase {
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       try {
-        await db.execute('ALTER TABLE $tableUsers ADD COLUMN sFirstName TEXT DEFAULT ""');
-        await db.execute('ALTER TABLE $tableUsers ADD COLUMN sLastName TEXT DEFAULT ""');
+        await db.execute(
+          'ALTER TABLE $tableUsers ADD COLUMN sFirstName TEXT DEFAULT ""',
+        );
+        await db.execute(
+          'ALTER TABLE $tableUsers ADD COLUMN sLastName TEXT DEFAULT ""',
+        );
       } catch (e) {
         debugPrint('Migration note: $e');
       }
@@ -275,7 +280,9 @@ class AppDatabase {
   Future<bool> isEmailExists(String email) async {
     final cleanEmail = email.trim().toLowerCase();
     if (kIsWeb) {
-      return _webUsers.any((u) => u['sEmail']?.toString().toLowerCase() == cleanEmail);
+      return _webUsers.any(
+        (u) => u['sEmail']?.toString().toLowerCase() == cleanEmail,
+      );
     }
 
     final db = await database;
@@ -477,6 +484,47 @@ class AppDatabase {
     await db.delete(tableHealthRecords);
   }
 
+  /// บันทึกประวัติการออกกำลังกายลงตาราง TbWorkouts
+  Future<int> insertWorkout({
+    required int userId,
+    required String type,
+    required double distanceKm,
+    required int durationSeconds,
+    required double caloriesBurned,
+  }) async {
+    final nowStr = DateTime.now().toIso8601String();
+    if (kIsWeb) {
+      return DateTime.now().millisecondsSinceEpoch % 100000;
+    }
+
+    final db = await database;
+    if (db == null) return 0;
+
+    return await db.insert(tableWorkouts, {
+      'nUserId': userId,
+      'sType': type,
+      'nDistance': distanceKm,
+      'nDuration': durationSeconds,
+      'nCaloriesBurned': caloriesBurned,
+      'dtWorkoutDate': nowStr,
+    });
+  }
+
+  /// ดึงประวัติการออกกำลังกายทั้งหมดของผู้ใช้ตาม userId
+  Future<List<Map<String, dynamic>>> getWorkouts({required int userId}) async {
+    if (kIsWeb) return [];
+
+    final db = await database;
+    if (db == null) return [];
+
+    return await db.query(
+      tableWorkouts,
+      where: 'nUserId = ?',
+      whereArgs: [userId],
+      orderBy: 'dtWorkoutDate DESC',
+    );
+  }
+
   // ==========================================
   // Auth Session Operations
   // ==========================================
@@ -510,16 +558,12 @@ class AppDatabase {
 
     final db = await database;
     if (db == null) return;
-    await db.insert(
-      tableSession,
-      {
-        'nSessionId': 1,
-        'isLoggedIn': isLoggedIn ? 1 : 0,
-        'sEmail': email ?? '',
-        'dtUpdatedAt': DateTime.now().toIso8601String(),
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.insert(tableSession, {
+      'nSessionId': 1,
+      'isLoggedIn': isLoggedIn ? 1 : 0,
+      'sEmail': email ?? '',
+      'dtUpdatedAt': DateTime.now().toIso8601String(),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   /// ตรวจสอบการเข้าสู่ระบบ

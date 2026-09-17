@@ -4,6 +4,7 @@ import 'package:healthymate/features/dashboard/dashboard_page.dart';
 import 'package:healthymate/features/health_calculator/screens/health_calculator_screen.dart';
 import 'package:healthymate/features/health_calculator/state/health_calculator_state.dart';
 import 'package:healthymate/features/practice/routine_notification_page.dart';
+import 'package:healthymate/features/workout/workout_tracking_screen.dart';
 import 'package:healthymate/core/services/auth_service.dart';
 import 'package:healthymate/shared/widgets/vitality_bottom_nav_bar.dart';
 
@@ -29,41 +30,6 @@ class _MainAppShellState extends State<MainAppShell> {
     setState(() {
       _currentIndex = index;
     });
-  }
-
-  Widget _buildPlaceholderTab(String title, IconData icon) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title), centerTitle: false),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: AppTheme.primaryGreenLight,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, size: 48, color: AppTheme.primaryGreen),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'หน้า $title',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'กำลังพัฒนาฟังก์ชันเพิ่มเติมเร็วๆ นี้',
-              style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   Widget _buildProfileTab() {
@@ -150,7 +116,9 @@ class _MainAppShellState extends State<MainAppShell> {
             onNavigateToWorkout: () => _onTabTapped(1),
           ),
           // 1: Workout (ออกกำลังกาย)
-          _buildPlaceholderTab('ออกกำลังกาย', Icons.fitness_center_rounded),
+          WorkoutTrackingScreen(
+            onBackToDashboard: () => _onTabTapped(0),
+          ),
           // 2: Health Calculator (สุขภาพ)
           HealthCalculatorScreen(state: _healthState),
           // 3: Routine (กิจวัตร)
