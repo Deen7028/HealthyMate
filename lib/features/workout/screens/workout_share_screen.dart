@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:gal/gal.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -11,6 +12,7 @@ class WorkoutShareScreen extends StatefulWidget {
   final double nDistance;
   final int nDuration;
   final double nCalories;
+  final List<LatLng> routePoints;
 
   const WorkoutShareScreen({
     super.key,
@@ -18,6 +20,7 @@ class WorkoutShareScreen extends StatefulWidget {
     required this.nDistance,
     required this.nDuration,
     required this.nCalories,
+    this.routePoints = const [],
   });
 
   @override
@@ -193,75 +196,110 @@ class _WorkoutShareScreenState extends State<WorkoutShareScreen> {
   }
 
   Widget _buildShareCard() {
+    final textShadows = _isTransparent
+        ? const [
+            Shadow(
+              color: Colors.black87,
+              blurRadius: 6,
+              offset: Offset(0, 1),
+            ),
+          ]
+        : null;
+
     return Container(
       width: 280,
       height: 480,
       decoration: BoxDecoration(
-        color: _isTransparent ? Colors.black.withValues(alpha: 0.55) : const Color(0xFF233620),
+        color: _isTransparent ? Colors.transparent : const Color(0xFF233620),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1.5),
+        border: _isTransparent
+            ? null
+            : Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1.5),
       ),
-      child: Stack(
-        children: [
-          // ป้ายสลับโหมดโปร่งใส
-          Positioned(
-            top: 16,
-            left: 16,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.white30),
-              ),
-              child: Text(
-                _isTransparent ? 'โปร่งใส' : 'คลาสสิก',
-                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(height: 20),
+            Text(
+              'ระยะทาง',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                shadows: textShadows,
               ),
             ),
-          ),
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const SizedBox(height: 20),
-                const Text('ระยะทาง', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
-                Text(
-                  '${widget.nDistance.toStringAsFixed(2)} กม.',
-                  style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: -0.5),
-                ),
-                const SizedBox(height: 14),
-                const Text('เพซ', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
-                Text(
-                  '${_calculatePace()} /กม.',
-                  style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900),
-                ),
-                const SizedBox(height: 14),
-                const Text('เวลา', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
-                Text(
-                  _formatDuration(widget.nDuration),
-                  style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900),
-                ),
-                const SizedBox(height: 24),
-                // วาดเส้นทาง GPS แบบมินิมอล
-                CustomPaint(
-                  size: const Size(120, 80),
-                  painter: _MiniRoutePainter(),
-                ),
-                const SizedBox(height: 30),
-                const Text(
-                  'HEALTHYMATE',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 3,
-                  ),
-                ),
-              ],
+            Text(
+              '${widget.nDistance.toStringAsFixed(2)} กม.',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 32,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.5,
+                shadows: textShadows,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 14),
+            Text(
+              'เพซ',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                shadows: textShadows,
+              ),
+            ),
+            Text(
+              '${_calculatePace()} /กม.',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
+                shadows: textShadows,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              'เวลา',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                shadows: textShadows,
+              ),
+            ),
+            Text(
+              _formatDuration(widget.nDuration),
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
+                shadows: textShadows,
+              ),
+            ),
+            const SizedBox(height: 24),
+            // วาดเส้นทาง GPS จริงที่ผู้ใช้วิ่ง/ออกกำลังกาย
+            if (widget.routePoints.length >= 2)
+              CustomPaint(
+                size: const Size(140, 90),
+                painter: _MiniRoutePainter(points: widget.routePoints),
+              )
+            else
+              const SizedBox(height: 90),
+            const SizedBox(height: 30),
+            Text(
+              'HEALTHYMATE',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 3,
+                shadows: textShadows,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -338,8 +376,14 @@ class _WorkoutShareScreenState extends State<WorkoutShareScreen> {
 }
 
 class _MiniRoutePainter extends CustomPainter {
+  final List<LatLng> points;
+
+  _MiniRoutePainter({required this.points});
+
   @override
   void paint(Canvas canvas, Size size) {
+    if (points.length < 2) return;
+
     final paint = Paint()
       ..color = const Color(0xFFFC5200) // ส้มสไตล์ Strava
       ..strokeWidth = 3.5
@@ -347,16 +391,56 @@ class _MiniRoutePainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
-    final path = Path()
-      ..moveTo(size.width * 0.2, size.height * 0.8)
-      ..lineTo(size.width * 0.45, size.height * 0.2)
-      ..lineTo(size.width * 0.8, size.height * 0.3)
-      ..lineTo(size.width * 0.35, size.height * 0.9)
-      ..close();
+    // หา bounding box ของพิกัด
+    double minLat = points.first.latitude;
+    double maxLat = points.first.latitude;
+    double minLng = points.first.longitude;
+    double maxLng = points.first.longitude;
+
+    for (final p in points) {
+      if (p.latitude < minLat) minLat = p.latitude;
+      if (p.latitude > maxLat) maxLat = p.latitude;
+      if (p.longitude < minLng) minLng = p.longitude;
+      if (p.longitude > maxLng) maxLng = p.longitude;
+    }
+
+    final double latSpan = maxLat - minLat;
+    final double lngSpan = maxLng - minLng;
+
+    const double padding = 10.0;
+    final double drawWidth = size.width - (padding * 2);
+    final double drawHeight = size.height - (padding * 2);
+
+    // คำนวณ scale ให้รักษาสัดส่วน Aspect Ratio (lat/lng)
+    final double scaleX = lngSpan == 0 ? 1.0 : drawWidth / lngSpan;
+    final double scaleY = latSpan == 0 ? 1.0 : drawHeight / latSpan;
+    final double scale = scaleX < scaleY ? scaleX : scaleY;
+
+    // หา offset กึ่งกลาง
+    final double actualWidth = lngSpan * scale;
+    final double actualHeight = latSpan * scale;
+    final double offsetX = padding + (drawWidth - actualWidth) / 2;
+    final double offsetY = padding + (drawHeight - actualHeight) / 2;
+
+    final path = Path();
+    for (int i = 0; i < points.length; i++) {
+      final p = points[i];
+      // Note: ละติจูด ค่ามากอยู่ด้านบน (North) ดังนั้น canvas Y ต้องกลับด้าน
+      final double x = offsetX + (lngSpan == 0 ? drawWidth / 2 : (p.longitude - minLng) * scale);
+      final double y = offsetY + (latSpan == 0 ? drawHeight / 2 : (maxLat - p.latitude) * scale);
+
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
 
     canvas.drawPath(path, paint);
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _MiniRoutePainter oldDelegate) {
+    return oldDelegate.points != points;
+  }
 }

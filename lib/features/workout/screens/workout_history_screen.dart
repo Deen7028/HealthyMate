@@ -477,26 +477,27 @@ class _WorkoutHistoryScreenState extends State<WorkoutHistoryScreen> {
                     ),
                   ),
                   const SizedBox(width: 4),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.share_rounded,
-                      color: Color(0xFF2E5327),
-                      size: 22,
-                    ),
-                    tooltip: 'แชร์กิจกรรม',
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => WorkoutShareScreen(
-                            sType: type,
-                            nDistance: distance,
-                            nDuration: duration,
-                            nCalories: calories,
+                    IconButton(
+                      icon: const Icon(
+                        Icons.share_rounded,
+                        color: Color(0xFF2E5327),
+                        size: 22,
+                      ),
+                      tooltip: 'แชร์กิจกรรม',
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => WorkoutShareScreen(
+                              sType: type,
+                              nDistance: distance,
+                              nDuration: duration,
+                              nCalories: calories,
+                              routePoints: routePoints,
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
+                        );
+                      },
+                    ),
                 ],
               ),
             ],
