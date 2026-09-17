@@ -56,7 +56,7 @@ class AppDatabase {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -72,7 +72,16 @@ class AppDatabase {
           'ALTER TABLE $tableUsers ADD COLUMN sLastName TEXT DEFAULT ""',
         );
       } catch (e) {
-        debugPrint('Migration note: $e');
+        debugPrint('Migration note v2: $e');
+      }
+    }
+    if (oldVersion < 3) {
+      try {
+        await db.execute(
+          'ALTER TABLE $tableWorkouts ADD COLUMN sRoutePoints TEXT DEFAULT ""',
+        );
+      } catch (e) {
+        debugPrint('Migration note v3: $e');
       }
     }
   }
@@ -193,6 +202,7 @@ class AppDatabase {
         nDistance REAL DEFAULT 0.00,
         nDuration INTEGER DEFAULT 0,
         nCaloriesBurned REAL DEFAULT 0.00,
+        sRoutePoints TEXT DEFAULT "",
         dtWorkoutDate TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (nUserId) REFERENCES $tableUsers (nUserId) ON DELETE CASCADE
       );
@@ -491,6 +501,7 @@ class AppDatabase {
     required double distanceKm,
     required int durationSeconds,
     required double caloriesBurned,
+    String routePoints = '',
   }) async {
     final nowStr = DateTime.now().toIso8601String();
     if (kIsWeb) {
@@ -506,6 +517,7 @@ class AppDatabase {
       'nDistance': distanceKm,
       'nDuration': durationSeconds,
       'nCaloriesBurned': caloriesBurned,
+      'sRoutePoints': routePoints,
       'dtWorkoutDate': nowStr,
     });
   }

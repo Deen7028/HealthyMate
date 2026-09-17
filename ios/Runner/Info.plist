@@ -30,6 +30,8 @@
 	<string>HealthyMate ต้องการสิทธิ์ตำแหน่งเพื่อติดตามระยะทางและความเร็วในการออกกำลังกาย</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>HealthyMate ต้องการสิทธิ์ตำแหน่งเพื่อติดตามระยะทางการออกกำลังกายในเบื้องหลัง</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>HealthyMate ต้องการบันทึกรูปภาพสรุปการออกกำลังกายลงในคลังภาพของคุณ</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

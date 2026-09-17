@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/auth_service.dart';
 import '../models/workout_models.dart';
@@ -16,6 +18,7 @@ class WorkoutTrackingState extends ChangeNotifier {
   Timer? _timer;
   StreamSubscription<Position>? _positionStreamSub;
   Position? _lastPosition;
+  final List<LatLng> _routePoints = [];
   int _secondsElapsed = 0;
   double _distanceKm = 0.0;
   double _caloriesBurned = 0.0;
@@ -37,6 +40,8 @@ class WorkoutTrackingState extends ChangeNotifier {
   int get secondsElapsed => _secondsElapsed;
   double get distanceKm => _distanceKm;
   double get caloriesBurned => _caloriesBurned;
+  int get userId => _userId;
+  List<LatLng> get routePoints => List.unmodifiable(_routePoints);
   bool get isRunning => _status == WorkoutState.running;
   bool get isPaused => _status == WorkoutState.paused;
 
@@ -74,6 +79,8 @@ class WorkoutTrackingState extends ChangeNotifier {
     _secondsElapsed = 0;
     _distanceKm = 0.0;
     _caloriesBurned = 0.0;
+    _routePoints.clear();
+    _lastPosition = null;
     _safeNotifyListeners();
   }
 
@@ -83,6 +90,8 @@ class WorkoutTrackingState extends ChangeNotifier {
     _secondsElapsed = 0;
     _distanceKm = 0.0;
     _caloriesBurned = 0.0;
+    _routePoints.clear();
+    _lastPosition = null;
     _safeNotifyListeners();
   }
 
@@ -123,6 +132,10 @@ class WorkoutTrackingState extends ChangeNotifier {
       locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
     ).then((pos) {
       _lastPosition = pos;
+      if (_routePoints.isEmpty) {
+        _routePoints.add(LatLng(pos.latitude, pos.longitude));
+        _safeNotifyListeners();
+      }
     }).catchError((_) {});
 
     const locationSettings = LocationSettings(
@@ -159,10 +172,12 @@ class WorkoutTrackingState extends ChangeNotifier {
           _caloriesBurned += addedKm * _userWeightKg * calorieFactorPerKm;
 
           _lastPosition = position;
+          _routePoints.add(LatLng(position.latitude, position.longitude));
           _safeNotifyListeners();
         }
       } else {
         _lastPosition = position;
+        _routePoints.add(LatLng(position.latitude, position.longitude));
       }
     });
   }
@@ -187,6 +202,11 @@ class WorkoutTrackingState extends ChangeNotifier {
     final savedDistance = double.parse(_distanceKm.toStringAsFixed(2));
     final savedCalories = double.parse(_caloriesBurned.toStringAsFixed(1));
 
+    // แปลงพิกัด GPS เส้นทางทั้งหมดเป็น JSON String
+    final routePointsJson = jsonEncode(
+      _routePoints.map((p) => {'lat': p.latitude, 'lng': p.longitude}).toList(),
+    );
+
     if (savedDuration >= 1) {
       await AppDatabase.instance.insertWorkout(
         userId: _userId,
@@ -194,6 +214,7 @@ class WorkoutTrackingState extends ChangeNotifier {
         distanceKm: savedDistance,
         durationSeconds: savedDuration,
         caloriesBurned: savedCalories,
+        routePoints: routePointsJson,
       );
     }
 
@@ -206,6 +227,7 @@ class WorkoutTrackingState extends ChangeNotifier {
     _timer?.cancel();
     _positionStreamSub?.cancel();
     _lastPosition = null;
+    _routePoints.clear();
     returnToCategorySelection();
   }
 

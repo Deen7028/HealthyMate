@@ -1,0 +1,516 @@
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:healthymate/core/database/app_database.dart';
+import 'package:healthymate/core/theme/app_theme.dart';
+import 'package:healthymate/features/workout/screens/workout_share_screen.dart';
+
+/// หน้าแสดงประวัติการออกกำลังกายจากตาราง TbWorkouts
+class WorkoutHistoryScreen extends StatefulWidget {
+  final int userId;
+
+  const WorkoutHistoryScreen({super.key, required this.userId});
+
+  @override
+  State<WorkoutHistoryScreen> createState() => _WorkoutHistoryScreenState();
+}
+
+class _WorkoutHistoryScreenState extends State<WorkoutHistoryScreen> {
+  bool _isLoading = true;
+  List<Map<String, dynamic>> _workouts = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWorkoutHistory();
+  }
+
+  Future<void> _loadWorkoutHistory() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final list = await AppDatabase.instance.getWorkouts(
+        userId: widget.userId,
+      );
+      if (mounted) {
+        setState(() {
+          _workouts = list;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  String _formatDuration(int seconds) {
+    final hrs = seconds ~/ 3600;
+    final mins = (seconds % 3600) ~/ 60;
+    final secs = seconds % 60;
+    if (hrs > 0) {
+      return '$hrs ชม. $mins นาที';
+    }
+    if (mins > 0) {
+      return '$mins นาที $secs วิ';
+    }
+    return '$secs วินาที';
+  }
+
+  String _formatDateTime(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return '-';
+    try {
+      final dt = DateTime.parse(dateStr).toLocal();
+      final day = dt.day.toString().padLeft(2, '0');
+      final month = dt.month.toString().padLeft(2, '0');
+      final year = dt.year + 543; // พ.ศ.
+      final hour = dt.hour.toString().padLeft(2, '0');
+      final min = dt.minute.toString().padLeft(2, '0');
+      return '$day/$month/$year $hour:$min น.';
+    } catch (_) {
+      return dateStr;
+    }
+  }
+
+  IconData _getCategoryIcon(String type) {
+    final t = type.toLowerCase();
+    if (t.contains('เดิน') || t.contains('walk')) {
+      return Icons.directions_walk_rounded;
+    } else if (t.contains('จักรยาน') ||
+        t.contains('cycl') ||
+        t.contains('bike')) {
+      return Icons.directions_bike_rounded;
+    }
+    return Icons.directions_run_rounded;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF4F7F3),
+      appBar: AppBar(
+        title: const Text(
+          'ประวัติการออกกำลังกาย',
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 18,
+            color: Color(0xFF1C2819),
+          ),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Color(0xFF1C2819),
+            size: 20,
+          ),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, color: Color(0xFF2E5327)),
+            onPressed: _loadWorkoutHistory,
+            tooltip: 'รีเฟรชประวัติ',
+          ),
+        ],
+      ),
+      body: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(color: AppTheme.primaryGreen),
+            )
+          : _workouts.isEmpty
+          ? _buildEmptyState()
+          : _buildHistoryList(),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 96,
+              height: 96,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8F1E7),
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFFD4E6D2), width: 2),
+              ),
+              child: const Icon(
+                Icons.fitness_center_rounded,
+                size: 48,
+                color: Color(0xFF2E5327),
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'ยังไม่มีประวัติการออกกำลังกาย',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF1C2819),
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'เริ่มบันทึกกิจกรรมวิ่ง เดิน หรือปั่นจักรยานเพื่อติดตามสถิติสุขภาพของคุณที่นี่',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13.5,
+                color: Color(0xFF677366),
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHistoryList() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(18),
+      itemCount: _workouts.length,
+      itemBuilder: (context, index) {
+        final item = _workouts[index];
+        final type = item['sType']?.toString() ?? 'กิจกรรม';
+        final distance = (item['nDistance'] as num?)?.toDouble() ?? 0.0;
+        final duration = (item['nDuration'] as num?)?.toInt() ?? 0;
+        final calories = (item['nCaloriesBurned'] as num?)?.toDouble() ?? 0.0;
+        final dateStr = item['dtWorkoutDate']?.toString();
+        final rawRoutePoints = item['sRoutePoints']?.toString();
+        List<LatLng> routePoints = [];
+        if (rawRoutePoints != null && rawRoutePoints.isNotEmpty) {
+          try {
+            final decoded = jsonDecode(rawRoutePoints) as List<dynamic>;
+            routePoints = decoded
+                .map((pt) => LatLng(
+                      (pt['lat'] as num).toDouble(),
+                      (pt['lng'] as num).toDouble(),
+                    ))
+                .toList();
+          } catch (_) {}
+        }
+
+        final LatLng centerPoint = routePoints.isNotEmpty
+            ? routePoints.first
+            : const LatLng(13.7563, 100.5018);
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 14),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+            border: Border.all(color: const Color(0xFFE5ECE3), width: 1),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // หัวการ์ด: ไอคอน + ชื่อกิจกรรม + วันเวลา
+              Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8F3EB),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(
+                      _getCategoryIcon(type),
+                      color: const Color(0xFF2E5327),
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          type,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF1C2819),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _formatDateTime(dateStr),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF7A8679),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F6F0),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.timer_outlined,
+                          size: 14,
+                          color: Color(0xFF2E5327),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _formatDuration(duration),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF2E5327),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              // แสดงแผนที่ของกิจกรรมการออกกำลังกาย
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: SizedBox(
+                  height: 200,
+                  width: double.infinity,
+                  child: Stack(
+                    children: [
+                      GoogleMap(
+                        initialCameraPosition: CameraPosition(
+                          target: centerPoint,
+                          zoom: 16.0,
+                        ),
+                        liteModeEnabled: false,
+                        zoomGesturesEnabled: false,
+                        zoomControlsEnabled: false,
+                        scrollGesturesEnabled: false,
+                        rotateGesturesEnabled: false,
+                        tiltGesturesEnabled: false,
+                        myLocationButtonEnabled: false,
+                        mapToolbarEnabled: false,
+                        compassEnabled: false,
+                        mapType: MapType.normal,
+                        onMapCreated: (GoogleMapController controller) {
+                          if (routePoints.length >= 2) {
+                            double minLat = routePoints.first.latitude;
+                            double maxLat = routePoints.first.latitude;
+                            double minLng = routePoints.first.longitude;
+                            double maxLng = routePoints.first.longitude;
+
+                            for (final pt in routePoints) {
+                              if (pt.latitude < minLat) minLat = pt.latitude;
+                              if (pt.latitude > maxLat) maxLat = pt.latitude;
+                              if (pt.longitude < minLng) minLng = pt.longitude;
+                              if (pt.longitude > maxLng) maxLng = pt.longitude;
+                            }
+
+                            final bounds = LatLngBounds(
+                              southwest: LatLng(minLat, minLng),
+                              northeast: LatLng(maxLat, maxLng),
+                            );
+                            controller.animateCamera(
+                              CameraUpdate.newLatLngBounds(bounds, 36),
+                            );
+                          }
+                        },
+                        polylines: routePoints.length >= 2
+                            ? {
+                                Polyline(
+                                  polylineId: PolylineId('history_route_$index'),
+                                  color: const Color(0xFFFC5200), // สีส้มสไตล์ Strava
+                                  width: 4,
+                                  points: routePoints,
+                                ),
+                              }
+                            : {},
+                        markers: routePoints.isNotEmpty
+                            ? {
+                                Marker(
+                                  markerId: MarkerId('start_$index'),
+                                  position: routePoints.first,
+                                  icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+                                ),
+                                if (routePoints.length >= 2)
+                                  Marker(
+                                    markerId: MarkerId('end_$index'),
+                                    position: routePoints.last,
+                                    icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+                                  ),
+                              }
+                            : {
+                                Marker(
+                                  markerId: MarkerId('pin_$index'),
+                                  position: centerPoint,
+                                  icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+                                ),
+                              },
+                      ),
+                      // ป้าย Overlay มินิระบุแผนที่เส้นทาง
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.65),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.map_rounded, color: Colors.white, size: 12),
+                              const SizedBox(width: 4),
+                              Text(
+                                routePoints.length >= 2 ? 'เส้นทางจริง' : 'ตำแหน่งกิจกรรม',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 14),
+              const Divider(height: 1, color: Color(0xFFF0F4EF)),
+              const SizedBox(height: 14),
+
+              // สถิติ: ระยะทาง และ แคลอรี
+              Row(
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.route_rounded,
+                          size: 18,
+                          color: Color(0xFF4A7C42),
+                        ),
+                        const SizedBox(width: 6),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'ระยะทาง',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF7A8679),
+                              ),
+                            ),
+                            Text(
+                              '${distance.toStringAsFixed(2)} km',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF1C2819),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    height: 28,
+                    width: 1,
+                    color: const Color(0xFFE5ECE3),
+                  ),
+                  Expanded(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.local_fire_department_rounded,
+                          size: 20,
+                          color: Color(0xFFD9534F),
+                        ),
+                        const SizedBox(width: 6),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'เผาผลาญ',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF7A8679),
+                              ),
+                            ),
+                            Text(
+                              '${calories.toStringAsFixed(0)} kcal',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF1C2819),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.share_rounded,
+                      color: Color(0xFF2E5327),
+                      size: 22,
+                    ),
+                    tooltip: 'แชร์กิจกรรม',
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => WorkoutShareScreen(
+                            sType: type,
+                            nDistance: distance,
+                            nDuration: duration,
+                            nCalories: calories,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}

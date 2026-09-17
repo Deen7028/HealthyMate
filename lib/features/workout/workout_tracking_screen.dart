@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:healthymate/features/workout/models/workout_models.dart';
+import 'package:healthymate/features/workout/screens/workout_history_screen.dart';
 import 'package:healthymate/features/workout/state/workout_tracking_state.dart';
 import 'package:healthymate/features/workout/widgets/workout_dialog_utils.dart';
 
@@ -339,19 +340,67 @@ class _WorkoutTrackingScreenState extends State<WorkoutTrackingScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 10),
-              const Text(
-                'เลือกหมวดหมู่การออกกำลังกาย',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF1C2819),
-                  letterSpacing: -0.5,
-                ),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'เลือกประเภทกิจกรรมก่อนเริ่มตรวจวัดและคำนวณแคลอรี',
-                style: TextStyle(fontSize: 13.5, color: Color(0xFF677366)),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          'เลือกหมวดหมู่การออกกำลังกาย',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF1C2819),
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'เลือกประเภทกิจกรรมก่อนเริ่มตรวจวัดและคำนวณแคลอรี',
+                          style: TextStyle(fontSize: 13.5, color: Color(0xFF677366)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // ปุ่มไอคอนประวัติการออกกำลังกาย มุมขวาบน
+                  InkWell(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => WorkoutHistoryScreen(userId: _state.userId),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E9E0), width: 1.2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: const Tooltip(
+                        message: 'ประวัติการออกกำลังกาย',
+                        child: Icon(
+                          Icons.history_rounded,
+                          color: Color(0xFF2E5327),
+                          size: 26,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 24),
 
@@ -642,6 +691,16 @@ class _WorkoutTrackingScreenState extends State<WorkoutTrackingScreen>
       myLocationButtonEnabled: false, // ปิดปุ่ม Default ของ Google Maps เพื่อใช้ปุ่ม UI ของเราเอง
       zoomControlsEnabled: false, // ปิดปุ่ม Zoom (+/-) เพื่อให้ UI สะอาดตา
       compassEnabled: false,
+      polylines: _state.routePoints.length >= 2
+          ? {
+              Polyline(
+                polylineId: const PolylineId('live_workout_route'),
+                color: const Color(0xFFFC5200),
+                width: 5,
+                points: _state.routePoints,
+              ),
+            }
+          : {},
       onMapCreated: (GoogleMapController controller) {
         _mapController = controller;
         if (_currentPosition != null) {
