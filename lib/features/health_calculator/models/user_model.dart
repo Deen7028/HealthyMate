@@ -8,11 +8,11 @@ class TbUser {
   final String sPasswordHash;
   final String sFirstName;
   final String sLastName;
-  final int nAge;
-  final double nHeight;
-  final double nWeight;
-  final String sGender; // 'male' / 'female'
-  final String sActivityLevel; // 'sedentary', 'light', 'moderate', 'heavy', 'very_heavy'
+  final int? nAge;
+  final double? nHeight;
+  final double? nWeight;
+  final String? sGender; // 'male' / 'female' / null
+  final String? sActivityLevel; // 'sedentary', 'light', 'moderate', 'heavy', 'very_heavy' / null
   final bool isDarkMode;
   final DateTime dtCreatedAt;
 
@@ -22,11 +22,11 @@ class TbUser {
     required this.sPasswordHash,
     required this.sFirstName,
     required this.sLastName,
-    required this.nAge,
-    required this.nHeight,
-    required this.nWeight,
-    required this.sGender,
-    required this.sActivityLevel,
+    this.nAge,
+    this.nHeight,
+    this.nWeight,
+    this.sGender,
+    this.sActivityLevel,
     this.isDarkMode = false,
     DateTime? dtCreatedAt,
   }) : dtCreatedAt = dtCreatedAt ?? DateTime.now();
@@ -57,6 +57,24 @@ class TbUser {
     };
   }
 
+  static double? _toDoubleNullable(dynamic val) {
+    if (val == null) return null;
+    if (val is num) return val.toDouble();
+    return double.tryParse(val.toString());
+  }
+
+  static int? _toIntNullable(dynamic val) {
+    if (val == null) return null;
+    if (val is num) return val.toInt();
+    return int.tryParse(val.toString());
+  }
+
+  static int _toInt(dynamic val, [int defaultVal = 0]) {
+    if (val == null) return defaultVal;
+    if (val is num) return val.toInt();
+    return int.tryParse(val.toString()) ?? defaultVal;
+  }
+
   factory TbUser.fromMap(Map<String, dynamic> map) {
     String firstName = map['sFirstName']?.toString() ?? '';
     String lastName = map['sLastName']?.toString() ?? '';
@@ -66,18 +84,23 @@ class TbUser {
       lastName = parts.length > 1 ? parts.sublist(1).join(' ') : '';
     }
 
+    final isDarkVal = map['isDarkMode'];
+    final bool isDark = isDarkVal is bool
+        ? isDarkVal
+        : (_toInt(isDarkVal) == 1);
+
     return TbUser(
-      nUserId: (map['nUserId'] as num?)?.toInt() ?? 1,
-      sEmail: map['sEmail'] ?? 'user@healthymate.app',
-      sPasswordHash: map['sPasswordHash'] ?? '',
+      nUserId: _toInt(map['nUserId'], 1),
+      sEmail: map['sEmail']?.toString() ?? 'user@healthymate.app',
+      sPasswordHash: map['sPasswordHash']?.toString() ?? '',
       sFirstName: firstName.isNotEmpty ? firstName : 'ผู้ใช้งาน',
       sLastName: lastName,
-      nAge: (map['nAge'] as num?)?.toInt() ?? 28,
-      nHeight: (map['nHeight'] as num?)?.toDouble() ?? 175.0,
-      nWeight: (map['nWeight'] as num?)?.toDouble() ?? 70.0,
-      sGender: map['sGender'] ?? 'male',
-      sActivityLevel: map['sActivityLevel'] ?? 'light',
-      isDarkMode: (map['isDarkMode'] as num?)?.toInt() == 1,
+      nAge: _toIntNullable(map['nAge']),
+      nHeight: _toDoubleNullable(map['nHeight']),
+      nWeight: _toDoubleNullable(map['nWeight']),
+      sGender: map['sGender']?.toString(),
+      sActivityLevel: map['sActivityLevel']?.toString(),
+      isDarkMode: isDark,
       dtCreatedAt: DateTime.tryParse(map['dtCreatedAt']?.toString() ?? '') ?? DateTime.now(),
     );
   }

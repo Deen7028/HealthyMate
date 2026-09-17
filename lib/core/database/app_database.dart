@@ -237,6 +237,35 @@ class AppDatabase {
     return null;
   }
 
+  /// ดึงข้อมูลผู้ใช้จาก `TbUsers` ตามอีเมล
+  Future<TbUser?> getUserByEmail(String email) async {
+    final cleanEmail = email.trim().toLowerCase();
+    if (kIsWeb) {
+      final map = _webUsers.cast<Map<String, dynamic>?>().firstWhere(
+        (item) => item?['sEmail']?.toString().toLowerCase() == cleanEmail,
+        orElse: () => null,
+      );
+      if (map != null) {
+        return TbUser.fromMap(map);
+      }
+      return null;
+    }
+
+    final db = await database;
+    if (db == null) return null;
+
+    final maps = await db.query(
+      tableUsers,
+      where: 'LOWER(sEmail) = ?',
+      whereArgs: [cleanEmail],
+    );
+
+    if (maps.isNotEmpty) {
+      return TbUser.fromMap(maps.first);
+    }
+    return null;
+  }
+
   /// ตรวจสอบว่ามีอีเมลนี้อยู่ใน `TbUsers` แล้วหรือไม่
   Future<bool> isEmailExists(String email) async {
     final cleanEmail = email.trim().toLowerCase();
@@ -275,11 +304,11 @@ class AppDatabase {
         sPasswordHash: hashedPassword,
         sFirstName: cleanFirstName,
         sLastName: cleanLastName,
-        nAge: 25,
-        nHeight: 170.0,
-        nWeight: 65.0,
-        sGender: 'male',
-        sActivityLevel: 'light',
+        nAge: null,
+        nHeight: null,
+        nWeight: null,
+        sGender: null,
+        sActivityLevel: null,
         isDarkMode: false,
         dtCreatedAt: DateTime.now(),
       );
@@ -293,11 +322,11 @@ class AppDatabase {
       'sPasswordHash': hashedPassword,
       'sFirstName': cleanFirstName,
       'sLastName': cleanLastName,
-      'nAge': 25,
-      'nHeight': 170.0,
-      'nWeight': 65.0,
-      'sGender': 'male',
-      'sActivityLevel': 'light',
+      'nAge': null,
+      'nHeight': null,
+      'nWeight': null,
+      'sGender': null,
+      'sActivityLevel': null,
       'isDarkMode': 0,
       'dtCreatedAt': DateTime.now().toIso8601String(),
     };
@@ -314,11 +343,11 @@ class AppDatabase {
       sPasswordHash: hashedPassword,
       sFirstName: cleanFirstName,
       sLastName: cleanLastName,
-      nAge: 25,
-      nHeight: 170.0,
-      nWeight: 65.0,
-      sGender: 'male',
-      sActivityLevel: 'light',
+      nAge: null,
+      nHeight: null,
+      nWeight: null,
+      sGender: null,
+      sActivityLevel: null,
       isDarkMode: false,
       dtCreatedAt: DateTime.now(),
     );

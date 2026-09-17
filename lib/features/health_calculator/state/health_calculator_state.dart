@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/api_service.dart';
+import 'package:healthymate/core/services/auth_service.dart';
 import 'package:healthymate/core/utils/health_calculator.dart';
 import 'package:healthymate/features/health_calculator/models/activity_level.dart';
 import 'package:healthymate/features/health_calculator/models/health_record_model.dart';
@@ -8,6 +9,7 @@ import 'package:healthymate/features/health_calculator/models/user_model.dart';
 
 class HealthCalculatorState extends ChangeNotifier {
   final AppDatabase _db = AppDatabase.instance;
+  bool _isDisposed = false;
 
   // Active User in TbUsers
   TbUser _currentUser = TbUser(
@@ -55,35 +57,55 @@ class HealthCalculatorState extends ChangeNotifier {
     loadData();
   }
 
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
+  }
+
+  @override
+  void notifyListeners() {
+    if (!_isDisposed) {
+      super.notifyListeners();
+    }
+  }
+
   Future<void> loadData() async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      // 1. พยายามดึงข้อมูลสดจาก PHP Database Server ก่อน
-      final serverRecords = await HealthApiService.fetchHealthRecords(userId: 1);
+      // 1. ตรวจสอบข้อมูลผู้ใช้ที่ล็อกอินอยู่
+      final currentEmail = AuthService.instance.currentUserEmail;
+      TbUser? user;
+      if (currentEmail.isNotEmpty) {
+        user = await _db.getUserByEmail(currentEmail);
+      }
+      user ??= await _db.getUser(userId: _currentUser.nUserId);
+
+      if (user != null) {
+        _currentUser = user;
+        if (user.sGender != null) _gender = user.genderEnum;
+        if (user.nAge != null) _age = user.nAge!;
+        if (user.nHeight != null) _height = user.nHeight!;
+        if (user.nWeight != null) _weight = user.nWeight!;
+        if (user.sActivityLevel != null) _activityLevel = user.activityLevelObj;
+      }
+
+      // 2. พยายามดึงข้อมูลสดจาก PHP Database Server ก่อน
+      final serverRecords = await HealthApiService.fetchHealthRecords(userId: _currentUser.nUserId);
       if (serverRecords.isNotEmpty) {
         _historyList = serverRecords;
-        _dataSource = "PHP MySQL Server (172.18.111.42)";
+        _dataSource = "PHP MySQL Server";
 
         // ดึงค่าน้ำหนักล่าสุดจาก Database มาใส่ฟอร์ม
         final latest = serverRecords.first;
-        _weight = latest.nWeight;
-        _height = latest.nHeight;
+        if (latest.nWeight > 0) _weight = latest.nWeight;
+        if (latest.nHeight > 0) _height = latest.nHeight;
       } else {
-        // 2. ถ้าเซิร์ฟเวอร์ยังไม่เปิด ให้ดึงจาก Local Database Cache
+        // 3. ถ้าเซิร์ฟเวอร์ยังไม่เปิด ให้ดึงจาก Local Database Cache
         _historyList = await _db.getHealthRecords(userId: _currentUser.nUserId);
         _dataSource = "Local Database Cache";
-
-        final user = await _db.getUser(userId: 1);
-        if (user != null) {
-          _currentUser = user;
-          _gender = user.genderEnum;
-          _age = user.nAge;
-          _height = user.nHeight;
-          _weight = user.nWeight;
-          _activityLevel = user.activityLevelObj;
-        }
       }
 
       // คำนวณผลลัพธ์จากข้อมูลจริงใน Database
@@ -92,8 +114,7 @@ class HealthCalculatorState extends ChangeNotifier {
       debugPrint('Error loading state from database: $e');
     } finally {
       _isLoading = false;
-      
-    notifyListeners();
+      notifyListeners();
     }
   }
 
@@ -182,9 +203,24 @@ class HealthCalculatorState extends ChangeNotifier {
 
       _historyList.insert(0, newRecord);
 
-      // บันทึกลง Local Database & ยิงไปบันทึกบน PHP Database Server
-      _db.insertHealthRecord(newRecord);
-      HealthApiService.saveHealthRecord(newRecord);
+      // บันทึกลง Local Database & อัปเดต record ID เมื่อบันทึกสำเร็จ
+      _db.insertHealthRecord(newRecord).then((savedRecord) {
+        if (!_isDisposed) {
+          final index = _historyList.indexOf(newRecord);
+          if (index != -1) {
+            _historyList[index] = savedRecord;
+            notifyListeners();
+          }
+        }
+      }).catchError((e) {
+        debugPrint('Error saving health record to local db: $e');
+      });
+
+      // ยิงไปบันทึกบน PHP Database Server
+      HealthApiService.saveHealthRecord(newRecord).catchError((e) {
+        debugPrint('Error saving health record to API: $e');
+        return false;
+      });
     }
 
     if (syncToDb) {
@@ -203,8 +239,13 @@ class HealthCalculatorState extends ChangeNotifier {
       );
 
       // อัปเดตลง Local Database & ส่งไปอัปเดตบน PHP Database Server
-      _db.updateUser(_currentUser);
-      HealthApiService.updateUserProfile(_currentUser);
+      _db.updateUser(_currentUser).catchError((e) {
+        debugPrint('Error updating user locally: $e');
+      });
+      HealthApiService.updateUserProfile(_currentUser).catchError((e) {
+        debugPrint('Error updating user profile to API: $e');
+        return false;
+      });
     }
 
     notifyListeners();
@@ -220,6 +261,10 @@ class HealthCalculatorState extends ChangeNotifier {
   Future<void> deleteHistoryItem(int recordId) async {
     _historyList.removeWhere((item) => item.nRecordId == recordId);
     notifyListeners();
-    await _db.deleteHealthRecord(recordId);
+    try {
+      await _db.deleteHealthRecord(recordId);
+    } catch (e) {
+      debugPrint('Error deleting health record from db: $e');
+    }
   }
 }
