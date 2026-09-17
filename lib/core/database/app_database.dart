@@ -570,7 +570,7 @@ class AppDatabase {
   Future<bool> authenticateUser(String email, String password) async {
     final cleanEmail = email.trim().toLowerCase();
     if (kIsWeb) {
-      if (_webUsers.isEmpty) return true;
+      if (_webUsers.isEmpty) return false;
       final user = _webUsers.firstWhere(
         (u) => u['sEmail']?.toString().toLowerCase() == cleanEmail,
         orElse: () => {},
@@ -578,11 +578,11 @@ class AppDatabase {
       if (user.isNotEmpty && user['sPasswordHash'] != null) {
         return user['sPasswordHash'] == password;
       }
-      return true;
+      return false;
     }
 
     final db = await database;
-    if (db == null) return true;
+    if (db == null) return false;
     final maps = await db.query(
       tableUsers,
       where: 'LOWER(sEmail) = ?',
@@ -595,6 +595,6 @@ class AppDatabase {
         return storedHash == password;
       }
     }
-    return true;
+    return false;
   }
 }

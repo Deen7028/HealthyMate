@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/theme/app_theme.dart';
 import 'package:healthymate/core/services/auth_service.dart';
 import 'package:healthymate/features/register/register_screen.dart';
@@ -22,32 +23,79 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final FocusNode _emailFocusNode = FocusNode();
+  final FocusNode _passwordFocusNode = FocusNode();
 
   bool _isPasswordVisible = false;
   bool _isLoading = false;
   String? _errorMessage;
+  int _failedAttempts = 0;
+  DateTime? _lockoutUntil;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _emailFocusNode.dispose();
+    _passwordFocusNode.dispose();
     super.dispose();
+  }
+
+  /// Regex ตรวจสอบรูปแบบ Email ที่ถูกต้อง
+  bool _isValidEmail(String email) {
+    final emailRegex = RegExp(
+      r'^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+$',
+    );
+    return emailRegex.hasMatch(email);
   }
 
   void _handleLogin() async {
     FocusScope.of(context).unfocus();
 
-    if (_emailController.text.trim().isEmpty) {
+    // 1. ตรวจสอบการถูกระงับชั่วคราว (Lockout Security)
+    if (_lockoutUntil != null && DateTime.now().isBefore(_lockoutUntil!)) {
+      final waitSeconds = _lockoutUntil!.difference(DateTime.now()).inSeconds;
       setState(() {
-        _errorMessage = 'กรุณากรอกอีเมลหรือชื่อผู้ใช้';
+        _errorMessage = 'คุณพยายามเข้าสู่ระบบผิดบ่อยเกินไป กรุณารอ $waitSeconds วินาที';
       });
       return;
     }
 
-    if (_passwordController.text.trim().isEmpty) {
+    final rawEmail = _emailController.text.trim();
+    final rawPassword = _passwordController.text;
+
+    // 2. ดักตรวจช่องว่าง (Empty Check)
+    if (rawEmail.isEmpty) {
+      setState(() {
+        _errorMessage = 'กรุณากรอกอีเมลของคุณ';
+      });
+      _emailFocusNode.requestFocus();
+      return;
+    }
+
+    // 3. ดักตรวจรูปแบบอีเมล (Email Format Validation)
+    if (!_isValidEmail(rawEmail)) {
+      setState(() {
+        _errorMessage = 'รูปแบบอีเมลไม่ถูกต้อง (เช่น example@domain.com)';
+      });
+      _emailFocusNode.requestFocus();
+      return;
+    }
+
+    // 4. ดักตรวจความยาวและเนื้อหารหัสผ่าน (Password Validation)
+    if (rawPassword.isEmpty) {
       setState(() {
         _errorMessage = 'กรุณากรอกรหัสผ่าน';
       });
+      _passwordFocusNode.requestFocus();
+      return;
+    }
+
+    if (rawPassword.length < 6) {
+      setState(() {
+        _errorMessage = 'รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร';
+      });
+      _passwordFocusNode.requestFocus();
       return;
     }
 
@@ -56,68 +104,103 @@ class _LoginScreenState extends State<LoginScreen> {
       _errorMessage = null;
     });
 
-    // เข้าสู่ระบบผ่าน AuthService
-    await AuthService.instance.login(
-      _emailController.text.trim(),
-      _passwordController.text.trim(),
-    );
+    try {
+      // 5. ตรวจสอบในฐานข้อมูล SQLite ว่ามีอีเมลนี้อยู่ในระบบหรือไม่
+      final isEmailExist = await AppDatabase.instance.isEmailExists(rawEmail);
+      if (!isEmailExist) {
+        if (!mounted) return;
+        _registerFailedAttempt();
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'ไม่พบบัญชีผู้ใช้นี้ในระบบ กรุณาตรวจสอบอีเมลหรือสมัครสมาชิก';
+        });
+        return;
+      }
 
-    if (!mounted) return;
+      // 6. ตรวจสอบความถูกต้องของรหัสผ่าน
+      final isSuccess = await AuthService.instance.login(rawEmail, rawPassword);
 
-    setState(() {
-      _isLoading = false;
-    });
+      if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: const [
-            Icon(Icons.check_circle_rounded, color: Colors.white),
-            SizedBox(width: 10),
-            Text('เข้าสู่ระบบสำเร็จแล้ว'),
-          ],
+      if (!isSuccess) {
+        _registerFailedAttempt();
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง';
+        });
+        return;
+      }
+
+      // 7. เข้าสู่ระบบสำเร็จ -> รีเซ็ตจำนวนครั้งที่ผิด
+      _failedAttempts = 0;
+      _lockoutUntil = null;
+
+      setState(() {
+        _isLoading = false;
+        _errorMessage = null;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: const [
+              Icon(Icons.check_circle_rounded, color: Colors.white),
+              SizedBox(width: 10),
+              Text('เข้าสู่ระบบสำเร็จแล้ว ยินดีต้อนรับ!'),
+            ],
+          ),
+          backgroundColor: AppTheme.primaryGreen,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          duration: const Duration(seconds: 2),
         ),
-        backgroundColor: AppTheme.primaryGreen,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-
-    if (widget.onLoginSuccess != null) {
-      widget.onLoginSuccess!();
-    } else if (Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
-    } else {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const MainAppShell()),
       );
+
+      if (widget.onLoginSuccess != null) {
+        widget.onLoginSuccess!();
+      } else if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const MainAppShell()),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'เกิดข้อผิดพลาดในการเชื่อมต่อระบบ กรุณาลองใหม่อีกครั้ง';
+      });
     }
   }
 
-  void _handleSocialLogin(String provider) async {
-    await AuthService.instance.login('$provider@healthymate.app', 'social');
-    if (!mounted) return;
-    
+  /// ดักจับการล็อกอินผิดซ้ำๆ เพื่อความปลอดภัย
+  void _registerFailedAttempt() {
+    _failedAttempts++;
+    if (_failedAttempts >= 5) {
+      _lockoutUntil = DateTime.now().add(const Duration(seconds: 30));
+    }
+  }
+
+  void _handleSocialLogin(String provider) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('เข้าสู่ระบบด้วย $provider สำเร็จแล้ว'),
-        backgroundColor: AppTheme.accentGreen,
+        content: Row(
+          children: [
+            const Icon(Icons.info_outline_rounded, color: Colors.white),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text('ระบบเข้าสู่ระบบด้วย $provider กำลังอยู่ในช่วงพัฒนา'),
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFF4A5568),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         duration: const Duration(seconds: 2),
       ),
     );
-
-    if (widget.onLoginSuccess != null) {
-      widget.onLoginSuccess!();
-    } else if (Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
-    } else {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const MainAppShell()),
-      );
-    }
   }
 
   @override
@@ -267,8 +350,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                 // Field 1 Input: Email/Username
                                 TextFormField(
                                   controller: _emailController,
+                                  focusNode: _emailFocusNode,
                                   keyboardType: TextInputType.emailAddress,
                                   textInputAction: TextInputAction.next,
+                                  onChanged: (_) {
+                                    if (_errorMessage != null) {
+                                      setState(() => _errorMessage = null);
+                                    }
+                                  },
                                   style: const TextStyle(
                                     fontSize: 15,
                                     color: AppTheme.textPrimary,
@@ -342,9 +431,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                 // Field 2 Input: Password
                                 TextFormField(
                                   controller: _passwordController,
+                                  focusNode: _passwordFocusNode,
                                   obscureText: !_isPasswordVisible,
                                   textInputAction: TextInputAction.done,
                                   onFieldSubmitted: (_) => _handleLogin(),
+                                  onChanged: (_) {
+                                    if (_errorMessage != null) {
+                                      setState(() => _errorMessage = null);
+                                    }
+                                  },
                                   style: const TextStyle(
                                     fontSize: 15,
                                     color: AppTheme.textPrimary,
