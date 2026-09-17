@@ -218,8 +218,10 @@ class HistoryBottomSheet extends StatelessWidget {
           SizedBox(
             height: 120,
             width: double.infinity,
-            child: CustomPaint(
-              painter: _WeightChartPainter(weights: weights),
+            child: RepaintBoundary(
+              child: CustomPaint(
+                painter: _WeightChartPainter(weights: weights),
+              ),
             ),
           ),
           const SizedBox(height: 12),

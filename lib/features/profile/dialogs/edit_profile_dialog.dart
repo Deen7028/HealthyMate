@@ -34,22 +34,22 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
   void initState() {
     super.initState();
     final user = widget.currentUser;
-    _firstCtrl = TextEditingController(text: user?.sFirstName ?? 'Alex');
-    _lastCtrl = TextEditingController(text: user?.sLastName ?? 'Morgan');
+    _firstCtrl = TextEditingController(text: user?.sFirstName ?? '');
+    _lastCtrl = TextEditingController(text: user?.sLastName ?? '');
     _ageCtrl = TextEditingController(
-      text: user?.nAge != null && user!.nAge > 0 ? user.nAge.toString() : '26',
+      text: user?.nAge != null && user!.nAge > 0 ? user.nAge.toString() : '',
     );
     _heightCtrl = TextEditingController(
       text: user?.nHeight != null && user!.nHeight > 0
           ? user.nHeight.toStringAsFixed(0)
-          : '168',
+          : '',
     );
     _weightCtrl = TextEditingController(
       text: user?.nWeight != null && user!.nWeight > 0
           ? user.nWeight.toStringAsFixed(1)
-          : '54.0',
+          : '',
     );
-    _currentGender = user?.sGender ?? 'female';
+    _currentGender = (user?.sGender.isNotEmpty == true) ? user!.sGender : 'male';
   }
 
   @override
@@ -154,15 +154,59 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
         ),
         ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF2E6339),
+            backgroundColor: Theme.of(context).colorScheme.primary,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
           onPressed: () async {
             final fName = _firstCtrl.text.trim();
             final lName = _lastCtrl.text.trim();
-            final age = int.tryParse(_ageCtrl.text) ?? 26;
-            final height = double.tryParse(_heightCtrl.text) ?? 168.0;
-            final weight = double.tryParse(_weightCtrl.text) ?? 54.0;
+
+            if (fName.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('กรุณากรอกชื่อ'),
+                  backgroundColor: Colors.redAccent,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+              return;
+            }
+
+            final age = int.tryParse(_ageCtrl.text) ?? widget.currentUser?.nAge ?? 0;
+            if (age < 0 || age > 130) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('อายุต้องอยู่ระหว่าง 1 - 130 ปี'),
+                  backgroundColor: Colors.redAccent,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+              return;
+            }
+
+            final height = double.tryParse(_heightCtrl.text) ?? widget.currentUser?.nHeight ?? 0.0;
+            if (height < 0.0 || height > 280.0) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('ส่วนสูงต้องอยู่ระหว่าง 30 - 280 ซม.'),
+                  backgroundColor: Colors.redAccent,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+              return;
+            }
+
+            final weight = double.tryParse(_weightCtrl.text) ?? widget.currentUser?.nWeight ?? 0.0;
+            if (weight < 0.0 || weight > 500.0) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('น้ำหนักต้องอยู่ระหว่าง 10 - 500 กก.'),
+                  backgroundColor: Colors.redAccent,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+              return;
+            }
 
             await widget.onSave(
               firstName: fName,

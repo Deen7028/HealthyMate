@@ -21,6 +21,7 @@ class EditGoalDialog extends StatefulWidget {
 class _EditGoalDialogState extends State<EditGoalDialog> {
   late final TextEditingController _titleCtrl;
   late final TextEditingController _timeCtrl;
+  late final TextEditingController _progressCtrl;
   late double _tempProgress;
 
   @override
@@ -29,12 +30,14 @@ class _EditGoalDialogState extends State<EditGoalDialog> {
     _titleCtrl = TextEditingController(text: widget.initialTitle);
     _timeCtrl = TextEditingController(text: widget.initialRemainingText);
     _tempProgress = widget.initialProgress;
+    _progressCtrl = TextEditingController(text: (_tempProgress * 100).toInt().toString());
   }
 
   @override
   void dispose() {
     _titleCtrl.dispose();
     _timeCtrl.dispose();
+    _progressCtrl.dispose();
     super.dispose();
   }
 
@@ -60,19 +63,46 @@ class _EditGoalDialogState extends State<EditGoalDialog> {
               ),
             ),
             const SizedBox(height: 16),
-            Text(
-              'ความคืบหน้า: ${(_tempProgress * 100).toInt()}%',
-              style: const TextStyle(fontWeight: FontWeight.w600),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'ความคืบหน้า:',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                SizedBox(
+                  width: 70,
+                  height: 36,
+                  child: TextField(
+                    controller: _progressCtrl,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    decoration: InputDecoration(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                      suffixText: '%',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    onChanged: (val) {
+                      final parsed = double.tryParse(val);
+                      if (parsed != null && parsed >= 0 && parsed <= 100) {
+                        setState(() {
+                          _tempProgress = parsed / 100.0;
+                        });
+                      }
+                    },
+                  ),
+                ),
+              ],
             ),
             Slider(
-              value: _tempProgress,
+              value: _tempProgress.clamp(0.0, 1.0),
               min: 0.0,
               max: 1.0,
-              divisions: 20,
-              activeColor: const Color(0xFF2E6339),
+              activeColor: Theme.of(context).colorScheme.primary,
               onChanged: (val) {
                 setState(() {
                   _tempProgress = val;
+                  _progressCtrl.text = (val * 100).toInt().toString();
                 });
               },
             ),
@@ -94,7 +124,7 @@ class _EditGoalDialogState extends State<EditGoalDialog> {
         ),
         ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF2E6339),
+            backgroundColor: Theme.of(context).colorScheme.primary,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
           onPressed: () async {

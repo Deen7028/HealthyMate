@@ -744,4 +744,82 @@ class AppDatabase {
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
+
+  Future<int> getWorkoutCount({required int userId}) async {
+    if (kIsWeb) return 0;
+    final db = await database;
+    if (db == null) return 0;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as cnt FROM $tableWorkouts WHERE nUserId = ?',
+      [userId],
+    );
+    if (result.isNotEmpty) {
+      return (result.first['cnt'] as num?)?.toInt() ?? 0;
+    }
+    return 0;
+  }
+
+  // ==========================================
+  // Connected Devices (TbHealthIntegrations)
+  // ==========================================
+
+  Future<List<Map<String, dynamic>>> getConnectedDevices(int userId) async {
+    if (kIsWeb) return [];
+    final db = await database;
+    if (db == null) return [];
+    return await db.query(
+      tableHealthIntegrations,
+      where: 'nUserId = ?',
+      whereArgs: [userId],
+      orderBy: 'nIntegrationId ASC',
+    );
+  }
+
+  Future<int> insertConnectedDevice({
+    required int userId,
+    required String providerName,
+    bool isSynced = true,
+  }) async {
+    if (kIsWeb) return 0;
+    final db = await database;
+    if (db == null) return 0;
+    return await db.insert(
+      tableHealthIntegrations,
+      {
+        'nUserId': userId,
+        'sProviderName': providerName,
+        'isSynced': isSynced ? 1 : 0,
+        'dtLastSyncedAt': DateTime.now().toIso8601String(),
+      },
+    );
+  }
+
+  Future<void> updateConnectedDeviceStatus({
+    required int integrationId,
+    required bool isSynced,
+  }) async {
+    if (kIsWeb) return;
+    final db = await database;
+    if (db == null) return;
+    await db.update(
+      tableHealthIntegrations,
+      {
+        'isSynced': isSynced ? 1 : 0,
+        'dtLastSyncedAt': DateTime.now().toIso8601String(),
+      },
+      where: 'nIntegrationId = ?',
+      whereArgs: [integrationId],
+    );
+  }
+
+  Future<void> deleteConnectedDevice(int integrationId) async {
+    if (kIsWeb) return;
+    final db = await database;
+    if (db == null) return;
+    await db.delete(
+      tableHealthIntegrations,
+      where: 'nIntegrationId = ?',
+      whereArgs: [integrationId],
+    );
+  }
 }

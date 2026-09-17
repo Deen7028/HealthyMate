@@ -47,7 +47,7 @@ class SettingsCard extends StatelessWidget {
             subtitle: 'Switch between light and dark themes',
             trailing: Switch(
               value: isDark,
-              activeTrackColor: const Color(0xFF2E6339),
+              activeTrackColor: Theme.of(context).colorScheme.primary,
               activeThumbColor: Colors.white,
               onChanged: onDarkModeChanged,
             ),
@@ -75,7 +75,7 @@ class SettingsCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: isLocationEnabled ? const Color(0xFF2E6339) : Colors.grey,
+                    color: isLocationEnabled ? Theme.of(context).colorScheme.primary : Colors.grey,
                   ),
                 ),
                 const SizedBox(width: 4),

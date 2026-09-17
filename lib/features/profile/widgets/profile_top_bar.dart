@@ -2,18 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:healthymate/core/services/theme_service.dart';
 
 class ProfileTopBar extends StatelessWidget {
-  final ImageProvider avatarProvider;
+  final ImageProvider? avatarProvider;
   final VoidCallback? onNotificationTap;
 
   const ProfileTopBar({
     super.key,
-    required this.avatarProvider,
+    this.avatarProvider,
     this.onNotificationTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final isDark = ThemeService.instance.isDarkMode;
+    final primaryColor = Theme.of(context).colorScheme.primary;
 
     return Padding(
       padding: const EdgeInsets.only(left: 20, right: 20, top: 12, bottom: 8),
@@ -26,11 +27,21 @@ class ProfileTopBar extends StatelessWidget {
             height: 36,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              image: DecorationImage(
-                image: avatarProvider,
-                fit: BoxFit.cover,
-              ),
+              color: primaryColor,
+              image: avatarProvider != null
+                  ? DecorationImage(
+                      image: avatarProvider!,
+                      fit: BoxFit.cover,
+                    )
+                  : null,
             ),
+            child: avatarProvider == null
+                ? const Icon(
+                    Icons.person,
+                    size: 20,
+                    color: Colors.white,
+                  )
+                : null,
           ),
           // App Title
           Text(
@@ -44,9 +55,9 @@ class ProfileTopBar extends StatelessWidget {
           ),
           // Notification Bell
           IconButton(
-            icon: const Icon(
+            icon: Icon(
               Icons.notifications_none_rounded,
-              color: Color(0xFF2E6339),
+              color: primaryColor,
               size: 24,
             ),
             onPressed: onNotificationTap ??

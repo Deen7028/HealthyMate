@@ -49,13 +49,23 @@ class HealthApiService {
   }
 
   /// 3. อัปเดตข้อมูลผู้ใช้ผ่าน PHP API (`user_profile.php`)
-  static Future<bool> updateUserProfile(TbUser user) async {
+  /// รองรับการส่ง `Map<String, dynamic>` จาก `toPublicProfileMap()` หรือ `TbUser`
+  static Future<bool> updateUserProfile(dynamic userOrMap) async {
     try {
       final uri = Uri.parse('$baseUrl/user_profile.php');
+      final Map<String, dynamic> payload;
+      if (userOrMap is Map<String, dynamic>) {
+        payload = userOrMap;
+      } else if (userOrMap is TbUser) {
+        payload = userOrMap.toPublicProfileMap();
+      } else {
+        payload = {};
+      }
+
       final response = await http.post(
         uri,
         headers: {'Content-Type': 'application/json; charset=utf-8'},
-        body: jsonEncode(user.toMap()),
+        body: jsonEncode(payload),
       ).timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {

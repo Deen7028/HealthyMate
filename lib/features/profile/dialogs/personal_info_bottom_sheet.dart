@@ -38,18 +38,18 @@ class PersonalInfoBottomSheet extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            _buildInfoRow('ชื่อเต็ม', fullName),
-            _buildInfoRow('อีเมล', email),
+            _buildInfoRow('ชื่อเต็ม', fullName.trim().isNotEmpty ? fullName : 'ยังไม่ระบุ'),
+            _buildInfoRow('อีเมล', email.trim().isNotEmpty ? email : 'ยังไม่ระบุ'),
             _buildInfoRow('เพศ', gender == 'female' ? 'หญิง' : 'ชาย'),
-            _buildInfoRow('อายุ', '$age ปี'),
-            _buildInfoRow('ส่วนสูง', '$height ซม.'),
-            _buildInfoRow('น้ำหนัก', '$weight กก.'),
+            _buildInfoRow('อายุ', age > 0 ? '$age ปี' : 'ยังไม่ระบุ'),
+            _buildInfoRow('ส่วนสูง', height > 0 ? '${height.toStringAsFixed(0)} ซม.' : 'ยังไม่ระบุ'),
+            _buildInfoRow('น้ำหนัก', weight > 0 ? '${weight.toStringAsFixed(1)} กก.' : 'ยังไม่ระบุ'),
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2E6339),
+                  backgroundColor: Theme.of(context).colorScheme.primary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),

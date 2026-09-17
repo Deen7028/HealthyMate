@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -32,35 +33,17 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLocationEnabled = true;
-  String _selectedUnit = 'Kilometers, Kilograms';
+  bool _isLoading = true;
   TbUser? _currentUser;
-  int _workoutCount = 142;
-  int _activeDays = 312;
 
-  // เป้าหมายหลัก (บันทึกและดึงจาก Database)
-  String _mainGoalTitle = 'ฝึกซ้อมมาราธอน';
-  double _goalProgress = 0.65;
-  String _goalRemainingText = 'เหลือเวลาอีก 12 สัปดาห์';
-
-  // อุปกรณ์ที่เชื่อมต่อ
-  final List<Map<String, dynamic>> _connectedDevices = [
-    {
-      'id': 'd1',
-      'name': 'Apple Watch Series 8',
-      'type': 'watch',
-      'icon': Icons.watch_rounded,
-      'status': 'กำลังเชื่อมต่ออยู่ (ซิงค์ล่าสุด 5 นาทีที่แล้ว)',
-      'isActive': true,
-    },
-    {
-      'id': 'd2',
-      'name': 'Smart Body Scale S2',
-      'type': 'scale',
-      'icon': Icons.monitor_weight_rounded,
-      'status': 'เชื่อมต่อแล้ว (ซิงค์ล่าสุด เมื่อเช้า)',
-      'isActive': true,
-    },
-  ];
+  // Hungarian Naming Conventions ตามมาตรฐานโปรเจกต์
+  int nWorkoutCount = 0;
+  int nActiveDays = 0;
+  String sMainGoalTitle = '';
+  double nGoalProgress = 0.0;
+  String sGoalRemainingText = '';
+  List<Map<String, dynamic>> lstConnectedDevices = [];
+  String sSelectedUnit = 'Kilometers, Kilograms';
 
   final ImagePicker _picker = ImagePicker();
 
@@ -89,49 +72,74 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (email.isNotEmpty) {
         user = await AppDatabase.instance.getUserByEmail(email);
       }
-      user ??= await AppDatabase.instance.getUser(userId: 1);
 
-      // โหลดสถิติ workout
-      final workouts = await AppDatabase.instance.getWorkouts(userId: user?.nUserId ?? 1);
-      final count = workouts.isNotEmpty ? workouts.length : 142;
-
-      // คำนวณวัน Active
-      int days = 312;
-      if (user != null) {
-        final diff = DateTime.now().difference(user.dtCreatedAt).inDays;
-        if (diff > 0) days = diff;
+      // ป้องกันช่องโหว่ Data Leak: หาก Authentication ผิดพลาดหรือไม่พบบัญชี ให้ logout ทันที ห้าม fallback userId: 1
+      if (user == null) {
+        debugPrint('ProfileScreen: No valid authenticated user found, forcing logout.');
+        if (mounted) {
+          await AuthService.instance.logout();
+        }
+        return;
       }
 
-      // โหลดเป้าหมายจาก Database
-      final goalData = await AppDatabase.instance.getUserGoal(user?.nUserId ?? 1);
+      final currentUserId = user.nUserId;
+
+      // เพิ่มประสิทธิภาพด้วย Future.wait เพื่อดึงข้อมูลพร้อมกันแบบ Concurrent
+      final results = await Future.wait([
+        AppDatabase.instance.getWorkoutCount(userId: currentUserId),
+        AppDatabase.instance.getUserGoal(currentUserId),
+        AppDatabase.instance.getConnectedDevices(currentUserId),
+        AppDatabase.instance.getUserUnitPreference(currentUserId),
+        Geolocator.isLocationServiceEnabled(),
+      ]);
+
+      final count = results[0] as int;
+      final goalData = results[1] as Map<String, dynamic>?;
+      final devices = results[2] as List<Map<String, dynamic>>;
+      final unit = results[3] as String;
+      final locStatus = results[4] as bool;
+
+      // คำนวณวัน Active จากวันที่สร้างบัญชี (dtCreatedAt)
+      final diff = DateTime.now().difference(user.dtCreatedAt).inDays;
+      final days = diff >= 0 ? diff + 1 : 1;
+
+      String goalTitle = '';
+      double goalProgress = 0.0;
+      String goalRemainingText = '';
       if (goalData != null) {
-        _mainGoalTitle = goalData['sTitle'] ?? _mainGoalTitle;
-        _goalProgress = (goalData['nProgress'] as num?)?.toDouble() ?? _goalProgress;
-        _goalRemainingText = goalData['sRemainingText'] ?? _goalRemainingText;
+        goalTitle = goalData['sTitle']?.toString() ?? '';
+        goalProgress = (goalData['nProgress'] as num?)?.toDouble() ?? 0.0;
+        goalRemainingText = goalData['sRemainingText']?.toString() ?? '';
       }
-
-      // โหลดหน่วยวัดที่บันทึกไว้
-      final unit = await AppDatabase.instance.getUserUnitPreference(user?.nUserId ?? 1);
-
-      // ตรวจสอบสิทธิ์ Location
-      final locStatus = await Geolocator.isLocationServiceEnabled();
 
       if (mounted) {
         setState(() {
           _currentUser = user;
           _isLocationEnabled = locStatus;
-          _selectedUnit = unit;
-          _workoutCount = count;
-          _activeDays = days;
+          sSelectedUnit = unit;
+          nWorkoutCount = count;
+          nActiveDays = days;
+          sMainGoalTitle = goalTitle;
+          nGoalProgress = goalProgress;
+          sGoalRemainingText = goalRemainingText;
+          lstConnectedDevices = devices;
+          _isLoading = false;
         });
       }
     } catch (e) {
       debugPrint('Error loading profile data: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
   /// เลือกรูปและคัดลอกไฟล์รูปเก็บไว้ใน App Documents Directory ถาวร
   Future<void> _pickAndSaveProfileImage() async {
+    final themePrimary = Theme.of(context).colorScheme.primary;
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -148,36 +156,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Theme.of(context).primaryColor,
+                  color: themePrimary,
                 ),
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library_rounded, color: Color(0xFF2E6339)),
+              leading: Icon(Icons.photo_library_rounded, color: themePrimary),
               title: const Text('เลือกจากแกลเลอรี'),
               onTap: () async {
                 Navigator.pop(ctx);
-                final picked = await _picker.pickImage(
-                  source: ImageSource.gallery,
-                  imageQuality: 85,
-                );
-                if (picked != null) {
-                  await _saveImageLocally(picked.path);
-                }
+                await _handleImagePick(ImageSource.gallery);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.camera_alt_rounded, color: Color(0xFF2E6339)),
+              leading: Icon(Icons.camera_alt_rounded, color: themePrimary),
               title: const Text('ถ่ายรูปด้วยกล้อง'),
               onTap: () async {
                 Navigator.pop(ctx);
-                final picked = await _picker.pickImage(
-                  source: ImageSource.camera,
-                  imageQuality: 85,
-                );
-                if (picked != null) {
-                  await _saveImageLocally(picked.path);
-                }
+                await _handleImagePick(ImageSource.camera);
               },
             ),
             if (_currentUser?.sProfileImagePath.isNotEmpty == true)
@@ -195,13 +191,81 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  /// บันทึกรูปลง Documents Directory เพื่อความถาวร
+  Future<void> _handleImagePick(ImageSource source) async {
+    try {
+      final picked = await _picker.pickImage(
+        source: source,
+        imageQuality: 85,
+      );
+      if (picked != null) {
+        await _saveImageLocally(picked.path);
+      }
+    } on PlatformException catch (pe) {
+      debugPrint('Permission error picking image: $pe');
+      if (mounted) {
+        _showPermissionDeniedDialog();
+      }
+    } catch (e) {
+      debugPrint('Unexpected error picking image: $e');
+      if (e.toString().toLowerCase().contains('denied') ||
+          e.toString().toLowerCase().contains('permission')) {
+        if (mounted) {
+          _showPermissionDeniedDialog();
+        }
+      }
+    }
+  }
+
+  void _showPermissionDeniedDialog() {
+    final themePrimary = Theme.of(context).colorScheme.primary;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 28),
+            SizedBox(width: 8),
+            Text(
+              'ไม่ได้รับสิทธิ์เข้าถึง',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+          ],
+        ),
+        content: const Text(
+          'แอปพลิเคชันต้องการสิทธิ์การเข้าถึงกล้องหรือคลังภาพเพื่อเปลี่ยนรูปโปรไฟล์ของคุณ กรุณาอนุญาตสิทธิ์ในการตั้งค่าของอุปกรณ์',
+          style: TextStyle(fontSize: 14, color: Color(0xFF5A6559), height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('ยกเลิก', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: themePrimary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await Geolocator.openAppSettings();
+            },
+            child: const Text('ไปที่การตั้งค่า', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// บันทึกรูปลง Documents Directory เพื่อความถาวร พร้อม timestamp ป้องกัน Image Cache Bug
   Future<void> _saveImageLocally(String tempPath) async {
     try {
       final docDir = await getApplicationDocumentsDirectory();
       final userId = _currentUser?.nUserId ?? 1;
       final fileExtension = tempPath.split('.').last;
-      final permanentPath = '${docDir.path}/profile_avatar_$userId.$fileExtension';
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final permanentPath = '${docDir.path}/profile_avatar_${userId}_$timestamp.$fileExtension';
 
       // คัดลอกไฟล์จาก cache ไปยัง Documents ถาวร
       final tempFile = File(tempPath);
@@ -227,14 +291,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(path.isEmpty ? 'ลบรูปโปรไฟล์แล้ว' : 'บันทึกรูปโปรไฟล์ถาวรเรียบร้อยแล้ว'),
-          backgroundColor: const Color(0xFF2E6339),
+          backgroundColor: Theme.of(context).colorScheme.primary,
           behavior: SnackBarBehavior.floating,
         ),
       );
     }
   }
 
-  ImageProvider _getAvatarImageProvider() {
+  ImageProvider? _getAvatarImageProvider() {
     final path = _currentUser?.sProfileImagePath ?? '';
     if (path.isNotEmpty) {
       final file = File(path);
@@ -242,9 +306,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return FileImage(file);
       }
     }
-    return const NetworkImage(
-      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
-    );
+    return null;
   }
 
   Future<void> _handleLocationTap() async {
@@ -271,7 +333,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           content: Text(enabled
               ? 'บริการตำแหน่งเปิดใช้งานแล้ว 📍'
               : 'บริการตำแหน่งยังไม่เปิดใช้งาน'),
-          backgroundColor: const Color(0xFF2E6339),
+          backgroundColor: Theme.of(context).colorScheme.primary,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -287,10 +349,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       builder: (context) {
         return UnitPickerBottomSheet(
-          selectedUnit: _selectedUnit,
+          selectedUnit: sSelectedUnit,
           onUnitSelected: (unit) async {
             setState(() {
-              _selectedUnit = unit;
+              sSelectedUnit = unit;
             });
             await AppDatabase.instance.saveUserUnitPreference(
               _currentUser?.nUserId ?? 1,
@@ -338,14 +400,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => EditGoalDialog(
-        initialTitle: _mainGoalTitle,
-        initialProgress: _goalProgress,
-        initialRemainingText: _goalRemainingText,
+        initialTitle: sMainGoalTitle,
+        initialProgress: nGoalProgress,
+        initialRemainingText: sGoalRemainingText,
         onSave: (newTitle, newProgress, newRemaining) async {
           setState(() {
-            _mainGoalTitle = newTitle;
-            _goalProgress = newProgress;
-            _goalRemainingText = newRemaining;
+            sMainGoalTitle = newTitle;
+            nGoalProgress = newProgress;
+            sGoalRemainingText = newRemaining;
           });
 
           await AppDatabase.instance.saveUserGoal(
@@ -360,6 +422,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showConnectedDevicesBottomSheet() {
+    final userId = _currentUser?.nUserId ?? 1;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -368,10 +431,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        return ConnectedDevicesBottomSheet(
-          connectedDevices: _connectedDevices,
-          onDevicesUpdated: () {
-            setState(() {});
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            return ConnectedDevicesBottomSheet(
+              connectedDevices: lstConnectedDevices,
+              onAddDevice: (providerName) async {
+                await AppDatabase.instance.insertConnectedDevice(
+                  userId: userId,
+                  providerName: providerName,
+                  isSynced: true,
+                );
+                final updated = await AppDatabase.instance.getConnectedDevices(userId);
+                if (mounted) {
+                  setState(() {
+                    lstConnectedDevices = updated;
+                  });
+                }
+                setModalState(() {});
+              },
+              onToggleDevice: (integrationId, isActive) async {
+                await AppDatabase.instance.updateConnectedDeviceStatus(
+                  integrationId: integrationId,
+                  isSynced: isActive,
+                );
+                final updated = await AppDatabase.instance.getConnectedDevices(userId);
+                if (mounted) {
+                  setState(() {
+                    lstConnectedDevices = updated;
+                  });
+                }
+                setModalState(() {});
+              },
+              onDeleteDevice: (integrationId) async {
+                await AppDatabase.instance.deleteConnectedDevice(integrationId);
+                final updated = await AppDatabase.instance.getConnectedDevices(userId);
+                if (mounted) {
+                  setState(() {
+                    lstConnectedDevices = updated;
+                  });
+                }
+                setModalState(() {});
+              },
+            );
           },
         );
       },
@@ -388,12 +489,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       builder: (context) {
         return PersonalInfoBottomSheet(
-          fullName: user?.sFullName.isNotEmpty == true ? user!.sFullName : 'Alex Morgan',
+          fullName: user?.sFullName ?? '',
           email: user?.sEmail ?? AuthService.instance.currentUserEmail,
-          gender: user?.sGender ?? 'female',
-          age: user?.nAge ?? 26,
-          height: user?.nHeight ?? 168.0,
-          weight: user?.nWeight ?? 54.0,
+          gender: user?.sGender ?? 'male',
+          age: user?.nAge ?? 0,
+          height: user?.nHeight ?? 0.0,
+          weight: user?.nWeight ?? 0.0,
           onEditTap: _showEditProfileDialog,
         );
       },
@@ -412,6 +513,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showPolicyDialog(String title, String content) {
+    final themePrimary = Theme.of(context).colorScheme.primary;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -426,7 +528,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         actions: [
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2E6339)),
+            style: ElevatedButton.styleFrom(backgroundColor: themePrimary),
             onPressed: () => Navigator.pop(ctx),
             child: const Text('ปิด', style: TextStyle(color: Colors.white)),
           ),
@@ -438,17 +540,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = ThemeService.instance.isDarkMode;
-    final userName = (_currentUser != null && _currentUser!.sFirstName.isNotEmpty)
-        ? _currentUser!.sFullName
-        : 'Alex Morgan';
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: isDark ? const Color(0xFF131915) : const Color(0xFFF3F6F2),
+        body: SafeArea(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(color: primaryColor),
+                const SizedBox(height: 16),
+                const Text(
+                  'กำลังโหลดข้อมูลโปรไฟล์...',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF5A6559),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    final userName = (_currentUser != null && _currentUser!.sFullName.trim().isNotEmpty)
+        ? _currentUser!.sFullName.trim()
+        : 'ผู้ใช้งาน';
     final userEmail = (_currentUser != null && _currentUser!.sEmail.isNotEmpty)
         ? _currentUser!.sEmail
         : (AuthService.instance.currentUserEmail.isNotEmpty
             ? AuthService.instance.currentUserEmail
-            : 'alex.morgan@example.com');
+            : '');
     final avatarProvider = _getAvatarImageProvider();
-    final activeDeviceCount =
-        _connectedDevices.where((d) => d['isActive'] == true).length;
+    final activeDeviceCount = lstConnectedDevices
+        .where((d) => (d['isSynced'] as num?)?.toInt() == 1)
+        .length;
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF131915) : const Color(0xFFF3F6F2),
@@ -465,9 +595,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 avatarProvider: avatarProvider,
                 name: userName,
                 email: userEmail,
-                goalTitle: _mainGoalTitle,
-                goalProgress: _goalProgress,
-                goalRemainingText: _goalRemainingText,
+                goalTitle: sMainGoalTitle,
+                goalProgress: nGoalProgress,
+                goalRemainingText: sGoalRemainingText,
                 onAvatarTap: _pickAndSaveProfileImage,
                 onEditProfileTap: _showEditProfileDialog,
                 onEditGoalTap: _showEditGoalDialog,
@@ -477,8 +607,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
               // 3. Quick Stats (สถิติย่อ)
               QuickStatsCard(
-                workoutCount: _workoutCount,
-                activeDays: _activeDays,
+                workoutCount: nWorkoutCount,
+                activeDays: nActiveDays,
               ),
 
               const SizedBox(height: 20),
@@ -488,7 +618,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 8),
               SettingsCard(
                 isLocationEnabled: _isLocationEnabled,
-                selectedUnit: _selectedUnit,
+                selectedUnit: sSelectedUnit,
                 onDarkModeChanged: (val) async {
                   await ThemeService.instance.setDarkMode(val);
                   setState(() {});

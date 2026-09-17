@@ -32,7 +32,7 @@ class UnitPickerBottomSheet extends StatelessWidget {
               title: const Text('เมตริก (กิโลเมตร, กิโลกรัม)'),
               subtitle: const Text('Kilometers, Kilograms'),
               trailing: selectedUnit.startsWith('Kilo')
-                  ? const Icon(Icons.check, color: Color(0xFF2E6339))
+                  ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
                   : null,
               onTap: () {
                 onUnitSelected('Kilometers, Kilograms');
@@ -43,7 +43,7 @@ class UnitPickerBottomSheet extends StatelessWidget {
               title: const Text('อิมพีเรียล (ไมล์, ปอนด์)'),
               subtitle: const Text('Miles, Pounds'),
               trailing: selectedUnit.startsWith('Mile')
-                  ? const Icon(Icons.check, color: Color(0xFF2E6339))
+                  ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
                   : null,
               onTap: () {
                 onUnitSelected('Miles, Pounds');

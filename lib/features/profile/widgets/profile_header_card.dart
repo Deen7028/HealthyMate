@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:healthymate/core/services/theme_service.dart';
 
 class ProfileHeaderCard extends StatelessWidget {
-  final ImageProvider avatarProvider;
+  final ImageProvider? avatarProvider;
   final String name;
   final String email;
   final String goalTitle;
@@ -14,7 +14,7 @@ class ProfileHeaderCard extends StatelessWidget {
 
   const ProfileHeaderCard({
     super.key,
-    required this.avatarProvider,
+    this.avatarProvider,
     required this.name,
     required this.email,
     required this.goalTitle,
@@ -28,6 +28,8 @@ class ProfileHeaderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = ThemeService.instance.isDarkMode;
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final hasGoal = goalTitle.trim().isNotEmpty;
 
     return Container(
       width: double.infinity,
@@ -57,12 +59,25 @@ class ProfileHeaderCard extends StatelessWidget {
                     height: 104,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFFE2E7DF), width: 3),
-                      image: DecorationImage(
-                        image: avatarProvider,
-                        fit: BoxFit.cover,
+                      color: primaryColor,
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF3B4D41) : const Color(0xFFE2E7DF),
+                        width: 3,
                       ),
+                      image: avatarProvider != null
+                          ? DecorationImage(
+                              image: avatarProvider!,
+                              fit: BoxFit.cover,
+                            )
+                          : null,
                     ),
+                    child: avatarProvider == null
+                        ? const Icon(
+                            Icons.person,
+                            size: 58,
+                            color: Colors.white,
+                          )
+                        : null,
                   ),
                 ),
                 Positioned(
@@ -74,9 +89,12 @@ class ProfileHeaderCard extends StatelessWidget {
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF2E6339),
+                        color: primaryColor,
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
+                        border: Border.all(
+                          color: isDark ? const Color(0xFF1E2822) : Colors.white,
+                          width: 2,
+                        ),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.15),
@@ -149,75 +167,101 @@ class ProfileHeaderCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFE8F3EB),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.radar_rounded,
-                          size: 18,
-                          color: Color(0xFF2E6339),
-                        ),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: primaryColor.withValues(alpha: isDark ? 0.25 : 0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.radar_rounded,
+                              size: 18,
+                              color: primaryColor,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'เป้าหมายหลัก',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? const Color(0xFFB0BEB3) : const Color(0xFF5A6559),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'เป้าหมายหลัก',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF5A6559),
-                        ),
+                      Icon(
+                        Icons.edit_outlined,
+                        size: 16,
+                        color: isDark ? Colors.grey.shade400 : const Color(0xFF6F7A72),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    goalTitle,
+                    hasGoal ? goalTitle : 'ยังไม่ได้กำหนดเป้าหมาย',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
-                      color: isDark ? Colors.white : const Color(0xFF1E2822),
+                      color: hasGoal
+                          ? (isDark ? Colors.white : const Color(0xFF1E2822))
+                          : (isDark ? Colors.grey.shade400 : const Color(0xFF8C968E)),
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  // Progress Bar & Percentage
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: LinearProgressIndicator(
-                            value: goalProgress,
-                            minHeight: 7,
-                            backgroundColor: isDark ? Colors.black26 : const Color(0xFFE2E7DF),
-                            valueColor: const AlwaysStoppedAnimation<Color>(
-                              Color(0xFF2E6339),
+                  if (hasGoal) ...[
+                    const SizedBox(height: 10),
+                    // Progress Bar & Percentage
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: LinearProgressIndicator(
+                              value: goalProgress.clamp(0.0, 1.0),
+                              minHeight: 7,
+                              backgroundColor: isDark ? Colors.black26 : const Color(0xFFE2E7DF),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                primaryColor,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
+                        const SizedBox(width: 12),
+                        Text(
+                          '${(goalProgress * 100).toInt()}%',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? const Color(0xFFB0BEB3) : const Color(0xFF5A6559),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (goalRemainingText.isNotEmpty) ...[
+                      const SizedBox(height: 8),
                       Text(
-                        '${(goalProgress * 100).toInt()}%',
+                        goalRemainingText,
                         style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF5A6559),
+                          fontSize: 12,
+                          color: Color(0xFF8C968E),
                         ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    goalRemainingText,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF8C968E),
+                  ] else ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      'แตะที่นี่เพื่อตั้งเป้าหมายสุขภาพหรือการออกกำลังกายของคุณ',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: primaryColor,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),

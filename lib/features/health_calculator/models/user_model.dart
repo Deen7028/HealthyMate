@@ -92,6 +92,24 @@ class TbUser {
     };
   }
 
+  /// สำหรับส่งข้อมูล Profile ไปยัง API ภายนอก โดยไม่แนบ Password Hash หรือข้อมูลความปลอดภัยลับ
+  Map<String, dynamic> toPublicProfileMap() {
+    return {
+      'nUserId': nUserId,
+      'sEmail': sEmail,
+      'sFirstName': sFirstName,
+      'sLastName': sLastName,
+      'nAge': nAge,
+      'nHeight': nHeight,
+      'nWeight': nWeight,
+      'sGender': sGender,
+      'sActivityLevel': sActivityLevel,
+      'isDarkMode': isDarkMode ? 1 : 0,
+      'sProfileImagePath': sProfileImagePath,
+      'dtCreatedAt': dtCreatedAt.toIso8601String(),
+    };
+  }
+
   factory TbUser.fromMap(Map<String, dynamic> map) {
     String firstName = map['sFirstName']?.toString() ?? '';
     String lastName = map['sLastName']?.toString() ?? '';

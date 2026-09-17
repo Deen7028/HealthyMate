@@ -75,19 +75,22 @@ class HealthCalculatorState extends ChangeNotifier {
         user = await _db.getUserByEmail(loggedInEmail);
       }
 
-      // ถ้ายังไม่พบ ให้ดึง user คนแรกใน DB หรือ fallback
-      user ??= await _db.getUser(userId: 1);
-
-      if (user != null) {
-        _currentUser = user;
-        _gender = user.genderEnum;
-        _age = user.nAge;
-        _height = user.nHeight;
-        _weight = user.nWeight;
-        _activityLevel = user.activityLevelObj;
+      // ป้องกันช่องโหว่ Hardcode User ID (Data Leak Risk):
+      // หาก Session ไม่ถูกต้อง หรือไม่พบผู้ใช้ในฐานข้อมูล ห้ามดึง userId: 1 เด็ดขาด
+      if (user == null) {
+        debugPrint('HealthCalculatorState: No valid authenticated user found, forcing logout.');
+        await AuthService.instance.logout();
+        return;
       }
 
-      final activeUserId = _currentUser?.nUserId ?? 1;
+      _currentUser = user;
+      _gender = user.genderEnum;
+      _age = user.nAge;
+      _height = user.nHeight;
+      _weight = user.nWeight;
+      _activityLevel = user.activityLevelObj;
+
+      final activeUserId = user.nUserId;
 
       // 2. ดึงประวัติสุขภาพของคนนั้นๆ (แยกตาม userId)
       final serverRecords = await HealthApiService.fetchHealthRecords(userId: activeUserId);
@@ -113,7 +116,7 @@ class HealthCalculatorState extends ChangeNotifier {
 
       // 3. คำนวณผลลัพธ์จากข้อมูลจริงของผู้ใช้คนนั้น
       if (_weight > 0 && _height > 0 && _age > 0) {
-        calculate(recordHistory: false, syncToDb: false);
+        await calculate(recordHistory: false, syncToDb: false);
       } else {
         _bmi = 0.0;
         _bmr = 0.0;
@@ -176,7 +179,7 @@ class HealthCalculatorState extends ChangeNotifier {
     _safeNotifyListeners();
   }
 
-  void calculate({bool recordHistory = false, bool syncToDb = false}) {
+  Future<void> calculate({bool recordHistory = false, bool syncToDb = false}) async {
     final calculatedBmi = HealthCalculator.calculateBMI(
       weightKg: _weight,
       heightCm: _height,
@@ -200,7 +203,11 @@ class HealthCalculatorState extends ChangeNotifier {
     _bmiCategory = HealthCalculator.getBMICategory(_bmi);
     _targets = HealthCalculator.calculateTargets(_tdee);
 
-    final activeUserId = _currentUser?.nUserId ?? 1;
+    final activeUserId = _currentUser?.nUserId;
+    if (activeUserId == null) {
+      _safeNotifyListeners();
+      return;
+    }
 
     if (recordHistory) {
       final newRecord = TbHealthRecord(
@@ -217,9 +224,13 @@ class HealthCalculatorState extends ChangeNotifier {
 
       _historyList.insert(0, newRecord);
 
-      // บันทึกลง Local Database & ยิงไปบันทึกบน PHP Database Server ตาม userId ของคนนั้นๆ
-      _db.insertHealthRecord(newRecord);
-      HealthApiService.saveHealthRecord(newRecord);
+      // บันทึกลง Local Database & ยิงไปบันทึกบน PHP Database Server พร้อม try-catch
+      await _db.insertHealthRecord(newRecord);
+      try {
+        await HealthApiService.saveHealthRecord(newRecord);
+      } catch (e) {
+        debugPrint('Failed to sync health record to cloud: $e');
+      }
     }
 
     if (syncToDb) {
@@ -237,16 +248,20 @@ class HealthCalculatorState extends ChangeNotifier {
         isDarkMode: _currentUser?.isDarkMode ?? false,
       );
 
-      // อัปเดตลง Local Database & ส่งไปอัปเดตบน PHP Database Server ตาม userId ของคนนั้นๆ
-      _db.updateUser(_currentUser!);
-      HealthApiService.updateUserProfile(_currentUser!);
+      // อัปเดตลง Local Database & ส่งไปอัปเดตบน PHP Database Server โดยใช้ toPublicProfileMap() เพื่อตัด sPasswordHash
+      await _db.updateUser(_currentUser!);
+      try {
+        await HealthApiService.updateUserProfile(_currentUser!.toPublicProfileMap());
+      } catch (e) {
+        debugPrint('Failed to sync user profile to cloud: $e');
+      }
     }
 
     _safeNotifyListeners();
   }
 
-  void saveToProfileAndDashboard() {
-    calculate(recordHistory: true, syncToDb: true);
+  Future<void> saveToProfileAndDashboard() async {
+    await calculate(recordHistory: true, syncToDb: true);
     _isSyncedToDashboard = true;
     _lastSyncedAt = DateTime.now();
     _safeNotifyListeners();

@@ -202,9 +202,6 @@ class _WorkoutHistoryScreenState extends State<WorkoutHistoryScreen> {
           } catch (_) {}
         }
 
-        final LatLng centerPoint = routePoints.isNotEmpty
-            ? routePoints.first
-            : const LatLng(13.7563, 100.5018);
 
         return Container(
           margin: const EdgeInsets.only(bottom: 14),
@@ -296,116 +293,111 @@ class _WorkoutHistoryScreenState extends State<WorkoutHistoryScreen> {
                 ],
               ),
 
-              // แสดงแผนที่ของกิจกรรมการออกกำลังกาย
-              const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: SizedBox(
-                  height: 200,
-                  width: double.infinity,
-                  child: Stack(
-                    children: [
-                      GoogleMap(
-                        initialCameraPosition: CameraPosition(
-                          target: centerPoint,
-                          zoom: 16.0,
-                        ),
-                        liteModeEnabled: false,
-                        zoomGesturesEnabled: false,
-                        zoomControlsEnabled: false,
-                        scrollGesturesEnabled: false,
-                        rotateGesturesEnabled: false,
-                        tiltGesturesEnabled: false,
-                        myLocationButtonEnabled: false,
-                        mapToolbarEnabled: false,
-                        compassEnabled: false,
-                        mapType: MapType.normal,
-                        onMapCreated: (GoogleMapController controller) {
-                          if (routePoints.length >= 2) {
-                            double minLat = routePoints.first.latitude;
-                            double maxLat = routePoints.first.latitude;
-                            double minLng = routePoints.first.longitude;
-                            double maxLng = routePoints.first.longitude;
+              // แสดงแผนที่เฉพาะเมื่อมีพิกัดเส้นทาง GPS บันทึกไว้จริง
+              // หากไม่มีเส้นทาง ให้ซ่อนแผนที่ออก เพื่อความสะอาดตา ไม่กระโดดไปพิกัดกรุงเทพฯ (Bangkok Fallback) และประหยัดทรัพยากร GPU
+              if (routePoints.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: SizedBox(
+                    height: 200,
+                    width: double.infinity,
+                    child: Stack(
+                      children: [
+                        GoogleMap(
+                          initialCameraPosition: CameraPosition(
+                            target: routePoints.first,
+                            zoom: 16.0,
+                          ),
+                          liteModeEnabled: false,
+                          zoomGesturesEnabled: false,
+                          zoomControlsEnabled: false,
+                          scrollGesturesEnabled: false,
+                          rotateGesturesEnabled: false,
+                          tiltGesturesEnabled: false,
+                          myLocationButtonEnabled: false,
+                          mapToolbarEnabled: false,
+                          compassEnabled: false,
+                          mapType: MapType.normal,
+                          onMapCreated: (GoogleMapController controller) {
+                            if (routePoints.length >= 2) {
+                              double minLat = routePoints.first.latitude;
+                              double maxLat = routePoints.first.latitude;
+                              double minLng = routePoints.first.longitude;
+                              double maxLng = routePoints.first.longitude;
 
-                            for (final pt in routePoints) {
-                              if (pt.latitude < minLat) minLat = pt.latitude;
-                              if (pt.latitude > maxLat) maxLat = pt.latitude;
-                              if (pt.longitude < minLng) minLng = pt.longitude;
-                              if (pt.longitude > maxLng) maxLng = pt.longitude;
+                              for (final pt in routePoints) {
+                                if (pt.latitude < minLat) minLat = pt.latitude;
+                                if (pt.latitude > maxLat) maxLat = pt.latitude;
+                                if (pt.longitude < minLng) minLng = pt.longitude;
+                                if (pt.longitude > maxLng) maxLng = pt.longitude;
+                              }
+
+                              final bounds = LatLngBounds(
+                                southwest: LatLng(minLat, minLng),
+                                northeast: LatLng(maxLat, maxLng),
+                              );
+                              controller.animateCamera(
+                                CameraUpdate.newLatLngBounds(bounds, 36),
+                              );
                             }
-
-                            final bounds = LatLngBounds(
-                              southwest: LatLng(minLat, minLng),
-                              northeast: LatLng(maxLat, maxLng),
-                            );
-                            controller.animateCamera(
-                              CameraUpdate.newLatLngBounds(bounds, 36),
-                            );
-                          }
-                        },
-                        polylines: routePoints.length >= 2
-                            ? {
-                                Polyline(
-                                  polylineId: PolylineId('history_route_$index'),
-                                  color: const Color(0xFFFC5200), // สีส้มสไตล์ Strava
-                                  width: 4,
-                                  points: routePoints,
-                                ),
-                              }
-                            : {},
-                        markers: routePoints.isNotEmpty
-                            ? {
-                                Marker(
-                                  markerId: MarkerId('start_$index'),
-                                  position: routePoints.first,
-                                  icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-                                ),
-                                if (routePoints.length >= 2)
-                                  Marker(
-                                    markerId: MarkerId('end_$index'),
-                                    position: routePoints.last,
-                                    icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+                          },
+                          polylines: routePoints.length >= 2
+                              ? {
+                                  Polyline(
+                                    polylineId: PolylineId('history_route_$index'),
+                                    color: const Color(0xFFFC5200), // สีส้มสไตล์ Strava
+                                    width: 4,
+                                    points: routePoints,
                                   ),
-                              }
-                            : {
-                                Marker(
-                                  markerId: MarkerId('pin_$index'),
-                                  position: centerPoint,
-                                  icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-                                ),
-                              },
-                      ),
-                      // ป้าย Overlay มินิระบุแผนที่เส้นทาง
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.65),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.map_rounded, color: Colors.white, size: 12),
-                              const SizedBox(width: 4),
-                              Text(
-                                routePoints.length >= 2 ? 'เส้นทางจริง' : 'ตำแหน่งกิจกรรม',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                }
+                              : {},
+                          markers: {
+                            Marker(
+                              markerId: MarkerId('start_$index'),
+                              position: routePoints.first,
+                              icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+                            ),
+                            if (routePoints.length >= 2)
+                              Marker(
+                                markerId: MarkerId('end_$index'),
+                                position: routePoints.last,
+                                icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
                               ),
-                            ],
+                          },
+                        ),
+                        // ป้าย Overlay มินิระบุแผนที่เส้นทาง
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.65),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.map_rounded, color: Colors.white, size: 12),
+                                const SizedBox(width: 4),
+                                Text(
+                                  routePoints.length >= 2 ? 'เส้นทางจริง' : 'ตำแหน่งกิจกรรม',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
+              ],
 
               const SizedBox(height: 14),
               const Divider(height: 1, color: Color(0xFFF0F4EF)),
