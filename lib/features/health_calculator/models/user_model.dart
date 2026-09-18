@@ -110,18 +110,6 @@ class TbUser {
     };
   }
 
-  static double? _toDoubleNullable(dynamic val) {
-    if (val == null) return null;
-    if (val is num) return val.toDouble();
-    return double.tryParse(val.toString());
-  }
-
-  static int? _toIntNullable(dynamic val) {
-    if (val == null) return null;
-    if (val is num) return val.toInt();
-    return int.tryParse(val.toString());
-  }
-
   static int _toInt(dynamic val, [int defaultVal = 0]) {
     if (val == null) return defaultVal;
     if (val is num) return val.toInt();
@@ -136,11 +124,6 @@ class TbUser {
       firstName = parts.isNotEmpty ? parts.first : 'ผู้ใช้งาน';
       lastName = parts.length > 1 ? parts.sublist(1).join(' ') : '';
     }
-
-    final isDarkVal = map['isDarkMode'];
-    final bool isDark = isDarkVal is bool
-        ? isDarkVal
-        : (_toInt(isDarkVal) == 1);
 
     return TbUser(
       nUserId: _toInt(map['nUserId'], 1),

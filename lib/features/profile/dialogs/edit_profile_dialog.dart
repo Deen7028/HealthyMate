@@ -37,19 +37,19 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
     _firstCtrl = TextEditingController(text: user?.sFirstName ?? '');
     _lastCtrl = TextEditingController(text: user?.sLastName ?? '');
     _ageCtrl = TextEditingController(
-      text: user?.nAge != null && user!.nAge > 0 ? user.nAge.toString() : '',
+      text: (user?.nAge != null && user!.nAge! > 0) ? user.nAge.toString() : '',
     );
     _heightCtrl = TextEditingController(
-      text: user?.nHeight != null && user!.nHeight > 0
-          ? user.nHeight.toStringAsFixed(0)
+      text: (user?.nHeight != null && user!.nHeight! > 0)
+          ? user.nHeight!.toStringAsFixed(0)
           : '',
     );
     _weightCtrl = TextEditingController(
-      text: user?.nWeight != null && user!.nWeight > 0
-          ? user.nWeight.toStringAsFixed(1)
+      text: (user?.nWeight != null && user!.nWeight! > 0)
+          ? user.nWeight!.toStringAsFixed(1)
           : '',
     );
-    _currentGender = (user?.sGender.isNotEmpty == true) ? user!.sGender : 'male';
+    _currentGender = (user?.sGender != null && user!.sGender!.isNotEmpty) ? user.sGender! : 'male';
   }
 
   @override

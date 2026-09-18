@@ -327,11 +327,7 @@ class AppDatabase {
     return null;
   }
 
-<<<<<<< HEAD
-  /// ดึงข้อมูลผู้ใช้ตาม Email
-=======
   /// ดึงข้อมูลผู้ใช้จาก `TbUsers` ตามอีเมล
->>>>>>> sal
   Future<TbUser?> getUserByEmail(String email) async {
     final cleanEmail = email.trim().toLowerCase();
     if (kIsWeb) {

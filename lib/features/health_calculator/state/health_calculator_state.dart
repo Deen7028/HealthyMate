@@ -7,8 +7,6 @@ import 'package:healthymate/features/health_calculator/models/activity_level.dar
 import 'package:healthymate/features/health_calculator/models/health_record_model.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
 
-import 'package:healthymate/core/services/auth_service.dart';
-
 class HealthCalculatorState extends ChangeNotifier {
   final AppDatabase _db = AppDatabase.instance;
   bool _isDisposed = false;
@@ -54,16 +52,9 @@ class HealthCalculatorState extends ChangeNotifier {
     super.dispose();
   }
 
-<<<<<<< HEAD
   void _safeNotifyListeners() {
     if (!_isDisposed && hasListeners) {
       notifyListeners();
-=======
-  @override
-  void notifyListeners() {
-    if (!_isDisposed) {
-      super.notifyListeners();
->>>>>>> sal
     }
   }
 
@@ -72,7 +63,6 @@ class HealthCalculatorState extends ChangeNotifier {
     _safeNotifyListeners();
 
     try {
-<<<<<<< HEAD
       // 1. ระบุผู้ใช้ปัจจุบันจาก Session / AuthService
       String? loggedInEmail = AuthService.instance.currentUserEmail;
       if (loggedInEmail.isEmpty) {
@@ -84,8 +74,7 @@ class HealthCalculatorState extends ChangeNotifier {
         user = await _db.getUserByEmail(loggedInEmail);
       }
 
-      // ป้องกันช่องโหว่ Hardcode User ID (Data Leak Risk):
-      // หาก Session ไม่ถูกต้อง หรือไม่พบผู้ใช้ในฐานข้อมูล ห้ามดึง userId: 1 เด็ดขาด
+      // ป้องกันช่องโหว่ Hardcode User ID: หากไม่มี valid user ให้ logout
       if (user == null) {
         debugPrint('HealthCalculatorState: No valid authenticated user found, forcing logout.');
         await AuthService.instance.logout();
@@ -94,36 +83,15 @@ class HealthCalculatorState extends ChangeNotifier {
 
       _currentUser = user;
       _gender = user.genderEnum;
-      _age = user.nAge;
-      _height = user.nHeight;
-      _weight = user.nWeight;
+      _age = user.nAge ?? 0;
+      _height = user.nHeight ?? 0.0;
+      _weight = user.nWeight ?? 0.0;
       _activityLevel = user.activityLevelObj;
 
       final activeUserId = user.nUserId;
 
       // 2. ดึงประวัติสุขภาพของคนนั้นๆ (แยกตาม userId)
       final serverRecords = await HealthApiService.fetchHealthRecords(userId: activeUserId);
-=======
-      // 1. ตรวจสอบข้อมูลผู้ใช้ที่ล็อกอินอยู่
-      final currentEmail = AuthService.instance.currentUserEmail;
-      TbUser? user;
-      if (currentEmail.isNotEmpty) {
-        user = await _db.getUserByEmail(currentEmail);
-      }
-      user ??= await _db.getUser(userId: _currentUser.nUserId);
-
-      if (user != null) {
-        _currentUser = user;
-        if (user.sGender != null) _gender = user.genderEnum;
-        if (user.nAge != null) _age = user.nAge!;
-        if (user.nHeight != null) _height = user.nHeight!;
-        if (user.nWeight != null) _weight = user.nWeight!;
-        if (user.sActivityLevel != null) _activityLevel = user.activityLevelObj;
-      }
-
-      // 2. พยายามดึงข้อมูลสดจาก PHP Database Server ก่อน
-      final serverRecords = await HealthApiService.fetchHealthRecords(userId: _currentUser.nUserId);
->>>>>>> sal
       if (serverRecords.isNotEmpty) {
         _historyList = serverRecords;
         _dataSource = "PHP MySQL Server";
@@ -133,7 +101,6 @@ class HealthCalculatorState extends ChangeNotifier {
         if (latest.nWeight > 0) _weight = latest.nWeight;
         if (latest.nHeight > 0) _height = latest.nHeight;
       } else {
-<<<<<<< HEAD
         // ดึงจาก Local Database Cache ตาม userId ของแต่ละคน
         _historyList = await _db.getHealthRecords(userId: activeUserId);
         _dataSource = "Local Database Cache";
@@ -143,11 +110,6 @@ class HealthCalculatorState extends ChangeNotifier {
           _weight = latest.nWeight;
           _height = latest.nHeight;
         }
-=======
-        // 3. ถ้าเซิร์ฟเวอร์ยังไม่เปิด ให้ดึงจาก Local Database Cache
-        _historyList = await _db.getHealthRecords(userId: _currentUser.nUserId);
-        _dataSource = "Local Database Cache";
->>>>>>> sal
       }
 
       // 3. คำนวณผลลัพธ์จากข้อมูลจริงของผู้ใช้คนนั้น
@@ -296,10 +258,11 @@ class HealthCalculatorState extends ChangeNotifier {
       );
 
       // อัปเดตลง Local Database & ส่งไปอัปเดตบน PHP Database Server
-      _db.updateUser(_currentUser).catchError((e) {
+      final userToUpdate = _currentUser!;
+      _db.updateUser(userToUpdate).catchError((e) {
         debugPrint('Error updating user locally: $e');
       });
-      HealthApiService.updateUserProfile(_currentUser).catchError((e) {
+      HealthApiService.updateUserProfile(userToUpdate).catchError((e) {
         debugPrint('Error updating user profile to API: $e');
         return false;
       });

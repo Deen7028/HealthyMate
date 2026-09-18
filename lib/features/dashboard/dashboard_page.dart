@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/percent_indicator.dart';
-
-// สมมติว่ามีการ import ข้อมูล/State เข้ามา
-// import 'package:healthymate/features/health_calculator/state/health_calculator_state.dart';
+import 'models/dashboard_data.dart';
+import 'widgets/daily_routine_checklist.dart';
 
 class DashboardPageUpdated extends StatefulWidget {
   final VoidCallback? onNavigateToCalculator;
@@ -27,6 +26,59 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
   final Color primaryGreen = const Color(0xFF0F9C58);
   final Color darkGreen = const Color(0xFF006432);
   final Color lightBg = const Color(0xFFF7F9FB);
+
+  // Exact checklist items matching design:
+  final List<DailyChecklistItem> _checklistItems = [
+    DailyChecklistItem(
+      id: 'c1',
+      title: 'ยืดเส้นยืดสายยามเช้า',
+      subtitle: '10 นาทีเพื่อปลุกร่างกาย',
+      icon: Icons.self_improvement_rounded,
+      color: const Color(0xFF2E5327),
+      isCompleted: true,
+    ),
+    DailyChecklistItem(
+      id: 'c2',
+      title: 'ดื่มน้ำ',
+      subtitle: 'เริ่มต้นวันด้วยน้ำ 500 มล.',
+      icon: Icons.water_drop_rounded,
+      color: const Color(0xFF2E5327),
+      isCompleted: true,
+    ),
+    DailyChecklistItem(
+      id: 'c3',
+      title: 'โปรตีนหลังออกกำลังกาย',
+      subtitle: 'เครื่องดื่มหรืออาหารโปรตีนสูง',
+      icon: Icons.restaurant_rounded,
+      color: const Color(0xFF5A6559),
+      isCompleted: false,
+    ),
+    DailyChecklistItem(
+      id: 'c4',
+      title: 'เดินเล่นยามเย็น',
+      subtitle: 'เดินเบาๆ 15 นาทีหลังอาหารเย็น',
+      icon: Icons.directions_walk_rounded,
+      color: const Color(0xFF5A6559),
+      isCompleted: false,
+    ),
+    DailyChecklistItem(
+      id: 'c5',
+      title: 'ทำสมาธิผ่อนคลาย',
+      subtitle: '10 นาทีเพื่อผ่อนคลายจิตใจก่อนนอน',
+      icon: Icons.spa_rounded,
+      color: const Color(0xFF2E5327),
+      isCompleted: true,
+    ),
+  ];
+
+  void _toggleChecklistItem(String id, bool isChecked) {
+    setState(() {
+      final index = _checklistItems.indexWhere((i) => i.id == id);
+      if (index != -1) {
+        _checklistItems[index].isCompleted = isChecked;
+      }
+    });
+  }
 
   void _handleStartWorkout() {
     if (widget.onNavigateToWorkout != null) {
@@ -71,15 +123,16 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                 _buildActionButtons(),
                 const SizedBox(height: 20),
 
-              // 5. Daily Routine Checklist (กิจวัตรประจำวัน เสร็จสิ้น 3/5)
-              DailyRoutineChecklist(
-                items: _checklistItems,
-                onToggleItem: _toggleChecklistItem,
-                onViewAllTap: widget.onNavigateToPractice,
-              ),
+                // 5. Daily Routine Checklist (กิจวัตรประจำวัน เสร็จสิ้น 3/5)
+                DailyRoutineChecklist(
+                  items: _checklistItems,
+                  onToggleItem: _toggleChecklistItem,
+                  onViewAllTap: widget.onNavigateToPractice,
+                ),
 
-              const SizedBox(height: 24),
-            ],
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
         ),
       ),
@@ -101,7 +154,8 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                   CircleAvatar(
                     radius: 20,
                     backgroundImage: NetworkImage(
-                        'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&q=80'),
+                      'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&q=80',
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Column(
@@ -110,19 +164,21 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                       Text(
                         'HealthyMate',
                         style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: primaryGreen),
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: primaryGreen,
+                        ),
                       ),
                       Row(
                         children: [
                           Icon(Icons.circle, color: primaryGreen, size: 8),
                           const SizedBox(width: 4),
-                          const Text('เข้าสู่วันจันทร์ • สัปดาห์ที่ 3',
-                              style:
-                                  TextStyle(fontSize: 12, color: Colors.grey)),
+                          const Text(
+                            'เข้าสู่วันจันทร์ • สัปดาห์ที่ 3',
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
                         ],
-                      )
+                      ),
                     ],
                   ),
                 ],
@@ -131,7 +187,7 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                 icon: const Icon(Icons.notifications_outlined),
                 onPressed: () {},
                 color: Colors.black87,
-              )
+              ),
             ],
           ),
           const SizedBox(height: 20),
@@ -140,10 +196,12 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
               style: TextStyle(color: Colors.black87, fontSize: 24),
               children: [
                 TextSpan(
-                    text: 'อรุณสวัสดิ์, สมชาย! ☀️\n',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                  text: 'อรุณสวัสดิ์, สมชาย! ☀️\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 TextSpan(
-                  text: 'พร้อมออกไปวิ่งรับพลังงานยามเช้าและดูแลสุขภาพที่ดีหรือยัง?',
+                  text:
+                      'พร้อมออกไปวิ่งรับพลังงานยามเช้าและดูแลสุขภาพที่ดีหรือยัง?',
                   style: TextStyle(fontSize: 14, color: Colors.black54),
                 ),
               ],
@@ -163,9 +221,10 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 4))
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Column(
@@ -180,11 +239,17 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                   const Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('ข้อมูลสุขภาพส่วนบุคคล',
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 16)),
-                      Text('คำนวณล่าสุดเมื่อเช้านี้',
-                          style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      Text(
+                        'ข้อมูลสุขภาพส่วนบุคคล',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      Text(
+                        'คำนวณล่าสุดเมื่อเช้านี้',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
                     ],
                   ),
                 ],
@@ -192,13 +257,18 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
               ElevatedButton.icon(
                 onPressed: widget.onNavigateToCalculator,
                 icon: const Icon(Icons.sync, size: 16, color: Colors.blue),
-                label: const Text('อัปเดตข้อมูล', style: TextStyle(color: Colors.blue, fontSize: 12)),
+                label: const Text(
+                  'อัปเดตข้อมูล',
+                  style: TextStyle(color: Colors.blue, fontSize: 12),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue.shade50,
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                 ),
-              )
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -207,15 +277,28 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _buildStatItem('น้ำหนัก / ส่วนสูง', '65 กก. | 170 ซม.'),
-              _buildStatItemWithBadge('ดัชนีมวลกาย', '22.4', 'สมส่วน (Normal)', Colors.green),
+              _buildStatItemWithBadge(
+                'ดัชนีมวลกาย',
+                '22.4',
+                'สมส่วน (Normal)',
+                Colors.green,
+              ),
             ],
           ),
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildStatItem('BMR พลังงานพื้นฐาน', '1,520 kcal', icon: Icons.bolt),
-              _buildStatItem('TDEE ต้องการต่อวัน', '2,100 kcal', icon: Icons.local_fire_department),
+              _buildStatItem(
+                'BMR พลังงานพื้นฐาน',
+                '1,520 kcal',
+                icon: Icons.bolt,
+              ),
+              _buildStatItem(
+                'TDEE ต้องการต่อวัน',
+                '2,100 kcal',
+                icon: Icons.local_fire_department,
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -234,21 +317,33 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('เป้าหมายเผาผลาญจากการออกกำลังกาย',
-                          style: TextStyle(
-                              fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87)),
-                      Text('เพื่อช่วยลดไขมันและรักษารูปร่างตามเป้าหมายหลัก',
-                          style: TextStyle(fontSize: 10, color: Colors.black54)),
+                      Text(
+                        'เป้าหมายเผาผลาญจากการออกกำลังกาย',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      Text(
+                        'เพื่อช่วยลดไขมันและรักษารูปร่างตามเป้าหมายหลัก',
+                        style: TextStyle(fontSize: 10, color: Colors.black54),
+                      ),
                     ],
                   ),
                 ),
-                Text('400\nkcal/วัน',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, color: primaryGreen, fontSize: 14)),
+                Text(
+                  '400\nkcal/วัน',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: primaryGreen,
+                    fontSize: 14,
+                  ),
+                ),
               ],
             ),
-          )
+          ),
         ],
       ),
     );
@@ -262,18 +357,32 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
         children: [
           Row(
             children: [
-              Text(title, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-              if (icon != null) ...[const SizedBox(width: 4), Icon(icon, size: 14, color: Colors.orange)],
+              Text(
+                title,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              if (icon != null) ...[
+                const SizedBox(width: 4),
+                Icon(icon, size: 14, color: Colors.orange),
+              ],
             ],
           ),
           const SizedBox(height: 4),
-          Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildStatItemWithBadge(String title, String value, String badgeText, Color badgeColor) {
+  Widget _buildStatItemWithBadge(
+    String title,
+    String value,
+    String badgeText,
+    Color badgeColor,
+  ) {
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -282,7 +391,13 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
           const SizedBox(height: 4),
           Row(
             children: [
-              Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -290,8 +405,15 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                   color: badgeColor.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(badgeText, style: TextStyle(color: badgeColor, fontSize: 10, fontWeight: FontWeight.bold)),
-              )
+                child: Text(
+                  badgeText,
+                  style: TextStyle(
+                    color: badgeColor,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
             ],
           ),
         ],
@@ -309,9 +431,10 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
         border: Border.all(color: primaryGreen.withOpacity(0.2)),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 4))
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Column(
@@ -323,14 +446,27 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                 children: [
                   Icon(Icons.flag, color: Colors.orange),
                   SizedBox(width: 8),
-                  Text('เป้าหมายหลักของฉัน', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text(
+                    'เป้าหมายหลักของฉัน',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
                 ],
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(color: primaryGreen.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
-                child: Text('เหลืออีก 12 วัน', style: TextStyle(color: darkGreen, fontSize: 12, fontWeight: FontWeight.bold)),
-              )
+                decoration: BoxDecoration(
+                  color: primaryGreen.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'เหลืออีก 12 วัน',
+                  style: TextStyle(
+                    color: darkGreen,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 24),
@@ -342,8 +478,14 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
             center: const Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text("68%", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24)),
-                Text("สำเร็จแล้ว", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                Text(
+                  "68%",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
+                ),
+                Text(
+                  "สำเร็จแล้ว",
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
               ],
             ),
             progressColor: primaryGreen,
@@ -351,11 +493,15 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
             circularStrokeCap: CircularStrokeCap.round,
           ),
           const SizedBox(height: 24),
-          const Text('🏃 วิ่ง 500 กิโลเมตร ใน 1 เดือน',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const Text(
+            '🏃 วิ่ง 500 กิโลเมตร ใน 1 เดือน',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
           const SizedBox(height: 4),
-          const Text('วิ่งสะสม: 340 / 500 กม. (เหลือ 160 กม.)',
-              style: TextStyle(fontSize: 14, color: Colors.black87)),
+          const Text(
+            'วิ่งสะสม: 340 / 500 กม. (เหลือ 160 กม.)',
+            style: TextStyle(fontSize: 14, color: Colors.black87),
+          ),
           const SizedBox(height: 16),
           // Tip Box
           Container(
@@ -368,17 +514,24 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.lightbulb_outline, color: Colors.orange, size: 20),
+                const Icon(
+                  Icons.lightbulb_outline,
+                  color: Colors.orange,
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'คำแนะนำวันนี้: เพื่อให้ถึงเป้าหมาย 500 กม. ควรเก็บระยะทางวันนี้ 15-18 กม. คุมโซน 2 เพื่อรักษาระดับความฟิตและป้องกันการล้า',
-                    style: TextStyle(fontSize: 12, color: Colors.orange.shade900),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.orange.shade900,
+                    ),
                   ),
                 ),
               ],
             ),
-          )
+          ),
         ],
       ),
     );
@@ -395,15 +548,23 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
             onPressed: _handleStartWorkout,
             style: ElevatedButton.styleFrom(
               backgroundColor: darkGreen,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
             ),
             child: const Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.bolt, color: Colors.yellow),
                 SizedBox(width: 8),
-                Text('เริ่มวิ่งมินิมาราธอน (30 นาที)',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                Text(
+                  'เริ่มวิ่งมินิมาราธอน (30 นาที)',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
               ],
             ),
           ),
@@ -416,7 +577,9 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
             onPressed: () {},
             style: OutlinedButton.styleFrom(
               side: BorderSide(color: Colors.grey.shade300),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               backgroundColor: Colors.white,
             ),
             child: const Row(
@@ -424,7 +587,14 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
               children: [
                 Icon(Icons.swap_calls, color: Colors.black54),
                 SizedBox(width: 8),
-                Text('เลือกประเภทอื่น', style: TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.bold)),
+                Text(
+                  'เลือกประเภทอื่น',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.black87,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
             ),
           ),
@@ -432,84 +602,4 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
       ],
     );
   }
-
-  // --- Widget เป้าหมายอื่นๆ (Card 3) ---
-  Widget _buildOtherGoalsCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 4))
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Row(
-                children: [
-                  Icon(Icons.format_list_bulleted, color: Colors.blueGrey),
-                  SizedBox(width: 8),
-                  Text('เป้าหมายอื่นๆ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                ],
-              ),
-              TextButton(
-                onPressed: () {},
-                child: const Text('ดูทั้งหมด >', style: TextStyle(fontSize: 12)),
-              )
-            ],
-          ),
-          const SizedBox(height: 12),
-          _buildMiniGoalProgress(icon: Icons.water_drop, color: Colors.blue, title: 'ดื่มน้ำ', current: '1.5', target: '2.5 ลิตร', percent: 0.6),
-          const SizedBox(height: 16),
-          _buildMiniGoalProgress(icon: Icons.directions_walk, color: Colors.orange, title: 'เดิน', current: '6,000', target: '10,000 ก้าว', percent: 0.6),
-          const SizedBox(height: 16),
-          _buildMiniGoalProgress(icon: Icons.bedtime, color: Colors.purple, title: 'นอนหลับ', current: '6', target: '8 ชม.', percent: 0.75),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMiniGoalProgress({required IconData icon, required Color color, required String title, required String current, required String target, required double percent}) {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: color, size: 20),
-                const SizedBox(width: 8),
-                Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-              ],
-            ),
-            Row(
-              children: [
-                Text('$current / $target', style: const TextStyle(fontSize: 12, color: Colors.black54)),
-                const SizedBox(width: 8),
-                Text('${(percent * 100).toInt()}%', style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.bold)),
-              ],
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        LinearPercentIndicator(
-          lineHeight: 8.0,
-          percent: percent,
-          progressColor: color,
-          backgroundColor: Colors.grey.shade200,
-          barRadius: const Radius.circular(4),
-          padding: EdgeInsets.zero,
-        ),
-      ],
-    );
-  }
-
-
 }

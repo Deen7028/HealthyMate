@@ -65,8 +65,8 @@ class WorkoutTrackingState extends ChangeNotifier {
       final user = await AppDatabase.instance.getUserByEmail(email);
       if (user != null) {
         _userId = user.nUserId;
-        if (user.nWeight > 0) {
-          _userWeightKg = user.nWeight;
+        if (user.nWeight != null && user.nWeight! > 0) {
+          _userWeightKg = user.nWeight!;
         }
         _safeNotifyListeners();
       }
