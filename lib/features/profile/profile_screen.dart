@@ -16,7 +16,6 @@ import 'package:healthymate/features/profile/widgets/quick_stats_card.dart';
 import 'package:healthymate/features/profile/widgets/settings_card.dart';
 import 'package:healthymate/features/profile/widgets/account_card.dart';
 import 'package:healthymate/features/profile/widgets/profile_footer.dart';
-import 'package:healthymate/features/profile/dialogs/edit_goal_dialog.dart';
 import 'package:healthymate/features/profile/dialogs/edit_profile_dialog.dart';
 import 'package:healthymate/features/profile/dialogs/unit_picker_bottom_sheet.dart';
 import 'package:healthymate/features/profile/dialogs/connected_devices_bottom_sheet.dart';
@@ -396,31 +395,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _showEditGoalDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => EditGoalDialog(
-        initialTitle: sMainGoalTitle,
-        initialProgress: nGoalProgress,
-        initialRemainingText: sGoalRemainingText,
-        onSave: (newTitle, newProgress, newRemaining) async {
-          setState(() {
-            sMainGoalTitle = newTitle;
-            nGoalProgress = newProgress;
-            sGoalRemainingText = newRemaining;
-          });
-
-          await AppDatabase.instance.saveUserGoal(
-            userId: _currentUser?.nUserId ?? 1,
-            title: newTitle,
-            progress: newProgress,
-            remainingText: newRemaining,
-          );
-        },
-      ),
-    );
-  }
-
   void _showConnectedDevicesBottomSheet() {
     final userId = _currentUser?.nUserId ?? 1;
     showModalBottomSheet(
@@ -600,7 +574,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 goalRemainingText: sGoalRemainingText,
                 onAvatarTap: _pickAndSaveProfileImage,
                 onEditProfileTap: _showEditProfileDialog,
-                onEditGoalTap: _showEditGoalDialog,
               ),
 
               const SizedBox(height: 16),

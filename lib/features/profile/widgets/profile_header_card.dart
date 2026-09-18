@@ -10,7 +10,7 @@ class ProfileHeaderCard extends StatelessWidget {
   final String goalRemainingText;
   final VoidCallback onAvatarTap;
   final VoidCallback onEditProfileTap;
-  final VoidCallback onEditGoalTap;
+  final VoidCallback? onEditGoalTap;
 
   const ProfileHeaderCard({
     super.key,
@@ -22,7 +22,7 @@ class ProfileHeaderCard extends StatelessWidget {
     required this.goalRemainingText,
     required this.onAvatarTap,
     required this.onEditProfileTap,
-    required this.onEditGoalTap,
+    this.onEditGoalTap,
   });
 
   @override
@@ -149,9 +149,10 @@ class ProfileHeaderCard extends StatelessWidget {
 
           const SizedBox(height: 20),
 
-          // เป้าหมายหลัก (Main Goal Card)
-          GestureDetector(
+          // เป้าหมายหลัก (Main Goal Card - แสดงข้อมูล)
+          InkWell(
             onTap: onEditGoalTap,
+            borderRadius: BorderRadius.circular(18),
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
@@ -194,11 +195,12 @@ class ProfileHeaderCard extends StatelessWidget {
                           ),
                         ],
                       ),
-                      Icon(
-                        Icons.edit_outlined,
-                        size: 16,
-                        color: isDark ? Colors.grey.shade400 : const Color(0xFF6F7A72),
-                      ),
+                      if (onEditGoalTap != null)
+                        Icon(
+                          Icons.edit_outlined,
+                          size: 16,
+                          color: isDark ? Colors.grey.shade400 : const Color(0xFF6F7A72),
+                        ),
                     ],
                   ),
                   const SizedBox(height: 8),
