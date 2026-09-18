@@ -56,7 +56,7 @@ class AppDatabase {
 
     return await openDatabase(
       path,
-      version: 5,
+      version: 7,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -114,6 +114,24 @@ class AppDatabase {
         ''');
       } catch (e) {
         debugPrint('Migration note v5: $e');
+      }
+    }
+    if (oldVersion < 6) {
+      try {
+        await db.execute('ALTER TABLE $tableNutritionLogs ADD COLUMN nProtein REAL DEFAULT 0.0');
+        await db.execute('ALTER TABLE $tableNutritionLogs ADD COLUMN nCarbs REAL DEFAULT 0.0');
+        await db.execute('ALTER TABLE $tableNutritionLogs ADD COLUMN nFat REAL DEFAULT 0.0');
+        await db.execute('ALTER TABLE $tableNutritionLogs ADD COLUMN sServingSize TEXT DEFAULT ""');
+        await db.execute('ALTER TABLE $tableNutritionLogs ADD COLUMN sImagePath TEXT DEFAULT ""');
+      } catch (e) {
+        debugPrint('Migration note v6: $e');
+      }
+    }
+    if (oldVersion < 7) {
+      try {
+        await db.execute('ALTER TABLE TbUserPreferences ADD COLUMN sGeminiApiKey TEXT DEFAULT ""');
+      } catch (e) {
+        debugPrint('Migration note v7: $e');
       }
     }
   }
@@ -208,6 +226,11 @@ class AppDatabase {
         sMealType TEXT NOT NULL,
         sFoodName TEXT NOT NULL,
         nCalories INTEGER NOT NULL,
+        nProtein REAL DEFAULT 0.0,
+        nCarbs REAL DEFAULT 0.0,
+        nFat REAL DEFAULT 0.0,
+        sServingSize TEXT DEFAULT "",
+        sImagePath TEXT DEFAULT "",
         dtLoggedAt TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (nUserId) REFERENCES $tableUsers (nUserId) ON DELETE CASCADE
       );
@@ -745,6 +768,51 @@ class AppDatabase {
     );
   }
 
+  Future<String> getGeminiApiKey(int userId) async {
+    final db = await database;
+    if (db == null) return '';
+    final maps = await db.query(
+      'TbUserPreferences',
+      where: 'nUserId = ?',
+      whereArgs: [userId],
+      limit: 1,
+    );
+    if (maps.isNotEmpty && maps.first['sGeminiApiKey'] != null) {
+      return maps.first['sGeminiApiKey'].toString();
+    }
+    return '';
+  }
+
+  Future<void> saveGeminiApiKey(int userId, String apiKey) async {
+    final db = await database;
+    if (db == null) return;
+    final existing = await db.query(
+      'TbUserPreferences',
+      where: 'nUserId = ?',
+      whereArgs: [userId],
+      limit: 1,
+    );
+    if (existing.isNotEmpty) {
+      await db.update(
+        'TbUserPreferences',
+        {'sGeminiApiKey': apiKey.trim()},
+        where: 'nUserId = ?',
+        whereArgs: [userId],
+      );
+    } else {
+      await db.insert(
+        'TbUserPreferences',
+        {
+          'nUserId': userId,
+          'sUnitSystem': 'metric',
+          'sUnitLabel': 'Kilometers, Kilograms',
+          'sGeminiApiKey': apiKey.trim(),
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+  }
+
   Future<int> getWorkoutCount({required int userId}) async {
     if (kIsWeb) return 0;
     final db = await database;
@@ -820,6 +888,66 @@ class AppDatabase {
       tableHealthIntegrations,
       where: 'nIntegrationId = ?',
       whereArgs: [integrationId],
+    );
+  }
+
+  // ==========================================
+  // Nutrition Logs Operations (TbNutritionLogs)
+  // ==========================================
+
+  Future<int> insertNutritionLog({
+    required int userId,
+    required String mealType,
+    required String foodName,
+    required int calories,
+    double protein = 0.0,
+    double carbs = 0.0,
+    double fat = 0.0,
+    String servingSize = '',
+    String imagePath = '',
+  }) async {
+    if (kIsWeb) return 0;
+    final db = await database;
+    if (db == null) return 0;
+
+    return await db.insert(tableNutritionLogs, {
+      'nUserId': userId,
+      'sMealType': mealType,
+      'sFoodName': foodName,
+      'nCalories': calories,
+      'nProtein': protein,
+      'nCarbs': carbs,
+      'nFat': fat,
+      'sServingSize': servingSize,
+      'sImagePath': imagePath,
+      'dtLoggedAt': DateTime.now().toIso8601String(),
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> getNutritionLogsToday(int userId) async {
+    if (kIsWeb) return [];
+    final db = await database;
+    if (db == null) return [];
+
+    final now = DateTime.now();
+    final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
+    return await db.query(
+      tableNutritionLogs,
+      where: 'nUserId = ? AND dtLoggedAt LIKE ?',
+      whereArgs: [userId, '$todayStr%'],
+      orderBy: 'nNutritionId DESC',
+    );
+  }
+
+  Future<void> deleteNutritionLog(int nutritionId) async {
+    if (kIsWeb) return;
+    final db = await database;
+    if (db == null) return;
+    await db.delete(
+      tableNutritionLogs,
+      where: 'nNutritionId = ?',
+      whereArgs: [nutritionId],
     );
   }
 }

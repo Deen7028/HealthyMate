@@ -8,7 +8,10 @@ class VitalityBottomNavBar extends StatelessWidget {
   /// Callback เมื่อผู้ใช้กดเลือกแท็บ
   final ValueChanged<int> onTap;
 
-  /// รายการ Tab Items (หากไม่ใส่จะใช้ 5 เมนูหลักมาตรฐานของ HealthyMate)
+  /// Callback เมื่อกดปุ่มกล้อง AI ตรงกลาง (Center FAB)
+  final VoidCallback? onCameraTap;
+
+  /// รายการแท็บที่กำหนดเอง (หากต้องการ)
   final List<VitalityNavItem>? customItems;
 
   const VitalityBottomNavBar({
@@ -16,9 +19,11 @@ class VitalityBottomNavBar extends StatelessWidget {
     required this.currentIndex,
     required this.onTap,
     this.customItems,
+    this.onCameraTap,
   });
 
-  /// รายการ 5 เมนูหลักมาตรฐาน
+  /// รายการ 4 เมนูหลักมาตรฐาน (หน้าหลัก, ออกกำลังกาย, กิจวัตร, โปรไฟล์)
+  /// และมีปุ่ม FAB กล้องถ่ายรูปอยู่ตรงกลาง
   static const List<VitalityNavItem> defaultItems = [
     VitalityNavItem(
       index: 0,
@@ -37,7 +42,6 @@ class VitalityBottomNavBar extends StatelessWidget {
       label: 'สุขภาพ',
       icon: Icons.calculate_outlined,
       activeIcon: Icons.calculate_rounded,
-      isCenterHighlight: true, // แท็บสุขภาพไอคอนวงกลมเด่นตรงกลาง
     ),
     VitalityNavItem(
       index: 3,
@@ -55,42 +59,57 @@ class VitalityBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = customItems ?? defaultItems;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: const Border(
-          top: BorderSide(color: Color(0xFFEAEFEA), width: 1.0),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF1E2822).withValues(alpha: 0.04),
-            blurRadius: 14,
-            offset: const Offset(0, -3),
-          ),
-        ],
-      ),
+    return BottomAppBar(
+      color: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      elevation: 10,
+      shadowColor: const Color(0xFF1E2822).withValues(alpha: 0.12),
+      shape: const CircularNotchedRectangle(),
+      notchMargin: 7.0,
+      padding: EdgeInsets.zero,
+      height: 64,
       child: SafeArea(
         top: false,
-        child: SizedBox(
-          height: 66,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: items.map((item) {
-                return _VitalityStandardNavItemWidget(
-                  item: item,
-                  isSelected: currentIndex == item.index,
-                  onTap: () => onTap(item.index),
-                );
-              }).toList(),
-            ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Row(
+            children: [
+              // ฝั่งซ้าย: หน้าหลัก (0) และ ออกกำลังกาย (1)
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildNavItem(0, defaultItems[0]),
+                    _buildNavItem(1, defaultItems[1]),
+                  ],
+                ),
+              ),
+
+              // ช่องว่างตรงกลางสำหรับ Center Docked FAB (กล้องถ่ายรูป)
+              const SizedBox(width: 60),
+
+              // ฝั่งขวา: กิจวัตร (3) และ โปรไฟล์ (4)
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildNavItem(3, defaultItems[3]),
+                    _buildNavItem(4, defaultItems[4]),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildNavItem(int index, VitalityNavItem item) {
+    return _VitalityStandardNavItemWidget(
+      item: item,
+      isSelected: currentIndex == index,
+      onTap: () => onTap(index),
     );
   }
 }

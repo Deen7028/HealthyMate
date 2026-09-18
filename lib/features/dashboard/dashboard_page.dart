@@ -238,6 +238,7 @@ class _DashboardPageState extends State<DashboardPage> {
               DailyRoutineChecklist(
                 items: _checklistItems,
                 onToggleItem: _toggleChecklistItem,
+                onViewAllTap: widget.onNavigateToPractice,
               ),
 
               const SizedBox(height: 24),

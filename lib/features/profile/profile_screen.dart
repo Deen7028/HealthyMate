@@ -21,6 +21,7 @@ import 'package:healthymate/features/profile/dialogs/unit_picker_bottom_sheet.da
 import 'package:healthymate/features/profile/dialogs/connected_devices_bottom_sheet.dart';
 import 'package:healthymate/features/profile/dialogs/personal_info_bottom_sheet.dart';
 import 'package:healthymate/features/profile/dialogs/logout_confirm_dialog.dart';
+import 'package:healthymate/features/food_recognition/dialogs/gemini_api_key_dialog.dart';
 
 /// หน้าโปรไฟล์และการตั้งค่า HealthyMate
 class ProfileScreen extends StatefulWidget {
@@ -43,6 +44,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String sGoalRemainingText = '';
   List<Map<String, dynamic>> lstConnectedDevices = [];
   String sSelectedUnit = 'Kilometers, Kilograms';
+  String sGeminiApiKey = '';
 
   final ImagePicker _picker = ImagePicker();
 
@@ -90,6 +92,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         AppDatabase.instance.getConnectedDevices(currentUserId),
         AppDatabase.instance.getUserUnitPreference(currentUserId),
         Geolocator.isLocationServiceEnabled(),
+        AppDatabase.instance.getGeminiApiKey(currentUserId),
       ]);
 
       final count = results[0] as int;
@@ -97,6 +100,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final devices = results[2] as List<Map<String, dynamic>>;
       final unit = results[3] as String;
       final locStatus = results[4] as bool;
+      final apiKey = results[5] as String;
 
       // คำนวณวัน Active จากวันที่สร้างบัญชี (dtCreatedAt)
       final diff = DateTime.now().difference(user.dtCreatedAt).inDays;
@@ -116,6 +120,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _currentUser = user;
           _isLocationEnabled = locStatus;
           sSelectedUnit = unit;
+          sGeminiApiKey = apiKey;
           nWorkoutCount = count;
           nActiveDays = days;
           sMainGoalTitle = goalTitle;
@@ -592,12 +597,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
               SettingsCard(
                 isLocationEnabled: _isLocationEnabled,
                 selectedUnit: sSelectedUnit,
+                hasGeminiApiKey: sGeminiApiKey.isNotEmpty,
                 onDarkModeChanged: (val) async {
                   await ThemeService.instance.setDarkMode(val);
                   setState(() {});
                 },
                 onLocationTap: _handleLocationTap,
                 onUnitPickerTap: _showUnitPicker,
+                onGeminiApiKeyTap: () {
+                  GeminiApiKeyDialog.show(
+                    context,
+                    userId: _currentUser?.nUserId ?? 1,
+                    currentKey: sGeminiApiKey,
+                    onSaved: (newKey) {
+                      setState(() {
+                        sGeminiApiKey = newKey;
+                      });
+                    },
+                  );
+                },
               ),
 
               const SizedBox(height: 20),

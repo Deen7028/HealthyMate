@@ -4,11 +4,13 @@ import '../models/dashboard_data.dart';
 class DailyRoutineChecklist extends StatelessWidget {
   final List<DailyChecklistItem> items;
   final Function(String id, bool isChecked) onToggleItem;
+  final VoidCallback? onViewAllTap;
 
   const DailyRoutineChecklist({
     super.key,
     required this.items,
     required this.onToggleItem,
+    this.onViewAllTap,
   });
 
   @override
@@ -36,12 +38,24 @@ class DailyRoutineChecklist extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'กิจวัตรประจำวัน',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1C2819),
+              InkWell(
+                onTap: onViewAllTap,
+                borderRadius: BorderRadius.circular(8),
+                child: Row(
+                  children: [
+                    const Text(
+                      'กิจวัตรประจำวัน',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1C2819),
+                      ),
+                    ),
+                    if (onViewAllTap != null) ...[
+                      const SizedBox(width: 4),
+                      const Icon(Icons.chevron_right_rounded, size: 22, color: Color(0xFF5A6559)),
+                    ],
+                  ],
                 ),
               ),
               Container(
