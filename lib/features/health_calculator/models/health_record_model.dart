@@ -42,16 +42,28 @@ class TbHealthRecord {
     };
   }
 
+  static double _toDouble(dynamic val, [double defaultVal = 0.0]) {
+    if (val == null) return defaultVal;
+    if (val is num) return val.toDouble();
+    return double.tryParse(val.toString()) ?? defaultVal;
+  }
+
+  static int _toInt(dynamic val, [int defaultVal = 0]) {
+    if (val == null) return defaultVal;
+    if (val is num) return val.toInt();
+    return int.tryParse(val.toString()) ?? defaultVal;
+  }
+
   factory TbHealthRecord.fromMap(Map<String, dynamic> map) {
     return TbHealthRecord(
-      nRecordId: (map['nRecordId'] as num?)?.toInt() ?? 0,
-      nUserId: (map['nUserId'] as num?)?.toInt() ?? 1,
-      nWeight: (map['nWeight'] as num?)?.toDouble() ?? 0.0,
-      nHeight: (map['nHeight'] as num?)?.toDouble() ?? 0.0,
-      nBmi: (map['nBmi'] as num?)?.toDouble() ?? 0.0,
-      nTdee: (map['nTdee'] as num?)?.toDouble() ?? 0.0,
+      nRecordId: _toInt(map['nRecordId']),
+      nUserId: _toInt(map['nUserId'], 1),
+      nWeight: _toDouble(map['nWeight']),
+      nHeight: _toDouble(map['nHeight']),
+      nBmi: _toDouble(map['nBmi']),
+      nTdee: _toDouble(map['nTdee']),
       dtRecordedAt: DateTime.tryParse(map['dtRecordedAt']?.toString() ?? '') ?? DateTime.now(),
-      computedBmr: (map['computedBmr'] as num?)?.toDouble(),
+      computedBmr: map['computedBmr'] != null ? _toDouble(map['computedBmr']) : null,
       activityLevelTitle: map['activityLevelTitle']?.toString(),
     );
   }

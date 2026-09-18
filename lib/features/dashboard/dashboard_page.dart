@@ -1,20 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:healthymate/features/health_calculator/state/health_calculator_state.dart';
-import 'models/dashboard_data.dart';
-import 'widgets/activity_progress_ring.dart';
-import 'widgets/daily_routine_checklist.dart';
-import 'widgets/key_stats_grid.dart';
+import 'package:percent_indicator/percent_indicator.dart';
 
-class DashboardPage extends StatefulWidget {
-  final HealthCalculatorState? state;
+// สมมติว่ามีการ import ข้อมูล/State เข้ามา
+// import 'package:healthymate/features/health_calculator/state/health_calculator_state.dart';
+
+class DashboardPageUpdated extends StatefulWidget {
   final VoidCallback? onNavigateToCalculator;
   final VoidCallback? onNavigateToPractice;
   final VoidCallback? onNavigateToWorkout;
   final VoidCallback? onStartWorkout;
 
-  const DashboardPage({
+  const DashboardPageUpdated({
     super.key,
-    this.state,
     this.onNavigateToCalculator,
     this.onNavigateToPractice,
     this.onNavigateToWorkout,
@@ -22,75 +19,14 @@ class DashboardPage extends StatefulWidget {
   });
 
   @override
-  State<DashboardPage> createState() => _DashboardPageState();
+  State<DashboardPageUpdated> createState() => _DashboardPageUpdatedState();
 }
 
-class _DashboardPageState extends State<DashboardPage> {
-  final DashboardStats _stats = DashboardStats(
-    distanceKm: 4.2,
-    activeTimeMinutes: 45,
-    caloriesBurned: 320,
-    stepCount: 6840,
-  );
-
-  // Exact checklist items matching design image:
-  final List<DailyChecklistItem> _checklistItems = [
-    DailyChecklistItem(
-      id: 'c1',
-      title: 'ยืดเส้นยืดสายยามเช้า',
-      subtitle: '10 นาทีเพื่อปลุกร่างกาย',
-      icon: Icons.self_improvement_rounded,
-      color: const Color(0xFF2E5327),
-      isCompleted: true,
-    ),
-    DailyChecklistItem(
-      id: 'c2',
-      title: 'ดื่มน้ำ',
-      subtitle: 'เริ่มต้นวันด้วยน้ำ 500 มล.',
-      icon: Icons.water_drop_rounded,
-      color: const Color(0xFF2E5327),
-      isCompleted: true,
-    ),
-    DailyChecklistItem(
-      id: 'c3',
-      title: 'โปรตีนหลังออกกำลังกาย',
-      subtitle: 'เครื่องดื่มหรืออาหารโปรตีนสูง',
-      icon: Icons.restaurant_rounded,
-      color: const Color(0xFF5A6559),
-      isCompleted: false,
-    ),
-    DailyChecklistItem(
-      id: 'c4',
-      title: 'เดินเล่นยามเย็น',
-      subtitle: 'เดินเบาๆ 15 นาทีหลังอาหารเย็น',
-      icon: Icons.directions_walk_rounded,
-      color: const Color(0xFF5A6559),
-      isCompleted: false,
-    ),
-    DailyChecklistItem(
-      id: 'c5',
-      title: 'ทำสมาธิผ่อนคลาย',
-      subtitle: '10 นาทีเพื่อผ่อนคลายจิตใจก่อนนอน',
-      icon: Icons.spa_rounded,
-      color: const Color(0xFF2E5327),
-      isCompleted: true,
-    ),
-  ];
-
-  double get _calculatedProgress {
-    if (_checklistItems.isEmpty) return 0.75;
-    final completed = _checklistItems.where((i) => i.isCompleted).length;
-    return completed / _checklistItems.length;
-  }
-
-  void _toggleChecklistItem(String id, bool isChecked) {
-    setState(() {
-      final index = _checklistItems.indexWhere((i) => i.id == id);
-      if (index != -1) {
-        _checklistItems[index].isCompleted = isChecked;
-      }
-    });
-  }
+class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
+  // สีหลักอ้างอิงจากดีไซน์
+  final Color primaryGreen = const Color(0xFF0F9C58);
+  final Color darkGreen = const Color(0xFF006432);
+  final Color lightBg = const Color(0xFFF7F9FB);
 
   void _handleStartWorkout() {
     if (widget.onNavigateToWorkout != null) {
@@ -100,16 +36,9 @@ class _DashboardPageState extends State<DashboardPage> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Row(
-            children: [
-              Icon(Icons.directions_run_rounded, color: Colors.white),
-              SizedBox(width: 10),
-              Text('กำลังเข้าสู่โหมดออกกำลังกาย... 🏋️‍♂️'),
-            ],
-          ),
-          backgroundColor: const Color(0xFF2E5327),
+          content: const Text('กำลังเข้าสู่โหมดมินิมาราธอน... 🏃‍♂️'),
+          backgroundColor: darkGreen,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
     }
@@ -118,133 +47,465 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F6F2), // Light warm grey-green background matching design
+      backgroundColor: lightBg, // สีพื้นหลังโทนสว่าง
       body: SafeArea(
         child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 1. Top App Bar (Profile photo + HealthyMate + Bell icon)
-              Padding(
-                padding: const EdgeInsets.only(left: 20, right: 20, top: 12, bottom: 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        // User Avatar
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            image: DecorationImage(
-                              image: NetworkImage(
-                                'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-                              ),
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        // App Title
-                        const Text(
-                          'HealthyMate',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1C2819),
-                            letterSpacing: -0.3,
-                          ),
-                        ),
-                      ],
-                    ),
-                    // Notification Bell Icon with Badge
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFFE2E9E0)),
-                      ),
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          const Icon(
-                            Icons.notifications_none_rounded,
-                            color: Color(0xFF2E5327),
-                            size: 22,
-                          ),
-                          Positioned(
-                            top: 10,
-                            right: 10,
-                            child: Container(
-                              width: 7,
-                              height: 7,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFF2E5327),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 1. Top Header
+                _buildHeader(),
+                const SizedBox(height: 24),
 
-              // 2. Greeting Section (สวัสดีตอนเช้า, Alex)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'สวัสดีตอนเช้า, Alex',
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1C2819),
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'วันนี้คุณทำได้ดีมาก มาเคลื่อนไหวร่างกายกันต่อเถอะ!',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF677366),
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+                // 2. ข้อมูลสุขภาพส่วนบุคคล (Health Summary Card)
+                _buildHealthSummaryCard(),
+                const SizedBox(height: 20),
 
-              // 3. Daily Activity Progress Ring Card (กิจกรรมประจำวัน 75% + ปุ่มเริ่มออกกำลังกาย)
-              DailyActivityCard(
-                progress: _calculatedProgress,
-                onStartWorkout: _handleStartWorkout,
-              ),
+                // 3. เป้าหมายหลักของฉัน (Main Goal Card)
+                _buildMainGoalCard(),
+                const SizedBox(height: 20),
 
-              // 4. Key Stats Grid (ระยะทาง 4.2 กม., เวลา 45 นาที, แคลอรี่ 320 กิโลแคลอรี่)
-              KeyStatsGrid(
-                stats: _stats,
-              ),
+                // 4. ปุ่มลัดเริ่มออกกำลังกาย
+                _buildActionButtons(),
+                const SizedBox(height: 20),
 
-              // 5. Daily Routine Checklist (กิจวัตรประจำวัน เสร็จสิ้น 3/5)
-              DailyRoutineChecklist(
-                items: _checklistItems,
-                onToggleItem: _toggleChecklistItem,
-              ),
-
-              const SizedBox(height: 24),
-            ],
+                // 5. เป้าหมายอื่นๆ (Other Goals & Routines)
+                _buildOtherGoalsCard(),
+                const SizedBox(height: 40),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
+
+  // --- Widget ส่วนบน (Header) ---
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundImage: NetworkImage(
+                        'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&q=80'),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'HealthyMate',
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: primaryGreen),
+                      ),
+                      Row(
+                        children: [
+                          Icon(Icons.circle, color: primaryGreen, size: 8),
+                          const SizedBox(width: 4),
+                          const Text('เข้าสู่วันจันทร์ • สัปดาห์ที่ 3',
+                              style:
+                                  TextStyle(fontSize: 12, color: Colors.grey)),
+                        ],
+                      )
+                    ],
+                  ),
+                ],
+              ),
+              IconButton(
+                icon: const Icon(Icons.notifications_outlined),
+                onPressed: () {},
+                color: Colors.black87,
+              )
+            ],
+          ),
+          const SizedBox(height: 20),
+          RichText(
+            text: const TextSpan(
+              style: TextStyle(color: Colors.black87, fontSize: 24),
+              children: [
+                TextSpan(
+                    text: 'อรุณสวัสดิ์, สมชาย! ☀️\n',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                TextSpan(
+                  text: 'พร้อมออกไปวิ่งรับพลังงานยามเช้าและดูแลสุขภาพที่ดีหรือยัง?',
+                  style: TextStyle(fontSize: 14, color: Colors.black54),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- Widget การ์ดข้อมูลสุขภาพ (Card 1) ---
+  Widget _buildHealthSummaryCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4))
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.health_and_safety, color: darkGreen),
+                  const SizedBox(width: 8),
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('ข้อมูลสุขภาพส่วนบุคคล',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 16)),
+                      Text('คำนวณล่าสุดเมื่อเช้านี้',
+                          style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    ],
+                  ),
+                ],
+              ),
+              ElevatedButton.icon(
+                onPressed: widget.onNavigateToCalculator,
+                icon: const Icon(Icons.sync, size: 16, color: Colors.blue),
+                label: const Text('อัปเดตข้อมูล', style: TextStyle(color: Colors.blue, fontSize: 12)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue.shade50,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                ),
+              )
+            ],
+          ),
+          const SizedBox(height: 16),
+          // สถิติย่อย 4 ช่อง
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildStatItem('น้ำหนัก / ส่วนสูง', '65 กก. | 170 ซม.'),
+              _buildStatItemWithBadge('ดัชนีมวลกาย', '22.4', 'สมส่วน (Normal)', Colors.green),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildStatItem('BMR พลังงานพื้นฐาน', '1,520 kcal', icon: Icons.bolt),
+              _buildStatItem('TDEE ต้องการต่อวัน', '2,100 kcal', icon: Icons.local_fire_department),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // กล่องเป้าหมายเผาผลาญ
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: primaryGreen.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.track_changes, color: primaryGreen),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('เป้าหมายเผาผลาญจากการออกกำลังกาย',
+                          style: TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87)),
+                      Text('เพื่อช่วยลดไขมันและรักษารูปร่างตามเป้าหมายหลัก',
+                          style: TextStyle(fontSize: 10, color: Colors.black54)),
+                    ],
+                  ),
+                ),
+                Text('400\nkcal/วัน',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, color: primaryGreen, fontSize: 14)),
+              ],
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
+  // --- Widget ย่อยสำหรับการ์ดข้อมูลสุขภาพ ---
+  Widget _buildStatItem(String title, String value, {IconData? icon}) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(title, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+              if (icon != null) ...[const SizedBox(width: 4), Icon(icon, size: 14, color: Colors.orange)],
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItemWithBadge(String title, String value, String badgeText, Color badgeColor) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: badgeColor.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(badgeText, style: TextStyle(color: badgeColor, fontSize: 10, fontWeight: FontWeight.bold)),
+              )
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- Widget การ์ดเป้าหมายหลัก (Card 2) ---
+  Widget _buildMainGoalCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: primaryGreen.withOpacity(0.2)),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4))
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.flag, color: Colors.orange),
+                  SizedBox(width: 8),
+                  Text('เป้าหมายหลักของฉัน', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(color: primaryGreen.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
+                child: Text('เหลืออีก 12 วัน', style: TextStyle(color: darkGreen, fontSize: 12, fontWeight: FontWeight.bold)),
+              )
+            ],
+          ),
+          const SizedBox(height: 24),
+          // Circular Progress
+          CircularPercentIndicator(
+            radius: 60.0,
+            lineWidth: 12.0,
+            percent: 0.68,
+            center: const Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text("68%", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24)),
+                Text("สำเร็จแล้ว", style: TextStyle(fontSize: 12, color: Colors.grey)),
+              ],
+            ),
+            progressColor: primaryGreen,
+            backgroundColor: Colors.grey.shade200,
+            circularStrokeCap: CircularStrokeCap.round,
+          ),
+          const SizedBox(height: 24),
+          const Text('🏃 วิ่ง 500 กิโลเมตร ใน 1 เดือน',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 4),
+          const Text('วิ่งสะสม: 340 / 500 กม. (เหลือ 160 กม.)',
+              style: TextStyle(fontSize: 14, color: Colors.black87)),
+          const SizedBox(height: 16),
+          // Tip Box
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.orange.shade100),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.lightbulb_outline, color: Colors.orange, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'คำแนะนำวันนี้: เพื่อให้ถึงเป้าหมาย 500 กม. ควรเก็บระยะทางวันนี้ 15-18 กม. คุมโซน 2 เพื่อรักษาระดับความฟิตและป้องกันการล้า',
+                    style: TextStyle(fontSize: 12, color: Colors.orange.shade900),
+                  ),
+                ),
+              ],
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
+  // --- Widget ปุ่ม Action (Start Workout) ---
+  Widget _buildActionButtons() {
+    return Column(
+      children: [
+        SizedBox(
+          width: double.infinity,
+          height: 54,
+          child: ElevatedButton(
+            onPressed: _handleStartWorkout,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: darkGreen,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.bolt, color: Colors.yellow),
+                SizedBox(width: 8),
+                Text('เริ่มวิ่งมินิมาราธอน (30 นาที)',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          height: 54,
+          child: OutlinedButton(
+            onPressed: () {},
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(color: Colors.grey.shade300),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              backgroundColor: Colors.white,
+            ),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.swap_calls, color: Colors.black54),
+                SizedBox(width: 8),
+                Text('เลือกประเภทอื่น', style: TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // --- Widget เป้าหมายอื่นๆ (Card 3) ---
+  Widget _buildOtherGoalsCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4))
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.format_list_bulleted, color: Colors.blueGrey),
+                  SizedBox(width: 8),
+                  Text('เป้าหมายอื่นๆ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                ],
+              ),
+              TextButton(
+                onPressed: () {},
+                child: const Text('ดูทั้งหมด >', style: TextStyle(fontSize: 12)),
+              )
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildMiniGoalProgress(icon: Icons.water_drop, color: Colors.blue, title: 'ดื่มน้ำ', current: '1.5', target: '2.5 ลิตร', percent: 0.6),
+          const SizedBox(height: 16),
+          _buildMiniGoalProgress(icon: Icons.directions_walk, color: Colors.orange, title: 'เดิน', current: '6,000', target: '10,000 ก้าว', percent: 0.6),
+          const SizedBox(height: 16),
+          _buildMiniGoalProgress(icon: Icons.bedtime, color: Colors.purple, title: 'นอนหลับ', current: '6', target: '8 ชม.', percent: 0.75),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMiniGoalProgress({required IconData icon, required Color color, required String title, required String current, required String target, required double percent}) {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: color, size: 20),
+                const SizedBox(width: 8),
+                Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            Row(
+              children: [
+                Text('$current / $target', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                const SizedBox(width: 8),
+                Text('${(percent * 100).toInt()}%', style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        LinearPercentIndicator(
+          lineHeight: 8.0,
+          percent: percent,
+          progressColor: color,
+          backgroundColor: Colors.grey.shade200,
+          barRadius: const Radius.circular(4),
+          padding: EdgeInsets.zero,
+        ),
+      ],
+    );
+  }
+
+
 }
