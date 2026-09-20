@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/auth_service.dart';
+import 'package:healthymate/core/services/sync_service.dart';
 import '../models/workout_models.dart';
 
 
@@ -219,6 +220,8 @@ class WorkoutTrackingState extends ChangeNotifier {
         caloriesBurned: savedCalories,
         routePoints: routePointsJson,
       );
+      // แจ้งเตือน SyncService ให้เริ่มเช็คและส่งข้อมูลขึ้น Cloud ทันทีถ้ามีเน็ต
+      unawaited(SyncService.instance.syncPendingData());
     }
 
     returnToCategorySelection();

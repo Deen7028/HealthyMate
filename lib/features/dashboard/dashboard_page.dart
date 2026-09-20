@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/percent_indicator.dart';
+import 'package:healthymate/shared/widgets/sync_status_badge.dart';
 import 'models/dashboard_data.dart';
 import 'widgets/daily_routine_checklist.dart';
 
@@ -183,10 +184,16 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                   ),
                 ],
               ),
-              IconButton(
-                icon: const Icon(Icons.notifications_outlined),
-                onPressed: () {},
-                color: Colors.black87,
+              Row(
+                children: [
+                  const SyncStatusBadge(),
+                  const SizedBox(width: 6),
+                  IconButton(
+                    icon: const Icon(Icons.notifications_outlined),
+                    onPressed: () {},
+                    color: Colors.black87,
+                  ),
+                ],
               ),
             ],
           ),

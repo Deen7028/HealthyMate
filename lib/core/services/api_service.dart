@@ -6,7 +6,7 @@ import 'package:healthymate/features/health_calculator/models/user_model.dart';
 
 class HealthApiService {
   // Base URL ของเซิร์ฟเวอร์ PHP API
-  static String baseUrl = "https://std.mcs.psu.ac.th/6620310001/html/HealthyMate/api";
+  static String baseUrl = "http://172.18.115.39:8000/6620310001/HealthyMate/api";
 
   /// 1. ดึงข้อมูลประวัติสุขภาพจาก PHP API (`health_records.php`)
   static Future<List<TbHealthRecord>> fetchHealthRecords({int userId = 1}) async {
@@ -76,5 +76,68 @@ class HealthApiService {
       debugPrint('PHP API offline or fallback: $e');
     }
     return false;
+  }
+
+  /// 4. บันทึกข้อมูลการออกกำลังกายขึ้น PHP API (`workouts.php`)
+  static Future<bool> saveWorkout(Map<String, dynamic> workout) async {
+    try {
+      final uri = Uri.parse('$baseUrl/workouts.php');
+      final response = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json; charset=utf-8'},
+        body: jsonEncode(workout),
+      ).timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        return body['status'] == 'success';
+      }
+    } catch (e) {
+      debugPrint('PHP API offline or fallback: $e');
+    }
+    return false;
+  }
+
+  /// 5. บันทึกประวัติมื้ออาหารขึ้น PHP API (`nutrition_logs.php`)
+  static Future<bool> saveNutritionLog(Map<String, dynamic> log) async {
+    try {
+      final uri = Uri.parse('$baseUrl/nutrition_logs.php');
+      final response = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json; charset=utf-8'},
+        body: jsonEncode(log),
+      ).timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        return body['status'] == 'success';
+      }
+    } catch (e) {
+      debugPrint('PHP API offline or fallback: $e');
+    }
+    return false;
+  }
+
+  /// 6. อัปโหลดรูปภาพขึ้น Server (/uploads) และรับ path กลับมาบันทึกลง Database
+  static Future<String?> uploadImage(String localFilePath, {String type = 'general'}) async {
+    try {
+      final uri = Uri.parse('$baseUrl/upload_image.php');
+      final request = http.MultipartRequest('POST', uri)
+        ..fields['type'] = type
+        ..files.add(await http.MultipartFile.fromPath('image', localFilePath));
+
+      final streamedResponse = await request.send().timeout(const Duration(seconds: 15));
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body['status'] == 'success') {
+          return body['filePath'] as String?; // ส่งกลับ "uploads/profile/xxx.jpg"
+        }
+      }
+    } catch (e) {
+      debugPrint('Error uploading image to server: $e');
+    }
+    return null;
   }
 }

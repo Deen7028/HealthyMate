@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/database/app_database.dart';
+import 'package:healthymate/core/services/sync_service.dart';
 import 'package:healthymate/core/theme/app_theme.dart';
 import 'package:healthymate/features/food_recognition/dialogs/edit_food_item_dialog.dart';
 import 'package:healthymate/features/food_recognition/dialogs/gemini_api_key_dialog.dart';
@@ -103,6 +104,10 @@ class _FoodRecognitionResultSheetState extends State<FoodRecognitionResultSheet>
           imagePath: _result.imagePath,
         );
       }
+
+      // ส่งสัญญาณให้อัปเดตสถานะค้างซิงค์ และซิงค์ขึ้น Cloud ในเบื้องหลังทันที
+      SyncService.instance.updatePendingCount();
+      SyncService.instance.syncPendingData();
 
       if (mounted) {
         Navigator.pop(context);

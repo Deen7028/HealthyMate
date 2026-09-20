@@ -40,6 +40,8 @@ CREATE TABLE `TbUsers` (
   `sActivityLevel` varchar(50) DEFAULT NULL,
   `isDarkMode` tinyint(1) DEFAULT 0,
   `sProfileImagePath` text DEFAULT '',
+  `isSynced` tinyint(1) DEFAULT 0,
+  `dtUpdatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `dtCreatedAt` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -126,6 +128,8 @@ CREATE TABLE `TbHealthRecords` (
   `nTdee` decimal(6,2) DEFAULT NULL,
   `computedBmr` decimal(6,2) DEFAULT NULL,
   `activityLevelTitle` varchar(100) DEFAULT NULL,
+  `isSynced` tinyint(1) DEFAULT 0,
+  `dtUpdatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `dtRecordedAt` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -146,6 +150,8 @@ CREATE TABLE `TbNutritionLogs` (
   `nFat` decimal(5,2) DEFAULT 0.00,
   `sServingSize` varchar(100) DEFAULT '',
   `sImagePath` text DEFAULT '',
+  `isSynced` tinyint(1) DEFAULT 0,
+  `dtUpdatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `dtLoggedAt` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -204,6 +210,8 @@ CREATE TABLE `TbWorkouts` (
   `nDuration` int(11) DEFAULT 0,
   `nCaloriesBurned` decimal(6,2) DEFAULT 0.00,
   `sRoutePoints` longtext DEFAULT '',
+  `isSynced` tinyint(1) DEFAULT 0,
+  `dtUpdatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `dtWorkoutDate` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/api_service.dart';
+import 'package:healthymate/core/services/sync_service.dart';
 import 'package:healthymate/core/theme/app_theme.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -154,8 +155,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
         password: password,
       );
 
-      // 3. ส่งข้อมูลไปอัปเดตลงเซิร์ฟเวอร์ PHP Database
-      HealthApiService.updateUserProfile(newUser);
+      // 3. ส่งข้อมูลไปอัปเดต/สร้างบัญชีบนเซิร์ฟเวอร์ PHP Database
+      try {
+        final serverSuccess = await HealthApiService.updateUserProfile(newUser.toMap());
+        if (serverSuccess) {
+          await AppDatabase.instance.markUserAsSynced(newUser.nUserId);
+        }
+      } catch (e) {
+        debugPrint('Failed to sync new user to server immediately: $e');
+      }
+
+      // สั่งกระตุ้น SyncService ในเบื้องหลัง
+      SyncService.instance.updatePendingCount();
+      SyncService.instance.syncPendingData();
 
       if (!mounted) return;
 

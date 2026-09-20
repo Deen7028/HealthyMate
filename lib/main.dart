@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/auth_service.dart';
+import 'package:healthymate/core/services/sync_service.dart';
 import 'package:healthymate/core/services/theme_service.dart';
 import 'package:healthymate/core/theme/app_theme.dart';
 import 'package:healthymate/features/login/login_screen.dart';
@@ -11,6 +12,7 @@ void main() async {
   AppDatabase.ensureInitialized();
   await AuthService.instance.init();
   await ThemeService.instance.init();
+  await SyncService.instance.init();
   runApp(const HealthyMateApp());
 }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/api_service.dart';
 import 'package:healthymate/core/services/auth_service.dart';
+import 'package:healthymate/core/services/sync_service.dart';
 import 'package:healthymate/core/utils/health_calculator.dart';
 import 'package:healthymate/features/health_calculator/models/activity_level.dart';
 import 'package:healthymate/features/health_calculator/models/health_record_model.dart';
@@ -222,7 +223,7 @@ class HealthCalculatorState extends ChangeNotifier {
 
       _historyList.insert(0, newRecord);
 
-      // บันทึกลง Local Database & อัปเดต record ID เมื่อบันทึกสำเร็จ
+      // บันทึกลง Local Database (isSynced = 0)
       _db.insertHealthRecord(newRecord).then((savedRecord) {
         if (!_isDisposed) {
           final index = _historyList.indexOf(newRecord);
@@ -231,14 +232,11 @@ class HealthCalculatorState extends ChangeNotifier {
             notifyListeners();
           }
         }
+        // ตรวจสอบและซิงค์ขึ้น Cloud ผ่าน SyncService ในเบื้องหลัง
+        SyncService.instance.updatePendingCount();
+        SyncService.instance.syncPendingData();
       }).catchError((e) {
         debugPrint('Error saving health record to local db: $e');
-      });
-
-      // ยิงไปบันทึกบน PHP Database Server
-      HealthApiService.saveHealthRecord(newRecord).catchError((e) {
-        debugPrint('Error saving health record to API: $e');
-        return false;
       });
     }
 
