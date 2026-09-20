@@ -180,7 +180,8 @@ class AppDatabase {
       CREATE TABLE IF NOT EXISTS TbUserPreferences (
         nUserId INTEGER PRIMARY KEY,
         sUnitSystem TEXT DEFAULT "metric",
-        sUnitLabel TEXT DEFAULT "Kilometers, Kilograms"
+        sUnitLabel TEXT DEFAULT "Kilometers, Kilograms",
+        sGeminiApiKey TEXT DEFAULT ""
       );
     ''');
 
@@ -769,35 +770,6 @@ class AppDatabase {
   Future<void> saveUserUnitPreference(int userId, String unitLabel) async {
     final db = await database;
     if (db == null) return;
-    await db.insert(
-      'TbUserPreferences',
-      {
-        'nUserId': userId,
-        'sUnitSystem': unitLabel.startsWith('Kilo') ? 'metric' : 'imperial',
-        'sUnitLabel': unitLabel,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-  }
-
-  Future<String> getGeminiApiKey(int userId) async {
-    final db = await database;
-    if (db == null) return '';
-    final maps = await db.query(
-      'TbUserPreferences',
-      where: 'nUserId = ?',
-      whereArgs: [userId],
-      limit: 1,
-    );
-    if (maps.isNotEmpty && maps.first['sGeminiApiKey'] != null) {
-      return maps.first['sGeminiApiKey'].toString();
-    }
-    return '';
-  }
-
-  Future<void> saveGeminiApiKey(int userId, String apiKey) async {
-    final db = await database;
-    if (db == null) return;
     final existing = await db.query(
       'TbUserPreferences',
       where: 'nUserId = ?',
@@ -807,7 +779,10 @@ class AppDatabase {
     if (existing.isNotEmpty) {
       await db.update(
         'TbUserPreferences',
-        {'sGeminiApiKey': apiKey.trim()},
+        {
+          'sUnitSystem': unitLabel.startsWith('Kilo') ? 'metric' : 'imperial',
+          'sUnitLabel': unitLabel,
+        },
         where: 'nUserId = ?',
         whereArgs: [userId],
       );
@@ -816,12 +791,72 @@ class AppDatabase {
         'TbUserPreferences',
         {
           'nUserId': userId,
-          'sUnitSystem': 'metric',
-          'sUnitLabel': 'Kilometers, Kilograms',
-          'sGeminiApiKey': apiKey.trim(),
+          'sUnitSystem': unitLabel.startsWith('Kilo') ? 'metric' : 'imperial',
+          'sUnitLabel': unitLabel,
+          'sGeminiApiKey': '',
         },
-        conflictAlgorithm: ConflictAlgorithm.replace,
       );
+    }
+  }
+
+  Future<String> getGeminiApiKey(int userId) async {
+    final db = await database;
+    if (db == null) return '';
+    try {
+      final maps = await db.query(
+        'TbUserPreferences',
+        where: 'nUserId = ?',
+        whereArgs: [userId],
+        limit: 1,
+      );
+      if (maps.isNotEmpty && maps.first['sGeminiApiKey'] != null) {
+        return maps.first['sGeminiApiKey'].toString();
+      }
+    } catch (e) {
+      debugPrint('getGeminiApiKey error: $e');
+    }
+    return '';
+  }
+
+  Future<void> saveGeminiApiKey(int userId, String apiKey) async {
+    final db = await database;
+    if (db == null) return;
+    try {
+      // ตรวจสอบและสร้างคอลัมน์ sGeminiApiKey หากยังไม่มี (กรณี database เก่าค้าง)
+      try {
+        await db.execute('ALTER TABLE TbUserPreferences ADD COLUMN sGeminiApiKey TEXT DEFAULT ""');
+      } catch (_) {
+        // มี column อยู่แล้ว ข้ามได้
+      }
+
+      final existing = await db.query(
+        'TbUserPreferences',
+        where: 'nUserId = ?',
+        whereArgs: [userId],
+        limit: 1,
+      );
+      if (existing.isNotEmpty) {
+        await db.update(
+          'TbUserPreferences',
+          {'sGeminiApiKey': apiKey.trim()},
+          where: 'nUserId = ?',
+          whereArgs: [userId],
+        );
+      } else {
+        await db.insert(
+          'TbUserPreferences',
+          {
+            'nUserId': userId,
+            'sUnitSystem': 'metric',
+            'sUnitLabel': 'Kilometers, Kilograms',
+            'sGeminiApiKey': apiKey.trim(),
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+    } catch (e) {
+      debugPrint('saveGeminiApiKey error: $e');
+      rethrow;
     }
   }
 

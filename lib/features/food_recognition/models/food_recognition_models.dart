@@ -106,12 +106,16 @@ class MealNutritionScanResult {
   MealCategory category;
   final List<DetectedFoodItem> items;
   final DateTime scannedAt;
+  final String? errorMessage;
+  final bool hasApiKey;
 
   MealNutritionScanResult({
     required this.imagePath,
     required this.category,
     required this.items,
     required this.scannedAt,
+    this.errorMessage,
+    this.hasApiKey = true,
   });
 
   int get totalCalories => items.fold(0, (sum, item) => sum + item.calories);
