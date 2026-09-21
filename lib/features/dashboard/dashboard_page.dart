@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/percent_indicator.dart';
-import 'models/dashboard_data.dart';
-import 'widgets/daily_routine_checklist.dart';
+
+// สมมติว่ามีการ import ข้อมูล/State เข้ามา
+// import 'package:healthymate/features/health_calculator/state/health_calculator_state.dart';
 
 class DashboardPageUpdated extends StatefulWidget {
   final VoidCallback? onNavigateToCalculator;
@@ -26,59 +27,6 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
   final Color primaryGreen = const Color(0xFF0F9C58);
   final Color darkGreen = const Color(0xFF006432);
   final Color lightBg = const Color(0xFFF7F9FB);
-
-  // Exact checklist items matching design:
-  final List<DailyChecklistItem> _checklistItems = [
-    DailyChecklistItem(
-      id: 'c1',
-      title: 'ยืดเส้นยืดสายยามเช้า',
-      subtitle: '10 นาทีเพื่อปลุกร่างกาย',
-      icon: Icons.self_improvement_rounded,
-      color: const Color(0xFF2E5327),
-      isCompleted: true,
-    ),
-    DailyChecklistItem(
-      id: 'c2',
-      title: 'ดื่มน้ำ',
-      subtitle: 'เริ่มต้นวันด้วยน้ำ 500 มล.',
-      icon: Icons.water_drop_rounded,
-      color: const Color(0xFF2E5327),
-      isCompleted: true,
-    ),
-    DailyChecklistItem(
-      id: 'c3',
-      title: 'โปรตีนหลังออกกำลังกาย',
-      subtitle: 'เครื่องดื่มหรืออาหารโปรตีนสูง',
-      icon: Icons.restaurant_rounded,
-      color: const Color(0xFF5A6559),
-      isCompleted: false,
-    ),
-    DailyChecklistItem(
-      id: 'c4',
-      title: 'เดินเล่นยามเย็น',
-      subtitle: 'เดินเบาๆ 15 นาทีหลังอาหารเย็น',
-      icon: Icons.directions_walk_rounded,
-      color: const Color(0xFF5A6559),
-      isCompleted: false,
-    ),
-    DailyChecklistItem(
-      id: 'c5',
-      title: 'ทำสมาธิผ่อนคลาย',
-      subtitle: '10 นาทีเพื่อผ่อนคลายจิตใจก่อนนอน',
-      icon: Icons.spa_rounded,
-      color: const Color(0xFF2E5327),
-      isCompleted: true,
-    ),
-  ];
-
-  void _toggleChecklistItem(String id, bool isChecked) {
-    setState(() {
-      final index = _checklistItems.indexWhere((i) => i.id == id);
-      if (index != -1) {
-        _checklistItems[index].isCompleted = isChecked;
-      }
-    });
-  }
 
   void _handleStartWorkout() {
     if (widget.onNavigateToWorkout != null) {
@@ -111,7 +59,11 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                 _buildHeader(),
                 const SizedBox(height: 24),
 
-                // 2. ข้อมูลสุขภาพส่วนบุคคล (Health Summary Card)
+                // 2. แถบปฏิทินกิจวัตรประจำสัปดาห์ (Calendar Strip)
+                _buildCalendarStrip(),
+                const SizedBox(height: 20),
+
+                // 3. ข้อมูลสุขภาพส่วนบุคคล (Health Summary Card)
                 _buildHealthSummaryCard(),
                 const SizedBox(height: 20),
 
@@ -123,14 +75,9 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                 _buildActionButtons(),
                 const SizedBox(height: 20),
 
-                // 5. Daily Routine Checklist (กิจวัตรประจำวัน เสร็จสิ้น 3/5)
-                DailyRoutineChecklist(
-                  items: _checklistItems,
-                  onToggleItem: _toggleChecklistItem,
-                  onViewAllTap: widget.onNavigateToPractice,
-                ),
-
-                const SizedBox(height: 24),
+                // 5. เป้าหมายอื่นๆ (Other Goals & Routines)
+                _buildOtherGoalsCard(),
+                const SizedBox(height: 40),
               ],
             ),
           ),
@@ -209,6 +156,157 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
           ),
         ],
       ),
+    );
+  }
+
+  // --- Calendar Strip ---
+  Widget _buildCalendarStrip() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.calendar_today, size: 16, color: Colors.blueGrey),
+                  SizedBox(width: 8),
+                  Text(
+                    'สัปดาห์นี้ • พฤษภาคม 2025',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      '🔥 ',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.red.shade400,
+                      ),
+                    ),
+                    Text(
+                      '18 วันต่อเนื่อง',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.red.shade800,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Days Row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildDayItem('จ.', '16', false),
+              _buildDayItem('อ.', '17', false),
+              _buildDayItem('พ.', '18', true),
+              _buildDayItem('พฤ.', '19', false),
+              _buildDayItem('ศ.', '20', false),
+              _buildDayItem('ส.', '21', false),
+              _buildDayItem('อา.', '22', false),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Divider(height: 1),
+          const SizedBox(height: 12),
+          const Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.check_circle_outline,
+                    size: 14,
+                    color: Colors.teal,
+                  ),
+                  SizedBox(width: 4),
+                  Text(
+                    'วันนี้ทำสำเร็จแล้ว 2/5 กิจวัตร',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.teal,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              Text(
+                '60% Complete',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.teal,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDayItem(String day, String date, bool isSelected) {
+    return Column(
+      children: [
+        Text(
+          day,
+          style: TextStyle(
+            fontSize: 12,
+            color: isSelected ? darkGreen : Colors.grey,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          width: 32,
+          height: 40,
+          decoration: BoxDecoration(
+            color: isSelected ? darkGreen : Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Center(
+            child: Text(
+              date,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: isSelected ? Colors.white : Colors.black87,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          width: 4,
+          height: 4,
+          decoration: BoxDecoration(
+            color: isSelected
+                ? Colors.greenAccent
+                : (int.parse(date) < 18 ? darkGreen : Colors.grey.shade300),
+            shape: BoxShape.circle,
+          ),
+        ),
+      ],
     );
   }
 
@@ -598,6 +696,135 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
               ],
             ),
           ),
+        ),
+      ],
+    );
+  }
+
+  // --- Widget เป้าหมายอื่นๆ (Card 3) ---
+  Widget _buildOtherGoalsCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.format_list_bulleted, color: Colors.blueGrey),
+                  SizedBox(width: 8),
+                  Text(
+                    'เป้าหมายอื่นๆ',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ],
+              ),
+              TextButton(
+                onPressed: () {},
+                child: const Text(
+                  'ดูทั้งหมด >',
+                  style: TextStyle(fontSize: 12),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildMiniGoalProgress(
+            icon: Icons.water_drop,
+            color: Colors.blue,
+            title: 'ดื่มน้ำ',
+            current: '1.5',
+            target: '2.5 ลิตร',
+            percent: 0.6,
+          ),
+          const SizedBox(height: 16),
+          _buildMiniGoalProgress(
+            icon: Icons.directions_walk,
+            color: Colors.orange,
+            title: 'เดิน',
+            current: '6,000',
+            target: '10,000 ก้าว',
+            percent: 0.6,
+          ),
+          const SizedBox(height: 16),
+          _buildMiniGoalProgress(
+            icon: Icons.bedtime,
+            color: Colors.purple,
+            title: 'นอนหลับ',
+            current: '6',
+            target: '8 ชม.',
+            percent: 0.75,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMiniGoalProgress({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String current,
+    required String target,
+    required double percent,
+  }) {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: color, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                Text(
+                  '$current / $target',
+                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${(percent * 100).toInt()}%',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        LinearPercentIndicator(
+          lineHeight: 8.0,
+          percent: percent,
+          progressColor: color,
+          backgroundColor: Colors.grey.shade200,
+          barRadius: const Radius.circular(4),
+          padding: EdgeInsets.zero,
         ),
       ],
     );
