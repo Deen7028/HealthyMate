@@ -13,6 +13,9 @@ class TbHealthRecord {
   // Extra computed metadata for UI display
   final double? computedBmr;
   final String? activityLevelTitle;
+  // Sync metadata
+  final int isSynced;
+  final String dtUpdatedAt;
 
   TbHealthRecord({
     required this.nRecordId,
@@ -24,7 +27,10 @@ class TbHealthRecord {
     DateTime? dtRecordedAt,
     this.computedBmr,
     this.activityLevelTitle,
-  }) : dtRecordedAt = dtRecordedAt ?? DateTime.now();
+    this.isSynced = 0,
+    String? dtUpdatedAt,
+  })  : dtRecordedAt = dtRecordedAt ?? DateTime.now(),
+        dtUpdatedAt = dtUpdatedAt ?? DateTime.now().toIso8601String();
 
   BMICategory get bmiCategoryObj => HealthCalculator.getBMICategory(nBmi);
 
@@ -38,6 +44,8 @@ class TbHealthRecord {
       'nTdee': nTdee,
       'computedBmr': computedBmr,
       'activityLevelTitle': activityLevelTitle,
+      'isSynced': isSynced,
+      'dtUpdatedAt': dtUpdatedAt,
       'dtRecordedAt': dtRecordedAt.toIso8601String(),
     };
   }
@@ -65,6 +73,8 @@ class TbHealthRecord {
       dtRecordedAt: DateTime.tryParse(map['dtRecordedAt']?.toString() ?? '') ?? DateTime.now(),
       computedBmr: map['computedBmr'] != null ? _toDouble(map['computedBmr']) : null,
       activityLevelTitle: map['activityLevelTitle']?.toString(),
+      isSynced: _toInt(map['isSynced'], 0),
+      dtUpdatedAt: map['dtUpdatedAt']?.toString(),
     );
   }
 }

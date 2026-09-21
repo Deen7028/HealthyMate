@@ -65,7 +65,7 @@ class AppDatabase {
 
     return await openDatabase(
       path,
-      version: 7,
+      version: 8,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -143,6 +143,24 @@ class AppDatabase {
         debugPrint('Migration note v7: $e');
       }
     }
+    if (oldVersion < 8) {
+      try {
+        // เพิ่มคอลัมน์ isSynced และ dtUpdatedAt สำหรับ Offline-First Architecture
+        await db.execute('ALTER TABLE $tableHealthRecords ADD COLUMN isSynced INTEGER DEFAULT 0');
+        await db.execute('ALTER TABLE $tableHealthRecords ADD COLUMN dtUpdatedAt TEXT DEFAULT ""');
+
+        await db.execute('ALTER TABLE $tableWorkouts ADD COLUMN isSynced INTEGER DEFAULT 0');
+        await db.execute('ALTER TABLE $tableWorkouts ADD COLUMN dtUpdatedAt TEXT DEFAULT ""');
+
+        await db.execute('ALTER TABLE $tableNutritionLogs ADD COLUMN isSynced INTEGER DEFAULT 0');
+        await db.execute('ALTER TABLE $tableNutritionLogs ADD COLUMN dtUpdatedAt TEXT DEFAULT ""');
+
+        await db.execute('ALTER TABLE $tableUsers ADD COLUMN isSynced INTEGER DEFAULT 0');
+        await db.execute('ALTER TABLE $tableUsers ADD COLUMN dtUpdatedAt TEXT DEFAULT ""');
+      } catch (e) {
+        debugPrint('Migration note v8 (Offline-first sync flags): $e');
+      }
+    }
   }
 
   /// สร้าง Table Schema ทั้งหมดตาม 6620310001_HealthMateDB.sql
@@ -161,7 +179,9 @@ class AppDatabase {
         sActivityLevel TEXT,
         isDarkMode INTEGER DEFAULT 0,
         sProfileImagePath TEXT DEFAULT "",
-        dtCreatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+        isSynced INTEGER DEFAULT 0,
+        dtCreatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
+        dtUpdatedAt TEXT DEFAULT CURRENT_TIMESTAMP
       );
     ''');
 
@@ -180,7 +200,8 @@ class AppDatabase {
       CREATE TABLE IF NOT EXISTS TbUserPreferences (
         nUserId INTEGER PRIMARY KEY,
         sUnitSystem TEXT DEFAULT "metric",
-        sUnitLabel TEXT DEFAULT "Kilometers, Kilograms"
+        sUnitLabel TEXT DEFAULT "Kilometers, Kilograms",
+        sGeminiApiKey TEXT DEFAULT ""
       );
     ''');
 
@@ -223,7 +244,9 @@ class AppDatabase {
         nTdee REAL,
         computedBmr REAL,
         activityLevelTitle TEXT,
+        isSynced INTEGER DEFAULT 0,
         dtRecordedAt TEXT DEFAULT CURRENT_TIMESTAMP,
+        dtUpdatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (nUserId) REFERENCES $tableUsers (nUserId) ON DELETE CASCADE
       );
     ''');
@@ -240,7 +263,9 @@ class AppDatabase {
         nFat REAL DEFAULT 0.0,
         sServingSize TEXT DEFAULT "",
         sImagePath TEXT DEFAULT "",
+        isSynced INTEGER DEFAULT 0,
         dtLoggedAt TEXT DEFAULT CURRENT_TIMESTAMP,
+        dtUpdatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (nUserId) REFERENCES $tableUsers (nUserId) ON DELETE CASCADE
       );
     ''');
@@ -287,7 +312,9 @@ class AppDatabase {
         nDuration INTEGER DEFAULT 0,
         nCaloriesBurned REAL DEFAULT 0.00,
         sRoutePoints TEXT DEFAULT "",
+        isSynced INTEGER DEFAULT 0,
         dtWorkoutDate TEXT DEFAULT CURRENT_TIMESTAMP,
+        dtUpdatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (nUserId) REFERENCES $tableUsers (nUserId) ON DELETE CASCADE
       );
     ''');
@@ -480,6 +507,34 @@ class AppDatabase {
     );
   }
 
+  /// บันทึกหรืออัปเดตข้อมูลผู้ใช้ที่ได้จาก Server (User Hydration) ลงใน `TbUsers` ของ SQLite
+  /// รองรับทั้งการติดตั้งใหม่และย้ายเครื่อง โดยเก็บ nUserId เดิมจาก MySQL เสมอ
+  Future<TbUser> upsertUserFromServer(Map<String, dynamic> userMap) async {
+    final user = TbUser.fromMap(userMap);
+    if (kIsWeb) {
+      final index = _webUsers.indexWhere((u) => u['nUserId'] == user.nUserId);
+      if (index >= 0) {
+        _webUsers[index] = user.toMap();
+      } else {
+        _webUsers.add(user.toMap());
+      }
+      return user;
+    }
+
+    final db = await database;
+    if (db != null) {
+      final mapToInsert = Map<String, dynamic>.from(user.toMap());
+      mapToInsert['isSynced'] = 1; // บัญชีมาจาก Server ถือว่าซิงค์เรียบร้อยแล้ว
+      await db.insert(
+        tableUsers,
+        mapToInsert,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+    return user;
+  }
+
+
   // ==========================================
   // TbHealthRecords CRUD Operations
   // ==========================================
@@ -603,7 +658,9 @@ class AppDatabase {
       'nDuration': durationSeconds,
       'nCaloriesBurned': caloriesBurned,
       'sRoutePoints': routePoints,
+      'isSynced': 0,
       'dtWorkoutDate': nowStr,
+      'dtUpdatedAt': nowStr,
     });
   }
 
@@ -622,7 +679,101 @@ class AppDatabase {
     );
   }
 
-  // ==========================================
+  /// เขียนข้อมูล Workouts จาก Server ลง SQLite ด้วย UPSERT (INSERT OR REPLACE)
+  /// - กำหนด `isSynced = 1` ทันที
+  /// - ใช้ ID ที่ได้รับจาก Server (`nWorkoutId`) เพื่อป้องกัน Primary Key ชนกัน
+  Future<int> upsertWorkoutsFromServer(List<Map<String, dynamic>> workouts) async {
+    if (kIsWeb || workouts.isEmpty) return 0;
+    final db = await database;
+    if (db == null) return 0;
+
+    int affectedCount = 0;
+    await db.transaction((txn) async {
+      for (final item in workouts) {
+        final rawId = item['nWorkoutId'];
+        final workoutId = rawId != null ? int.tryParse(rawId.toString()) : null;
+        final rawUserId = item['nUserId'];
+        final userId = rawUserId != null ? int.tryParse(rawUserId.toString()) ?? 1 : 1;
+
+        final rawDuration = item['nDuration'];
+        final duration = rawDuration != null ? int.tryParse(rawDuration.toString()) ?? 0 : 0;
+
+        final rawDistance = item['nDistance'];
+        final distance = rawDistance != null ? double.tryParse(rawDistance.toString()) ?? 0.0 : 0.0;
+
+        final rawCalories = item['nCaloriesBurned'];
+        final calories = rawCalories != null ? double.tryParse(rawCalories.toString()) ?? 0.0 : 0.0;
+
+        final type = item['sType']?.toString() ?? 'วิ่ง';
+        final routePoints = item['sRoutePoints']?.toString() ?? '';
+        final workoutDate = item['dtWorkoutDate']?.toString() ?? DateTime.now().toIso8601String();
+        final updatedAt = item['dtUpdatedAt']?.toString() ?? DateTime.now().toIso8601String();
+
+        final mapToInsert = <String, dynamic>{
+          if (workoutId != null && workoutId > 0) 'nWorkoutId': workoutId,
+          'nUserId': userId,
+          'sType': type,
+          'nDistance': distance,
+          'nDuration': duration,
+          'nCaloriesBurned': calories,
+          'sRoutePoints': routePoints,
+          'isSynced': 1, // ข้อมูลมาจาก Server ให้ระบุว่าซิงค์สมบูรณ์แล้วทันที
+          'dtWorkoutDate': workoutDate,
+          'dtUpdatedAt': updatedAt,
+        };
+
+        await txn.insert(
+          tableWorkouts,
+          mapToInsert,
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+        affectedCount++;
+      }
+    });
+
+    return affectedCount;
+  }
+
+  /// อ่านเวลาการดึงข้อมูลล่าสุด (dtLastWorkoutSync) จาก TbHealthIntegrations หรือ Session
+  Future<String?> getLastWorkoutSyncTimestamp(int userId) async {
+    if (kIsWeb) return null;
+    final db = await database;
+    if (db == null) return null;
+    try {
+      final res = await db.query(
+        tableHealthIntegrations,
+        where: 'nUserId = ? AND sProviderName = ?',
+        whereArgs: [userId, 'workout_sync_timestamp'],
+        limit: 1,
+      );
+      if (res.isNotEmpty) {
+        return res.first['dtLastSyncedAt']?.toString();
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// บันทึกเวลาซิงค์ล่าสุด (Save Last Sync Timestamp)
+  Future<void> setLastWorkoutSyncTimestamp(int userId, String timestamp) async {
+    if (kIsWeb) return;
+    final db = await database;
+    if (db == null) return;
+    try {
+      await db.insert(
+        tableHealthIntegrations,
+        {
+          'nUserId': userId,
+          'sProviderName': 'workout_sync_timestamp',
+          'isSynced': 1,
+          'dtLastSyncedAt': timestamp,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    } catch (e) {
+      debugPrint('AppDatabase: Error saving workout sync timestamp: $e');
+    }
+  }
+
   // Auth Session Operations
   // ==========================================
 
@@ -769,35 +920,6 @@ class AppDatabase {
   Future<void> saveUserUnitPreference(int userId, String unitLabel) async {
     final db = await database;
     if (db == null) return;
-    await db.insert(
-      'TbUserPreferences',
-      {
-        'nUserId': userId,
-        'sUnitSystem': unitLabel.startsWith('Kilo') ? 'metric' : 'imperial',
-        'sUnitLabel': unitLabel,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-  }
-
-  Future<String> getGeminiApiKey(int userId) async {
-    final db = await database;
-    if (db == null) return '';
-    final maps = await db.query(
-      'TbUserPreferences',
-      where: 'nUserId = ?',
-      whereArgs: [userId],
-      limit: 1,
-    );
-    if (maps.isNotEmpty && maps.first['sGeminiApiKey'] != null) {
-      return maps.first['sGeminiApiKey'].toString();
-    }
-    return '';
-  }
-
-  Future<void> saveGeminiApiKey(int userId, String apiKey) async {
-    final db = await database;
-    if (db == null) return;
     final existing = await db.query(
       'TbUserPreferences',
       where: 'nUserId = ?',
@@ -807,7 +929,10 @@ class AppDatabase {
     if (existing.isNotEmpty) {
       await db.update(
         'TbUserPreferences',
-        {'sGeminiApiKey': apiKey.trim()},
+        {
+          'sUnitSystem': unitLabel.startsWith('Kilo') ? 'metric' : 'imperial',
+          'sUnitLabel': unitLabel,
+        },
         where: 'nUserId = ?',
         whereArgs: [userId],
       );
@@ -816,12 +941,72 @@ class AppDatabase {
         'TbUserPreferences',
         {
           'nUserId': userId,
-          'sUnitSystem': 'metric',
-          'sUnitLabel': 'Kilometers, Kilograms',
-          'sGeminiApiKey': apiKey.trim(),
+          'sUnitSystem': unitLabel.startsWith('Kilo') ? 'metric' : 'imperial',
+          'sUnitLabel': unitLabel,
+          'sGeminiApiKey': '',
         },
-        conflictAlgorithm: ConflictAlgorithm.replace,
       );
+    }
+  }
+
+  Future<String> getGeminiApiKey(int userId) async {
+    final db = await database;
+    if (db == null) return '';
+    try {
+      final maps = await db.query(
+        'TbUserPreferences',
+        where: 'nUserId = ?',
+        whereArgs: [userId],
+        limit: 1,
+      );
+      if (maps.isNotEmpty && maps.first['sGeminiApiKey'] != null) {
+        return maps.first['sGeminiApiKey'].toString();
+      }
+    } catch (e) {
+      debugPrint('getGeminiApiKey error: $e');
+    }
+    return '';
+  }
+
+  Future<void> saveGeminiApiKey(int userId, String apiKey) async {
+    final db = await database;
+    if (db == null) return;
+    try {
+      // ตรวจสอบและสร้างคอลัมน์ sGeminiApiKey หากยังไม่มี (กรณี database เก่าค้าง)
+      try {
+        await db.execute('ALTER TABLE TbUserPreferences ADD COLUMN sGeminiApiKey TEXT DEFAULT ""');
+      } catch (_) {
+        // มี column อยู่แล้ว ข้ามได้
+      }
+
+      final existing = await db.query(
+        'TbUserPreferences',
+        where: 'nUserId = ?',
+        whereArgs: [userId],
+        limit: 1,
+      );
+      if (existing.isNotEmpty) {
+        await db.update(
+          'TbUserPreferences',
+          {'sGeminiApiKey': apiKey.trim()},
+          where: 'nUserId = ?',
+          whereArgs: [userId],
+        );
+      } else {
+        await db.insert(
+          'TbUserPreferences',
+          {
+            'nUserId': userId,
+            'sUnitSystem': 'metric',
+            'sUnitLabel': 'Kilometers, Kilograms',
+            'sGeminiApiKey': apiKey.trim(),
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+    } catch (e) {
+      debugPrint('saveGeminiApiKey error: $e');
+      rethrow;
     }
   }
 
@@ -932,7 +1117,9 @@ class AppDatabase {
       'nFat': fat,
       'sServingSize': servingSize,
       'sImagePath': imagePath,
+      'isSynced': 0,
       'dtLoggedAt': DateTime.now().toIso8601String(),
+      'dtUpdatedAt': DateTime.now().toIso8601String(),
     });
   }
 
@@ -961,5 +1148,147 @@ class AppDatabase {
       where: 'nNutritionId = ?',
       whereArgs: [nutritionId],
     );
+  }
+
+  // ==========================================
+  // Offline-First Sync Flags & Operations
+  // ==========================================
+
+  /// คำนวณจำนวนแถวข้อมูลที่ยังไม่ได้ซิงค์ทั้งหมด (isSynced = 0)
+  Future<int> getPendingSyncCount() async {
+    if (kIsWeb) return 0;
+    final db = await database;
+    if (db == null) return 0;
+
+    int total = 0;
+    try {
+      final r1 = await db.rawQuery('SELECT COUNT(*) as cnt FROM $tableHealthRecords WHERE isSynced = 0');
+      total += (r1.first['cnt'] as num?)?.toInt() ?? 0;
+    } catch (_) {}
+
+    try {
+      final r2 = await db.rawQuery('SELECT COUNT(*) as cnt FROM $tableWorkouts WHERE isSynced = 0');
+      total += (r2.first['cnt'] as num?)?.toInt() ?? 0;
+    } catch (_) {}
+
+    try {
+      final r3 = await db.rawQuery('SELECT COUNT(*) as cnt FROM $tableNutritionLogs WHERE isSynced = 0');
+      total += (r3.first['cnt'] as num?)?.toInt() ?? 0;
+    } catch (_) {}
+
+    try {
+      final r4 = await db.rawQuery('SELECT COUNT(*) as cnt FROM $tableUsers WHERE isSynced = 0');
+      total += (r4.first['cnt'] as num?)?.toInt() ?? 0;
+    } catch (_) {}
+
+    return total;
+  }
+
+  /// ดึงข้อมูล HealthRecords ที่ยังไม่ซิงค์
+  Future<List<Map<String, dynamic>>> getUnsyncedHealthRecords() async {
+    if (kIsWeb) return [];
+    final db = await database;
+    if (db == null) return [];
+    try {
+      return await db.query(tableHealthRecords, where: 'isSynced = 0');
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// มาร์กว่า HealthRecord ซิงค์สำเร็จแล้ว
+  Future<void> markHealthRecordAsSynced(int recordId) async {
+    if (kIsWeb) return;
+    final db = await database;
+    if (db == null) return;
+    try {
+      await db.update(
+        tableHealthRecords,
+        {'isSynced': 1, 'dtUpdatedAt': DateTime.now().toIso8601String()},
+        where: 'nRecordId = ?',
+        whereArgs: [recordId],
+      );
+    } catch (_) {}
+  }
+
+  /// ดึงข้อมูล Workouts ที่ยังไม่ซิงค์
+  Future<List<Map<String, dynamic>>> getUnsyncedWorkouts() async {
+    if (kIsWeb) return [];
+    final db = await database;
+    if (db == null) return [];
+    try {
+      return await db.query(tableWorkouts, where: 'isSynced = 0');
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// มาร์กว่า Workout ซิงค์สำเร็จแล้ว
+  Future<void> markWorkoutAsSynced(int workoutId) async {
+    if (kIsWeb) return;
+    final db = await database;
+    if (db == null) return;
+    try {
+      await db.update(
+        tableWorkouts,
+        {'isSynced': 1, 'dtUpdatedAt': DateTime.now().toIso8601String()},
+        where: 'nWorkoutId = ?',
+        whereArgs: [workoutId],
+      );
+    } catch (_) {}
+  }
+
+  /// ดึงข้อมูล NutritionLogs ที่ยังไม่ซิงค์
+  Future<List<Map<String, dynamic>>> getUnsyncedNutritionLogs() async {
+    if (kIsWeb) return [];
+    final db = await database;
+    if (db == null) return [];
+    try {
+      return await db.query(tableNutritionLogs, where: 'isSynced = 0');
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// มาร์กว่า NutritionLog ซิงค์สำเร็จแล้ว
+  Future<void> markNutritionLogAsSynced(int nutritionId) async {
+    if (kIsWeb) return;
+    final db = await database;
+    if (db == null) return;
+    try {
+      await db.update(
+        tableNutritionLogs,
+        {'isSynced': 1, 'dtUpdatedAt': DateTime.now().toIso8601String()},
+        where: 'nNutritionId = ?',
+        whereArgs: [nutritionId],
+      );
+    } catch (_) {}
+  }
+
+  /// ดึงข้อมูล Users ที่ยังไม่ซิงค์
+  Future<List<Map<String, dynamic>>> getUnsyncedUsers() async {
+    if (kIsWeb) return [];
+    final db = await database;
+    if (db == null) return [];
+    try {
+      return await db.query(tableUsers, where: 'isSynced = 0');
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// มาร์กว่า User ซิงค์สำเร็จแล้ว
+  Future<void> markUserAsSynced(int userId) async {
+    if (kIsWeb) return;
+    final db = await database;
+    if (db == null) return;
+    try {
+      await db.update(
+        tableUsers,
+        {'isSynced': 1, 'dtUpdatedAt': DateTime.now().toIso8601String()},
+        where: 'nUserId = ?',
+        whereArgs: [userId],
+      );
+    } catch (_) {}
   }
 }

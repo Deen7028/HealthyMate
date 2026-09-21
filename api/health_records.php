@@ -50,8 +50,8 @@ switch ($method) {
 
         try {
             $stmt = $conn->prepare("
-                INSERT INTO TbHealthRecords (nUserId, nWeight, nHeight, nBmi, nTdee, dtRecordedAt)
-                VALUES (:userId, :weight, :height, :bmi, :tdee, :recordedAt)
+                INSERT INTO TbHealthRecords (nUserId, nWeight, nHeight, nBmi, nTdee, isSynced, dtUpdatedAt, dtRecordedAt)
+                VALUES (:userId, :weight, :height, :bmi, :tdee, 1, NOW(), :recordedAt)
             ");
             $stmt->execute([
                 ':userId' => $userId,

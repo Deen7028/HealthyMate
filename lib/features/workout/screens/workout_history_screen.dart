@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:healthymate/core/database/app_database.dart';
+import 'package:healthymate/core/services/sync_service.dart';
 import 'package:healthymate/core/theme/app_theme.dart';
 import 'package:healthymate/features/workout/screens/workout_share_screen.dart';
 
@@ -17,12 +18,79 @@ class WorkoutHistoryScreen extends StatefulWidget {
 
 class _WorkoutHistoryScreenState extends State<WorkoutHistoryScreen> {
   bool _isLoading = true;
+  bool _isPulling = false;
   List<Map<String, dynamic>> _workouts = [];
 
   @override
   void initState() {
     super.initState();
-    _loadWorkoutHistory();
+    _initWorkoutData();
+  }
+
+  /// ตรวจสอบเงื่อนไขการดึงข้อมูลเริ่มต้น (Initial Data Hydration Trigger)
+  /// - หาก Local DB ว่างเปล่า (COUNT(*) == 0) จะสั่งดึงข้อมูลจาก Server ลงมาเติมลงเครื่องทันที
+  Future<void> _initWorkoutData() async {
+    await _loadWorkoutHistory();
+
+    // ตรวจสอบว่า Local DB ว่างเปล่าหรือไม่
+    try {
+      final count = await AppDatabase.instance.getWorkoutCount(userId: widget.userId);
+      if (count == 0 && mounted) {
+        debugPrint('WorkoutHistory: Local DB is empty (COUNT == 0). Triggering Initial Pull Sync...');
+        await _pullDownstreamData(isInitial: true);
+      }
+    } catch (e) {
+      debugPrint('WorkoutHistory: Error checking workout count: $e');
+    }
+  }
+
+  /// ฟังก์ชันดึงข้อมูลจากเซิร์ฟเวอร์ลงมา (Pull Downstream Sync)
+  Future<void> _pullDownstreamData({bool isInitial = false}) async {
+    if (!mounted) return;
+    setState(() {
+      _isPulling = true;
+    });
+
+    try {
+      final pulledCount = await SyncService.instance.pullDownstreamWorkouts(
+        widget.userId,
+        forceInitial: isInitial,
+      );
+
+      // โหลดข้อมูลล่าสุดจาก SQLite หลัง Upsert เสร็จ
+      final list = await AppDatabase.instance.getWorkouts(userId: widget.userId);
+      if (mounted) {
+        setState(() {
+          _workouts = list;
+          _isLoading = false;
+          _isPulling = false;
+        });
+
+        if (pulledCount > 0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.cloud_download_rounded, color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
+                  Text('ดึงข้อมูลสำเร็จ $pulledCount รายการ'),
+                ],
+              ),
+              backgroundColor: AppTheme.primaryGreen,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('WorkoutHistory: Pull downstream error: $e');
+      if (mounted) {
+        setState(() {
+          _isPulling = false;
+        });
+      }
+    }
   }
 
   Future<void> _loadWorkoutHistory() async {
@@ -114,64 +182,103 @@ class _WorkoutHistoryScreenState extends State<WorkoutHistoryScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: Color(0xFF2E5327)),
-            onPressed: _loadWorkoutHistory,
-            tooltip: 'รีเฟรชประวัติ',
-          ),
+          if (_isPulling)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 14),
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Color(0xFF2E5327),
+                  ),
+                ),
+              ),
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.sync_rounded, color: Color(0xFF2E5327)),
+              onPressed: () => _pullDownstreamData(isInitial: false),
+              tooltip: 'ดึงข้อมูลล่าสุดจากเซิร์ฟเวอร์ (Delta Sync)',
+            ),
         ],
       ),
-      body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppTheme.primaryGreen),
-            )
-          : _workouts.isEmpty
-          ? _buildEmptyState()
-          : _buildHistoryList(),
+      body: RefreshIndicator(
+        color: AppTheme.primaryGreen,
+        backgroundColor: Colors.white,
+        onRefresh: () => _pullDownstreamData(isInitial: false),
+        child: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(color: AppTheme.primaryGreen),
+              )
+            : _workouts.isEmpty
+            ? _buildEmptyState()
+            : _buildHistoryList(),
+      ),
     );
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 40),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 96,
-              height: 96,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE8F1E7),
-                shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFFD4E6D2), width: 2),
-              ),
-              child: const Icon(
-                Icons.fitness_center_rounded,
-                size: 48,
-                color: Color(0xFF2E5327),
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 96,
+                    height: 96,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8F1E7),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFFD4E6D2), width: 2),
+                    ),
+                    child: const Icon(
+                      Icons.fitness_center_rounded,
+                      size: 48,
+                      color: Color(0xFF2E5327),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'ยังไม่มีประวัติการออกกำลังกาย',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF1C2819),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'เลื่อนลงเพื่อดึงข้อมูลจาก Cloud หรือเริ่มบันทึกกิจกรรมวิ่ง เดิน หรือปั่นจักรยานใหม่',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      color: Color(0xFF677366),
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  OutlinedButton.icon(
+                    onPressed: () => _pullDownstreamData(isInitial: true),
+                    icon: const Icon(Icons.cloud_download_outlined, size: 18),
+                    label: const Text('ดึงข้อมูลทั้งหมดจาก Server'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.primaryGreen,
+                      side: const BorderSide(color: AppTheme.primaryGreen),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 24),
-            const Text(
-              'ยังไม่มีประวัติการออกกำลังกาย',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF1C2819),
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'เริ่มบันทึกกิจกรรมวิ่ง เดิน หรือปั่นจักรยานเพื่อติดตามสถิติสุขภาพของคุณที่นี่',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13.5,
-                color: Color(0xFF677366),
-                height: 1.4,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -179,6 +286,7 @@ class _WorkoutHistoryScreenState extends State<WorkoutHistoryScreen> {
 
   Widget _buildHistoryList() {
     return ListView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(18),
       itemCount: _workouts.length,
       itemBuilder: (context, index) {

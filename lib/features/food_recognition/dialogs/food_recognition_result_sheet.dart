@@ -1,8 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/database/app_database.dart';
+import 'package:healthymate/core/services/sync_service.dart';
 import 'package:healthymate/core/theme/app_theme.dart';
 import 'package:healthymate/features/food_recognition/dialogs/edit_food_item_dialog.dart';
+import 'package:healthymate/features/food_recognition/dialogs/gemini_api_key_dialog.dart';
 import 'package:healthymate/features/food_recognition/models/food_recognition_models.dart';
 
 class FoodRecognitionResultSheet extends StatefulWidget {
@@ -103,6 +105,10 @@ class _FoodRecognitionResultSheetState extends State<FoodRecognitionResultSheet>
         );
       }
 
+      // ส่งสัญญาณให้อัปเดตสถานะค้างซิงค์ และซิงค์ขึ้น Cloud ในเบื้องหลังทันที
+      SyncService.instance.updatePendingCount();
+      SyncService.instance.syncPendingData();
+
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -191,6 +197,23 @@ class _FoodRecognitionResultSheetState extends State<FoodRecognitionResultSheet>
                       ),
                     ],
                   ),
+                ),
+                IconButton(
+                  tooltip: 'ตั้งค่า Gemini API Key',
+                  onPressed: () async {
+                    final user = await AppDatabase.instance.getUser();
+                    final userId = user?.nUserId ?? 1;
+                    final currentKey = await AppDatabase.instance.getGeminiApiKey(userId);
+                    if (context.mounted) {
+                      GeminiApiKeyDialog.show(
+                        context,
+                        userId: userId,
+                        currentKey: currentKey,
+                        onSaved: (_) {},
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.vpn_key_outlined, color: Color(0xFF6F7A72), size: 20),
                 ),
                 IconButton(
                   onPressed: () => Navigator.pop(context),
@@ -335,18 +358,87 @@ class _FoodRecognitionResultSheetState extends State<FoodRecognitionResultSheet>
                   if (_result.items.isEmpty)
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.all(24),
+                      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF9FAF9),
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(18),
                         border: Border.all(color: const Color(0xFFE5EAE6)),
                       ),
-                      child: const Center(
-                        child: Text(
-                          'ยังไม่มีรายการอาหารในมื้อนี้\nกดปุ่ม "เพิ่มเมนู" เพื่อระบุอาหารด้วยตนเอง',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Color(0xFF8A958E), fontSize: 13),
-                        ),
+                      child: Column(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.shade50,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.info_outline_rounded, size: 28, color: Colors.amber.shade800),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            _result.hasApiKey
+                                ? 'ไม่สามารถจำแนกรายการของกินจากภาพนี้ได้'
+                                : 'ยังไม่ได้ตั้งค่า Google Gemini API Key',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF2D3830),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            !_result.hasApiKey
+                                ? 'กรุณากดปุ่ม "ตั้งค่า Gemini API Key" เพื่อให้ AI ช่วยสแกนและวิเคราะห์สารอาหารอัตโนมัติ หรือกด "เพิ่มเมนูอาหาร" เพื่อระบุด้วยตนเอง'
+                                : (_result.errorMessage != null && _result.errorMessage!.isNotEmpty)
+                                    ? '${_result.errorMessage}\nคุณสามารถกดปุ่ม "เพิ่มเมนูอาหาร" เพื่อระบุข้อมูลด้วยตนเอง'
+                                    : 'ภาพถ่ายอาจมีแสงสะท้อน มืดเกินไป หรือไม่ชัดเจน\nคุณสามารถกดปุ่ม "เพิ่มเมนูอาหาร" ด้านล่างเพื่อระบุรายการอาหารและโภชนาการได้ทันที',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Color(0xFF7A867E), fontSize: 12, height: 1.4),
+                          ),
+                          const SizedBox(height: 14),
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              ElevatedButton.icon(
+                                onPressed: _addNewItem,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: primaryColor,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                ),
+                                icon: const Icon(Icons.add_rounded, size: 18),
+                                label: const Text('เพิ่มเมนูอาหาร', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                              ),
+                              OutlinedButton.icon(
+                                onPressed: () async {
+                                  final user = await AppDatabase.instance.getUser();
+                                  final userId = user?.nUserId ?? 1;
+                                  final currentKey = await AppDatabase.instance.getGeminiApiKey(userId);
+                                  if (context.mounted) {
+                                    GeminiApiKeyDialog.show(
+                                      context,
+                                      userId: userId,
+                                      currentKey: currentKey,
+                                      onSaved: (_) {},
+                                    );
+                                  }
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: primaryColor,
+                                  side: BorderSide(color: primaryColor.withValues(alpha: 0.4)),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                ),
+                                icon: const Icon(Icons.vpn_key_rounded, size: 16),
+                                label: const Text('ตั้งค่า Gemini API Key', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     )
                   else
@@ -383,20 +475,25 @@ class _FoodRecognitionResultSheetState extends State<FoodRecognitionResultSheet>
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   elevation: 0,
                 ),
-                onPressed: _isSaving ? null : _saveMealToDatabase,
+                onPressed: (_isSaving || _result.items.isEmpty) ? null : _saveMealToDatabase,
                 icon: _isSaving
                     ? const SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                       )
-                    : const Icon(Icons.bookmark_added_rounded, color: Colors.white),
+                    : Icon(
+                        _result.items.isEmpty ? Icons.playlist_add_rounded : Icons.bookmark_added_rounded,
+                        color: Colors.white,
+                      ),
                 label: Text(
                   _isSaving
                       ? 'กำลังบันทึกข้อมูล...'
-                      : 'บันทึกมื้อ${_result.category.label} (${_result.totalCalories} kcal)',
+                      : _result.items.isEmpty
+                          ? 'กรุณาเพิ่มรายการอาหารก่อนบันทึก'
+                          : 'บันทึกมื้อ${_result.category.label} (${_result.totalCalories} kcal)',
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),

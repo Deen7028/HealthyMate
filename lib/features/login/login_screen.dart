@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:healthymate/core/database/app_database.dart';
-import 'package:healthymate/core/theme/app_theme.dart';
 import 'package:healthymate/core/services/auth_service.dart';
+import 'package:healthymate/core/services/sync_service.dart';
+import 'package:healthymate/core/theme/app_theme.dart';
+import 'package:healthymate/features/health_calculator/models/user_model.dart';
 import 'package:healthymate/features/register/register_screen.dart';
 import 'package:healthymate/main_app.dart';
 
@@ -105,40 +106,39 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      // 5. ตรวจสอบในฐานข้อมูล SQLite ว่ามีอีเมลนี้อยู่ในระบบหรือไม่
-      final isEmailExist = await AppDatabase.instance.isEmailExists(rawEmail);
-      if (!isEmailExist) {
-        if (!mounted) return;
-        _registerFailedAttempt();
-        setState(() {
-          _isLoading = false;
-          _errorMessage = 'ไม่พบบัญชีผู้ใช้นี้ในระบบ กรุณาตรวจสอบอีเมลหรือสมัครสมาชิก';
-        });
-        return;
-      }
-
-      // 6. ตรวจสอบความถูกต้องของรหัสผ่าน
-      final isSuccess = await AuthService.instance.login(rawEmail, rawPassword);
+      // 5. ดำเนินการเข้าสู่ระบบผ่าน AuthService
+      // (ปุ่ม Login จะหมุนต่อเนื่อง _isLoading = true ระหว่างเช็คทั้งในเครื่อง SQLite และ Remote MySQL Server)
+      final loginResult = await AuthService.instance.login(rawEmail, rawPassword);
 
       if (!mounted) return;
 
+      final isSuccess = loginResult['success'] == true;
       if (!isSuccess) {
         _registerFailedAttempt();
         setState(() {
-          _isLoading = false;
-          _errorMessage = 'รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง';
+          _isLoading = false; // สิ้นสุดกระบวนการตรวจสอบทั้งหมด ค่อยหยุดหมุนและแจ้ง Error
+          _errorMessage = loginResult['message']?.toString() ?? 'เข้าสู่ระบบไม่สำเร็จ';
         });
         return;
       }
 
-      // 7. เข้าสู่ระบบสำเร็จ -> รีเซ็ตจำนวนครั้งที่ผิด
+      // 6. เข้าสู่ระบบสำเร็จ -> รีเซ็ตจำนวนครั้งที่ผิด
       _failedAttempts = 0;
       _lockoutUntil = null;
+
+      // 7. ดึงประวัติการออกกำลังกายจาก Database Server ลง SQLite ทันที (Initial Data Hydration)
+      final loggedInUser = loginResult['user'] as TbUser?;
+      if (loggedInUser != null) {
+        // ดึงข้อมูลใน Background ต่อเนื่อง
+        SyncService.instance.pullDownstreamWorkouts(loggedInUser.nUserId);
+      }
 
       setState(() {
         _isLoading = false;
         _errorMessage = null;
       });
+
+      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -165,11 +165,12 @@ class _LoginScreenState extends State<LoginScreen> {
           MaterialPageRoute(builder: (context) => const MainAppShell()),
         );
       }
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('LoginScreen: Exception during _handleLogin: $e\n$stack');
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _errorMessage = 'เกิดข้อผิดพลาดในการเชื่อมต่อระบบ กรุณาลองใหม่อีกครั้ง';
+        _errorMessage = 'เกิดข้อผิดพลาดในการเชื่อมต่อระบบ: $e';
       });
     }
   }
