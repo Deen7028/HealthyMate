@@ -6,7 +6,53 @@ import 'package:healthymate/features/health_calculator/models/user_model.dart';
 
 class HealthApiService {
   // Base URL ของเซิร์ฟเวอร์ PHP API
-  static String baseUrl = "http://10.52.81.115:8000/6620310001/HealthyMate/api";
+  static String baseUrl = "https://172.18.111.30/6620310001/html/HealthyMate/api";
+
+  /// Headers พื้นฐานสำหรับ Virtual Host Apache ของ ม.อ. และระบบความปลอดภัยป้องกันการเข้าถึงตรง
+  static Map<String, String> get defaultHeaders => {
+    'Host': 'std.mcs.psu.ac.th',
+    'Content-Type': 'application/json; charset=utf-8',
+    'X-App-Key': 'HealthyMate_Secure_App_2026',
+  };
+
+  /// 0. ยืนยันตัวตนกับ Remote Server (`login.php`) เมื่อติดตั้งใหม่หรือไม่มีข้อมูลในเครื่อง
+  /// คืนค่าเป็น Map พร้อม status ('success', 'not_found', 'invalid_password', 'offline_or_error') และข้อมูล user
+  static Future<Map<String, dynamic>> loginRemote({
+    required String email,
+    required String password,
+    String? passwordHash,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl/login.php');
+      final Map<String, dynamic> payload = {
+        'sEmail': email,
+        'sPassword': password,
+      };
+      if (passwordHash != null) {
+        payload['sPasswordHash'] = passwordHash;
+      }
+
+      final response = await http
+          .post(
+            uri,
+            headers: defaultHeaders,
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 8));
+
+      debugPrint('HealthApiService: Remote login status code: ${response.statusCode}, body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body is Map<String, dynamic>) {
+          return body;
+        }
+      }
+    } catch (e) {
+      debugPrint('HealthApiService: Remote login error or offline: $e');
+    }
+    return {'status': 'offline_or_error', 'message': 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้'};
+  }
 
   /// 1. ดึงข้อมูลประวัติสุขภาพจาก PHP API (`health_records.php`)
   static Future<List<TbHealthRecord>> fetchHealthRecords({
@@ -14,7 +60,9 @@ class HealthApiService {
   }) async {
     try {
       final uri = Uri.parse('$baseUrl/health_records.php?nUserId=$userId');
-      final response = await http.get(uri).timeout(const Duration(seconds: 5));
+      final response = await http
+          .get(uri, headers: defaultHeaders)
+          .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
@@ -25,9 +73,11 @@ class HealthApiService {
               )
               .toList();
         }
+      } else {
+        debugPrint('[API ERROR] fetchHealthRecords HTTP ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
-      debugPrint('PHP API offline or fallback: $e');
+      debugPrint('[API EXCEPTION] fetchHealthRecords failed: $e');
     }
     return [];
   }
@@ -39,7 +89,7 @@ class HealthApiService {
       final response = await http
           .post(
             uri,
-            headers: {'Content-Type': 'application/json; charset=utf-8'},
+            headers: defaultHeaders,
             body: jsonEncode(record.toMap()),
           )
           .timeout(const Duration(seconds: 5));
@@ -47,9 +97,11 @@ class HealthApiService {
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
         return body['status'] == 'success';
+      } else {
+        debugPrint('[API ERROR] saveHealthRecord HTTP ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
-      debugPrint('PHP API offline or fallback: $e');
+      debugPrint('[API EXCEPTION] saveHealthRecord failed: $e');
     }
     return false;
   }
@@ -71,7 +123,7 @@ class HealthApiService {
       final response = await http
           .post(
             uri,
-            headers: {'Content-Type': 'application/json; charset=utf-8'},
+            headers: defaultHeaders,
             body: jsonEncode(payload),
           )
           .timeout(const Duration(seconds: 5));
@@ -79,21 +131,55 @@ class HealthApiService {
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
         return body['status'] == 'success';
+      } else {
+        debugPrint('[API ERROR] updateUserProfile HTTP ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
-      debugPrint('PHP API offline or fallback: $e');
+      debugPrint('[API EXCEPTION] updateUserProfile failed: $e');
     }
     return false;
   }
 
-  /// 4. บันทึกข้อมูลการออกกำลังกายขึ้น PHP API (`workouts.php`)
+  /// 4. ดึงประวัติการออกกำลังกายจาก PHP API (`workouts.php`)
+  /// รองรับทั้ง Initial Data Hydration (ดึงทั้งหมด) และ Delta Sync (เฉพาะรายการใหม่ตั้งแต่ since)
+  static Future<List<Map<String, dynamic>>> fetchWorkouts({
+    required int userId,
+    String? since,
+  }) async {
+    try {
+      var urlStr = '$baseUrl/workouts.php?nUserId=$userId';
+      if (since != null && since.isNotEmpty) {
+        urlStr += '&since=${Uri.encodeComponent(since)}';
+      }
+      final uri = Uri.parse(urlStr);
+      final response = await http
+          .get(uri, headers: defaultHeaders)
+          .timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body['status'] == 'success' && body['data'] is List) {
+          return List<Map<String, dynamic>>.from(
+            (body['data'] as List).map((item) => Map<String, dynamic>.from(item as Map)),
+          );
+        }
+      } else {
+        debugPrint('[API ERROR] fetchWorkouts HTTP ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[API EXCEPTION] fetchWorkouts failed: $e');
+    }
+    return [];
+  }
+
+  /// 5. บันทึกข้อมูลการออกกำลังกายขึ้น PHP API (`workouts.php`)
   static Future<bool> saveWorkout(Map<String, dynamic> workout) async {
     try {
       final uri = Uri.parse('$baseUrl/workouts.php');
       final response = await http
           .post(
             uri,
-            headers: {'Content-Type': 'application/json; charset=utf-8'},
+            headers: defaultHeaders,
             body: jsonEncode(workout),
           )
           .timeout(const Duration(seconds: 5));
@@ -101,9 +187,11 @@ class HealthApiService {
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
         return body['status'] == 'success';
+      } else {
+        debugPrint('[API ERROR] saveWorkout HTTP ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
-      debugPrint('PHP API offline or fallback: $e');
+      debugPrint('[API EXCEPTION] saveWorkout failed: $e');
     }
     return false;
   }
@@ -115,7 +203,7 @@ class HealthApiService {
       final response = await http
           .post(
             uri,
-            headers: {'Content-Type': 'application/json; charset=utf-8'},
+            headers: defaultHeaders,
             body: jsonEncode(log),
           )
           .timeout(const Duration(seconds: 5));
@@ -123,9 +211,11 @@ class HealthApiService {
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
         return body['status'] == 'success';
+      } else {
+        debugPrint('[API ERROR] saveNutritionLog HTTP ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
-      debugPrint('PHP API offline or fallback: $e');
+      debugPrint('[API EXCEPTION] saveNutritionLog failed: $e');
     }
     return false;
   }
@@ -138,6 +228,10 @@ class HealthApiService {
     try {
       final uri = Uri.parse('$baseUrl/upload_image.php');
       final request = http.MultipartRequest('POST', uri)
+        ..headers.addAll({
+          'Host': 'std.mcs.psu.ac.th',
+          'X-App-Key': 'HealthyMate_Secure_App_2026',
+        })
         ..fields['type'] = type
         ..files.add(await http.MultipartFile.fromPath('image', localFilePath));
 

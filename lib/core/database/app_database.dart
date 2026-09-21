@@ -507,6 +507,34 @@ class AppDatabase {
     );
   }
 
+  /// บันทึกหรืออัปเดตข้อมูลผู้ใช้ที่ได้จาก Server (User Hydration) ลงใน `TbUsers` ของ SQLite
+  /// รองรับทั้งการติดตั้งใหม่และย้ายเครื่อง โดยเก็บ nUserId เดิมจาก MySQL เสมอ
+  Future<TbUser> upsertUserFromServer(Map<String, dynamic> userMap) async {
+    final user = TbUser.fromMap(userMap);
+    if (kIsWeb) {
+      final index = _webUsers.indexWhere((u) => u['nUserId'] == user.nUserId);
+      if (index >= 0) {
+        _webUsers[index] = user.toMap();
+      } else {
+        _webUsers.add(user.toMap());
+      }
+      return user;
+    }
+
+    final db = await database;
+    if (db != null) {
+      final mapToInsert = Map<String, dynamic>.from(user.toMap());
+      mapToInsert['isSynced'] = 1; // บัญชีมาจาก Server ถือว่าซิงค์เรียบร้อยแล้ว
+      await db.insert(
+        tableUsers,
+        mapToInsert,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+    return user;
+  }
+
+
   // ==========================================
   // TbHealthRecords CRUD Operations
   // ==========================================
@@ -651,7 +679,101 @@ class AppDatabase {
     );
   }
 
-  // ==========================================
+  /// เขียนข้อมูล Workouts จาก Server ลง SQLite ด้วย UPSERT (INSERT OR REPLACE)
+  /// - กำหนด `isSynced = 1` ทันที
+  /// - ใช้ ID ที่ได้รับจาก Server (`nWorkoutId`) เพื่อป้องกัน Primary Key ชนกัน
+  Future<int> upsertWorkoutsFromServer(List<Map<String, dynamic>> workouts) async {
+    if (kIsWeb || workouts.isEmpty) return 0;
+    final db = await database;
+    if (db == null) return 0;
+
+    int affectedCount = 0;
+    await db.transaction((txn) async {
+      for (final item in workouts) {
+        final rawId = item['nWorkoutId'];
+        final workoutId = rawId != null ? int.tryParse(rawId.toString()) : null;
+        final rawUserId = item['nUserId'];
+        final userId = rawUserId != null ? int.tryParse(rawUserId.toString()) ?? 1 : 1;
+
+        final rawDuration = item['nDuration'];
+        final duration = rawDuration != null ? int.tryParse(rawDuration.toString()) ?? 0 : 0;
+
+        final rawDistance = item['nDistance'];
+        final distance = rawDistance != null ? double.tryParse(rawDistance.toString()) ?? 0.0 : 0.0;
+
+        final rawCalories = item['nCaloriesBurned'];
+        final calories = rawCalories != null ? double.tryParse(rawCalories.toString()) ?? 0.0 : 0.0;
+
+        final type = item['sType']?.toString() ?? 'วิ่ง';
+        final routePoints = item['sRoutePoints']?.toString() ?? '';
+        final workoutDate = item['dtWorkoutDate']?.toString() ?? DateTime.now().toIso8601String();
+        final updatedAt = item['dtUpdatedAt']?.toString() ?? DateTime.now().toIso8601String();
+
+        final mapToInsert = <String, dynamic>{
+          if (workoutId != null && workoutId > 0) 'nWorkoutId': workoutId,
+          'nUserId': userId,
+          'sType': type,
+          'nDistance': distance,
+          'nDuration': duration,
+          'nCaloriesBurned': calories,
+          'sRoutePoints': routePoints,
+          'isSynced': 1, // ข้อมูลมาจาก Server ให้ระบุว่าซิงค์สมบูรณ์แล้วทันที
+          'dtWorkoutDate': workoutDate,
+          'dtUpdatedAt': updatedAt,
+        };
+
+        await txn.insert(
+          tableWorkouts,
+          mapToInsert,
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+        affectedCount++;
+      }
+    });
+
+    return affectedCount;
+  }
+
+  /// อ่านเวลาการดึงข้อมูลล่าสุด (dtLastWorkoutSync) จาก TbHealthIntegrations หรือ Session
+  Future<String?> getLastWorkoutSyncTimestamp(int userId) async {
+    if (kIsWeb) return null;
+    final db = await database;
+    if (db == null) return null;
+    try {
+      final res = await db.query(
+        tableHealthIntegrations,
+        where: 'nUserId = ? AND sProviderName = ?',
+        whereArgs: [userId, 'workout_sync_timestamp'],
+        limit: 1,
+      );
+      if (res.isNotEmpty) {
+        return res.first['dtLastSyncedAt']?.toString();
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// บันทึกเวลาซิงค์ล่าสุด (Save Last Sync Timestamp)
+  Future<void> setLastWorkoutSyncTimestamp(int userId, String timestamp) async {
+    if (kIsWeb) return;
+    final db = await database;
+    if (db == null) return;
+    try {
+      await db.insert(
+        tableHealthIntegrations,
+        {
+          'nUserId': userId,
+          'sProviderName': 'workout_sync_timestamp',
+          'isSynced': 1,
+          'dtLastSyncedAt': timestamp,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    } catch (e) {
+      debugPrint('AppDatabase: Error saving workout sync timestamp: $e');
+    }
+  }
+
   // Auth Session Operations
   // ==========================================
 

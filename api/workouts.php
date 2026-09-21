@@ -4,18 +4,35 @@ require_once "db_connect.php";
 $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
-    // 1. GET: ดึงประวัติการออกกำลังกาย
+    // 1. GET: ดึงประวัติการออกกำลังกาย (รองรับ Initial Sync และ Delta Sync ด้วย ?since=)
     case 'GET':
         $userId = isset($_GET['nUserId']) ? intval($_GET['nUserId']) : 1;
+        $since = isset($_GET['since']) ? trim($_GET['since']) : null;
 
         try {
-            $stmt = $conn->prepare("SELECT * FROM TbWorkouts WHERE nUserId = :userId ORDER BY dtWorkoutDate DESC");
-            $stmt->execute([':userId' => $userId]);
+            if (!empty($since)) {
+                // Delta Sync: คิวรีเฉพาะแถวที่มีการสร้างหรือแก้ไขหลังจาก $since
+                $stmt = $conn->prepare("
+                    SELECT * FROM TbWorkouts 
+                    WHERE nUserId = :userId 
+                      AND (dtUpdatedAt > :since OR dtWorkoutDate > :since)
+                    ORDER BY dtWorkoutDate DESC
+                ");
+                $stmt->execute([
+                    ':userId' => $userId,
+                    ':since' => $since
+                ]);
+            } else {
+                // Initial Sync: คิวรีข้อมูลทั้งหมดของผู้ใช้
+                $stmt = $conn->prepare("SELECT * FROM TbWorkouts WHERE nUserId = :userId ORDER BY dtWorkoutDate DESC");
+                $stmt->execute([':userId' => $userId]);
+            }
             $workouts = $stmt->fetchAll();
 
             echo json_encode([
                 "status" => "success",
-                "data" => $workouts
+                "data" => $workouts,
+                "serverTime" => date('Y-m-d H:i:s')
             ], JSON_UNESCAPED_UNICODE);
         } catch (PDOException $e) {
             echo json_encode([

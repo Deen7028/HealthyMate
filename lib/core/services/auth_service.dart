@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:healthymate/core/database/app_database.dart';
+import 'package:healthymate/core/services/api_service.dart';
 
 class AuthService extends ChangeNotifier {
   static final AuthService instance = AuthService._internal();
@@ -29,16 +30,85 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  Future<bool> login(String email, String password) async {
-    final success = await AppDatabase.instance.authenticateUser(email, password);
-    if (success) {
-      _isLoggedIn = true;
-      _currentUserEmail = email;
-      await AppDatabase.instance.setLoginStatus(true, email: email);
-      notifyListeners();
-      return true;
+  /// เข้าสู่ระบบ (รองรับทั้ง Offline Local SQLite และ Online Remote Server Fallback)
+  /// คืนค่าเป็น Map:
+  /// - `success`: true/false
+  /// - `user`: TbUser ที่ล็อกอินสำเร็จ (ถ้ามี)
+  /// - `status`: 'success' | 'not_found' | 'invalid_password' | 'offline_or_error'
+  /// - `message`: ข้อความอธิบาย
+  Future<Map<String, dynamic>> login(String email, String password) async {
+    final cleanEmail = email.trim().toLowerCase();
+
+    // 1. ตรวจสอบใน SQLite เครื่องก่อน (กรณีมีข้อมูลอยู่แล้ว หรือใช้งานแบบออฟไลน์)
+    final isLocalUserExists = await AppDatabase.instance.isEmailExists(cleanEmail);
+    if (isLocalUserExists) {
+      final isPasswordCorrect = await AppDatabase.instance.authenticateUser(cleanEmail, password);
+      if (isPasswordCorrect) {
+        _isLoggedIn = true;
+        _currentUserEmail = cleanEmail;
+        await AppDatabase.instance.setLoginStatus(true, email: cleanEmail);
+        final localUser = await AppDatabase.instance.getUserByEmail(cleanEmail);
+        notifyListeners();
+        return {
+          'success': true,
+          'status': 'success',
+          'user': localUser,
+          'message': 'เข้าสู่ระบบสำเร็จ',
+        };
+      } else {
+        // มีผู้ใช้ในเครื่องแต่รหัสผ่านผิด
+        return {
+          'success': false,
+          'status': 'invalid_password',
+          'message': 'รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง',
+        };
+      }
     }
-    return false;
+
+    // 2. ถ้าใน SQLite ไม่มีผู้ใช้นี้ (เช่น ลงแอปใหม่ ย้ายเครื่อง หรือล้างข้อมูลแอป)
+    // ให้ยิงไปตรวจสอบกับ MySQL Server ผ่าน login.php
+    final remoteRes = await HealthApiService.loginRemote(
+      email: cleanEmail,
+      password: password,
+    );
+
+    final status = remoteRes['status']?.toString() ?? 'offline_or_error';
+    if (status == 'success' && remoteRes['user'] != null) {
+      // 3. เซิร์ฟเวอร์ยืนยันว่าถูกต้อง -> ทำการ Hydrate บันทึก User ลง SQLite ในเครื่องทันที
+      final hydratedUser = await AppDatabase.instance.upsertUserFromServer(
+        Map<String, dynamic>.from(remoteRes['user'] as Map),
+      );
+
+      _isLoggedIn = true;
+      _currentUserEmail = cleanEmail;
+      await AppDatabase.instance.setLoginStatus(true, email: cleanEmail);
+      notifyListeners();
+
+      return {
+        'success': true,
+        'status': 'success',
+        'user': hydratedUser,
+        'message': 'เข้าสู่ระบบสำเร็จ',
+      };
+    } else if (status == 'not_found') {
+      return {
+        'success': false,
+        'status': 'not_found',
+        'message': remoteRes['message']?.toString() ?? 'ไม่พบบัญชีผู้ใช้นี้ในระบบ กรุณาตรวจสอบอีเมลหรือสมัครสมาชิก',
+      };
+    } else if (status == 'invalid_password') {
+      return {
+        'success': false,
+        'status': 'invalid_password',
+        'message': remoteRes['message']?.toString() ?? 'รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง',
+      };
+    } else {
+      return {
+        'success': false,
+        'status': 'offline_or_error',
+        'message': 'ไม่พบบัญชีในเครื่อง และไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต',
+      };
+    }
   }
 
   Future<void> logout() async {
