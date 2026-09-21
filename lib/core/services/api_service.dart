@@ -6,10 +6,12 @@ import 'package:healthymate/features/health_calculator/models/user_model.dart';
 
 class HealthApiService {
   // Base URL ของเซิร์ฟเวอร์ PHP API
-  static String baseUrl = "http://172.18.115.39:8000/6620310001/HealthyMate/api";
+  static String baseUrl = "http://10.52.81.115:8000/6620310001/HealthyMate/api";
 
   /// 1. ดึงข้อมูลประวัติสุขภาพจาก PHP API (`health_records.php`)
-  static Future<List<TbHealthRecord>> fetchHealthRecords({int userId = 1}) async {
+  static Future<List<TbHealthRecord>> fetchHealthRecords({
+    int userId = 1,
+  }) async {
     try {
       final uri = Uri.parse('$baseUrl/health_records.php?nUserId=$userId');
       final response = await http.get(uri).timeout(const Duration(seconds: 5));
@@ -18,7 +20,9 @@ class HealthApiService {
         final body = jsonDecode(response.body);
         if (body['status'] == 'success' && body['data'] is List) {
           return (body['data'] as List)
-              .map((item) => TbHealthRecord.fromMap(item as Map<String, dynamic>))
+              .map(
+                (item) => TbHealthRecord.fromMap(item as Map<String, dynamic>),
+              )
               .toList();
         }
       }
@@ -32,11 +36,13 @@ class HealthApiService {
   static Future<bool> saveHealthRecord(TbHealthRecord record) async {
     try {
       final uri = Uri.parse('$baseUrl/health_records.php');
-      final response = await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json; charset=utf-8'},
-        body: jsonEncode(record.toMap()),
-      ).timeout(const Duration(seconds: 5));
+      final response = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json; charset=utf-8'},
+            body: jsonEncode(record.toMap()),
+          )
+          .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
@@ -62,11 +68,13 @@ class HealthApiService {
         payload = {};
       }
 
-      final response = await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json; charset=utf-8'},
-        body: jsonEncode(payload),
-      ).timeout(const Duration(seconds: 5));
+      final response = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json; charset=utf-8'},
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
@@ -82,11 +90,13 @@ class HealthApiService {
   static Future<bool> saveWorkout(Map<String, dynamic> workout) async {
     try {
       final uri = Uri.parse('$baseUrl/workouts.php');
-      final response = await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json; charset=utf-8'},
-        body: jsonEncode(workout),
-      ).timeout(const Duration(seconds: 5));
+      final response = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json; charset=utf-8'},
+            body: jsonEncode(workout),
+          )
+          .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
@@ -102,11 +112,13 @@ class HealthApiService {
   static Future<bool> saveNutritionLog(Map<String, dynamic> log) async {
     try {
       final uri = Uri.parse('$baseUrl/nutrition_logs.php');
-      final response = await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json; charset=utf-8'},
-        body: jsonEncode(log),
-      ).timeout(const Duration(seconds: 5));
+      final response = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json; charset=utf-8'},
+            body: jsonEncode(log),
+          )
+          .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
@@ -119,20 +131,26 @@ class HealthApiService {
   }
 
   /// 6. อัปโหลดรูปภาพขึ้น Server (/uploads) และรับ path กลับมาบันทึกลง Database
-  static Future<String?> uploadImage(String localFilePath, {String type = 'general'}) async {
+  static Future<String?> uploadImage(
+    String localFilePath, {
+    String type = 'general',
+  }) async {
     try {
       final uri = Uri.parse('$baseUrl/upload_image.php');
       final request = http.MultipartRequest('POST', uri)
         ..fields['type'] = type
         ..files.add(await http.MultipartFile.fromPath('image', localFilePath));
 
-      final streamedResponse = await request.send().timeout(const Duration(seconds: 15));
+      final streamedResponse = await request.send().timeout(
+        const Duration(seconds: 15),
+      );
       final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
         if (body['status'] == 'success') {
-          return body['filePath'] as String?; // ส่งกลับ "uploads/profile/xxx.jpg"
+          return body['filePath']
+              as String?; // ส่งกลับ "uploads/profile/xxx.jpg"
         }
       }
     } catch (e) {

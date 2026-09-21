@@ -10,7 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // ข้อมูลการเชื่อมต่อฐานข้อมูล MySQL/MariaDB ตามไฟล์ 6620310001_HealthMateDB.sql
-$host = "172.18.115.39";   // หรือ "localhost" / IP ของ Database Server
+$host = "10.52.81.115";   // หรือ "localhost" / IP ของ Database Server
 $port = "3306";
 $db_name = "6620310001_HealthMateDB";
 $username = "6620310001";       // ปรับตาม Username ของคุณ
