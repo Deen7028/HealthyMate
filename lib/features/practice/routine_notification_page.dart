@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:healthymate/core/database/app_database.dart';
+import 'package:healthymate/core/services/api_service.dart';
+import 'package:healthymate/features/health_calculator/models/user_model.dart';
 import 'models/routine_item.dart';
 import 'widgets/add_routine_dialog.dart';
 
@@ -15,10 +18,135 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
   final Color lightBg = const Color(0xFFF7F9FB);
   final Color cardGreenBg = const Color(0xFFE8F5E9);
 
-  bool _isWarmupChecked = false;
-  bool _isCooldownChecked = true;
-  final List<RoutineItem> _customRoutines = [];
-  RoutineItem? _pinnedMainGoal;
+  // ---------- State ----------
+  bool _isLoading = true;
+  TbUser? _user;
+  List<Map<String, dynamic>> _routines = [];
+  // routineId -> isCompleted (for today)
+  Map<int, bool> _todayCompletionMap = {};
+  int _completedCount = 0;
+  Map<String, dynamic>? _userGoal;
+
+  // ข้อมูล workout สำหรับ main goal card
+  double _totalDistanceKm = 0.0;
+  double _totalCaloriesBurned = 0.0;
+  int _workoutCount = 0;
+
+  String get _todayStr {
+    final now = DateTime.now();
+    return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      final db = AppDatabase.instance;
+
+      // 1. หา user
+      final email = await db.getLoggedInUserEmail();
+      TbUser? user;
+      if (email != null && email.isNotEmpty) {
+        user = await db.getUserByEmail(email);
+      }
+      user ??= await db.getUser(userId: 1);
+
+      if (user == null) {
+        debugPrint('[Routines] ❌ ไม่พบข้อมูลผู้ใช้');
+        if (mounted) setState(() => _isLoading = false);
+        return;
+      }
+
+      final userId = user.nUserId;
+      debugPrint('[Routines] ✅ ผู้ใช้: ${user.sFullName} (ID=$userId)');
+
+      // 2. ดึงกิจวัตรทั้งหมด
+      final routines = await db.getRoutines(userId: userId);
+      debugPrint('[Routines] 📋 กิจวัตร: ${routines.length} รายการ');
+
+      // 3. ดึง completion สำหรับวันนี้
+      final Map<int, bool> completionMap = {};
+      for (final r in routines) {
+        final routineId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
+        final log = await db.getRoutineLogForDate(
+          routineId: routineId,
+          dateStr: _todayStr,
+        );
+        completionMap[routineId] = (log?['isCompleted'] as num?)?.toInt() == 1;
+      }
+      final completedCount = completionMap.values.where((v) => v).length;
+
+      // 4. ดึงเป้าหมายหลัก
+      final goal = await db.getUserGoal(userId);
+
+      // 5. ดึงข้อมูล workout
+      final workouts = await db.getWorkouts(userId: userId);
+      double totalDist = 0.0;
+      double totalCal = 0.0;
+      for (final w in workouts) {
+        totalDist += (w['nDistance'] as num?)?.toDouble() ?? 0.0;
+        totalCal += (w['nCaloriesBurned'] as num?)?.toDouble() ?? 0.0;
+      }
+
+      if (mounted) {
+        setState(() {
+          _user = user;
+          _routines = routines;
+          _todayCompletionMap = completionMap;
+          _completedCount = completedCount;
+          _userGoal = goal;
+          _totalDistanceKm = totalDist;
+          _totalCaloriesBurned = totalCal;
+          _workoutCount = workouts.length;
+          _isLoading = false;
+        });
+      }
+
+      // 6. Sync จาก Server (background)
+      _syncRoutinesFromServer(userId);
+    } catch (e, stack) {
+      debugPrint('[Routines] ❌ Error loading data: $e');
+      debugPrint('[Routines] Stack: $stack');
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  /// ดึงกิจวัตรจาก Server แล้ว merge กับ local
+  Future<void> _syncRoutinesFromServer(int userId) async {
+    try {
+      debugPrint('[Routines] 🌐 กำลังซิงค์จาก Server...');
+      final serverResult = await HealthApiService.fetchRoutines(userId: userId);
+
+      if (serverResult == null) {
+        debugPrint('[Routines] 🌐 Server ไม่ตอบ — ใช้ข้อมูล Local');
+        return;
+      }
+
+      final serverRoutines = (serverResult['data'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+      debugPrint('[Routines] 🌐 ✅ Server routines: ${serverRoutines.length} รายการ');
+
+      // Merge: ถ้า server มีมากกว่า local ให้ใช้ server
+      if (serverRoutines.length >= _routines.length && mounted) {
+        final Map<int, bool> newCompletionMap = {};
+        for (final r in serverRoutines) {
+          final routineId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
+          newCompletionMap[routineId] = (r['todayCompleted'] as num?)?.toInt() == 1;
+        }
+        setState(() {
+          _routines = serverRoutines;
+          _todayCompletionMap = newCompletionMap;
+          _completedCount = newCompletionMap.values.where((v) => v).length;
+        });
+        debugPrint('[Routines] 🌐 ✅ UI อัปเดตจาก Server');
+      }
+    } catch (e) {
+      debugPrint('[Routines] 🌐 ❌ Sync error: $e');
+    }
+  }
 
   Future<void> _openAddRoutineDialog() async {
     final RoutineItem? newRoutine = await showModalBottomSheet<RoutineItem>(
@@ -30,10 +158,173 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
       builder: (context) => const AddRoutineDialog(),
     );
 
-    if (newRoutine != null) {
-      setState(() => _customRoutines.add(newRoutine));
+    if (newRoutine != null && _user != null) {
+      // บันทึก Local
+      final id = await AppDatabase.instance.insertRoutine(
+        userId: _user!.nUserId,
+        title: newRoutine.title,
+        time: newRoutine.notificationTime,
+        isNotificationActive: newRoutine.isNotificationEnabled,
+      );
+      debugPrint('[Routines] ✅ เพิ่มกิจวัตร: "${newRoutine.title}" (ID=$id)');
       _showSnackBar('เพิ่ม "${newRoutine.title}" ในกิจวัตรสำเร็จ!');
+
+      // บันทึก Server (background)
+      HealthApiService.insertRoutineRemote(
+        userId: _user!.nUserId,
+        title: newRoutine.title,
+        time: newRoutine.notificationTime,
+        isNotificationActive: newRoutine.isNotificationEnabled,
+      ).then((serverId) {
+        debugPrint('[Routines] 🌐 Server insert: ID=$serverId');
+      });
+
+      await _loadData();
     }
+  }
+
+  Future<void> _deleteRoutine(int routineId, String title) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('ยืนยันการลบ'),
+        content: Text('ต้องการลบกิจวัตร "$title" หรือไม่?\nข้อมูลที่เช็คไว้จะถูกลบทั้งหมด'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('ยกเลิก'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('ลบ', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      // ลบ Local
+      await AppDatabase.instance.deleteRoutine(routineId);
+      debugPrint('[Routines] 🗑️ ลบกิจวัตร: "$title" (ID=$routineId)');
+      _showSnackBar('ลบ "$title" เรียบร้อย');
+
+      // ลบ Server (background)
+      HealthApiService.deleteRoutineRemote(routineId).then((ok) {
+        debugPrint('[Routines] 🌐 Server delete: ${ok ? "✅" : "❌"}');
+      });
+
+      await _loadData();
+    }
+  }
+
+  Future<void> _editRoutine(Map<String, dynamic> routine) async {
+    final routineId = (routine['nRoutineId'] as num?)?.toInt() ?? 0;
+    final currentTitle = routine['sTitle']?.toString() ?? '';
+    final currentTime = routine['sTime']?.toString() ?? '';
+
+    final titleController = TextEditingController(text: currentTitle);
+    final timeController = TextEditingController(text: currentTime);
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.edit, color: darkGreen),
+            const SizedBox(width: 8),
+            const Text('แก้ไขกิจวัตร'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleController,
+              decoration: InputDecoration(
+                labelText: 'ชื่อกิจวัตร',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: timeController,
+              decoration: InputDecoration(
+                labelText: 'เวลาแจ้งเตือน',
+                hintText: 'เช่น 08:00 น.',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('ยกเลิก'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: darkGreen,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('บันทึก', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true) {
+      final newTitle = titleController.text.trim();
+      final newTime = timeController.text.trim();
+
+      // อัปเดต Local
+      await AppDatabase.instance.updateRoutine(
+        routineId: routineId,
+        title: newTitle,
+        time: newTime,
+      );
+      debugPrint('[Routines] ✏️ แก้ไขกิจวัตร: "$currentTitle" → "$newTitle"');
+      _showSnackBar('แก้ไขกิจวัตรสำเร็จ');
+
+      // อัปเดต Server (background)
+      HealthApiService.updateRoutineRemote(
+        routineId: routineId,
+        title: newTitle,
+        time: newTime,
+      ).then((ok) {
+        debugPrint('[Routines] 🌐 Server update: ${ok ? "✅" : "❌"}');
+      });
+
+      await _loadData();
+    }
+
+    titleController.dispose();
+    timeController.dispose();
+  }
+
+  Future<void> _toggleRoutineCompletion(int routineId) async {
+    // Toggle Local
+    final isCompleted = await AppDatabase.instance.toggleRoutineLog(
+      routineId: routineId,
+      dateStr: _todayStr,
+    );
+
+    if (mounted) {
+      setState(() {
+        _todayCompletionMap[routineId] = isCompleted;
+        _completedCount = _todayCompletionMap.values.where((v) => v).length;
+      });
+    }
+
+    // Toggle Server (background)
+    HealthApiService.toggleRoutineLogRemote(
+      routineId: routineId,
+      date: _todayStr,
+    ).then((serverResult) {
+      debugPrint('[Routines] 🌐 Server toggle: routineId=$routineId → $serverResult');
+    });
   }
 
   void _showSnackBar(String message) {
@@ -57,30 +348,17 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
 
   // --- เมนู 3 จุด (Popup Menu) ---
   Widget _buildThreeDotsMenu({
-    required VoidCallback onPin,
     required VoidCallback onEdit,
     required VoidCallback onDelete,
-    bool isPinned = false,
   }) {
     return PopupMenuButton<String>(
       icon: const Icon(Icons.more_vert, color: Colors.grey),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       onSelected: (value) {
-        if (value == 'pin') onPin();
         if (value == 'edit') onEdit();
         if (value == 'delete') onDelete();
       },
       itemBuilder: (context) => [
-        PopupMenuItem(
-          value: 'pin',
-          child: Row(
-            children: [
-              Icon(isPinned ? Icons.push_pin_outlined : Icons.push_pin, color: primaryGreen, size: 20),
-              const SizedBox(width: 8),
-              Text(isPinned ? 'เลิกปักหมุดเป้าหมายหลัก' : 'ปักหมุดเป็นเป้าหมายหลัก'),
-            ],
-          ),
-        ),
         const PopupMenuItem(
           value: 'edit',
           child: Row(
@@ -105,131 +383,161 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     );
   }
 
+  // ---------- สีและไอคอนตามลำดับกิจวัตร ----------
+  static const _routineColors = [
+    Colors.blue,
+    Colors.orange,
+    Colors.purple,
+    Colors.teal,
+    Colors.red,
+    Colors.indigo,
+    Colors.green,
+    Colors.pink,
+  ];
+
+  static const _routineIcons = [
+    Icons.check_circle_outline,
+    Icons.fitness_center,
+    Icons.self_improvement,
+    Icons.water_drop,
+    Icons.directions_walk,
+    Icons.bedtime,
+    Icons.restaurant,
+    Icons.favorite,
+  ];
+
+  Color _getRoutineColor(int index) => _routineColors[index % _routineColors.length];
+  IconData _getRoutineIcon(int index) => _routineIcons[index % _routineIcons.length];
+
+  // ---------- Time block classification ----------
+  String _getTimeBlock(String? time) {
+    if (time == null || time.isEmpty) return 'other';
+    // ลองแปลง HH:mm
+    final match = RegExp(r'(\d{1,2})[:\.](\d{2})').firstMatch(time);
+    if (match != null) {
+      final hour = int.tryParse(match.group(1) ?? '') ?? 12;
+      if (hour < 12) return 'morning';
+      if (hour < 18) return 'afternoon';
+      return 'night';
+    }
+    // ถ้าไม่มีเวลา ดูจาก keyword
+    if (time.contains('เช้า') || time.contains('Morning')) return 'morning';
+    if (time.contains('บ่าย') || time.contains('Afternoon')) return 'afternoon';
+    if (time.contains('เย็น') || time.contains('คืน') || time.contains('Night')) return 'night';
+    return 'other';
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: lightBg,
+        appBar: _buildAppBar(),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: primaryGreen),
+              const SizedBox(height: 16),
+              Text('กำลังโหลดกิจวัตร...', style: TextStyle(color: Colors.grey.shade600)),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // จัดกลุ่มกิจวัตรตามช่วงเวลา
+    final morningRoutines = <Map<String, dynamic>>[];
+    final afternoonRoutines = <Map<String, dynamic>>[];
+    final nightRoutines = <Map<String, dynamic>>[];
+    final otherRoutines = <Map<String, dynamic>>[];
+
+    for (final r in _routines) {
+      final time = r['sTime']?.toString() ?? '';
+      switch (_getTimeBlock(time)) {
+        case 'morning':
+          morningRoutines.add(r);
+          break;
+        case 'afternoon':
+          afternoonRoutines.add(r);
+          break;
+        case 'night':
+          nightRoutines.add(r);
+          break;
+        default:
+          otherRoutines.add(r);
+      }
+    }
+
     return Scaffold(
       backgroundColor: lightBg,
       appBar: _buildAppBar(),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 16),
-              
-              if (_pinnedMainGoal != null)
-                _buildMainGoalCard()
-              else
-                _buildDefaultMainGoalCard(),
-              
-              const SizedBox(height: 24),
-              _buildDailyRoutinesHeader(),
-              const SizedBox(height: 16),
+      body: RefreshIndicator(
+        color: primaryGreen,
+        onRefresh: _loadData,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 16),
 
-              // ☀️ ช่วงเช้า
-              _buildTimeBlockHeader('☀️ ช่วงเช้า (Morning)', '06:00 - 11:00'),
-              _buildRoutineCard(
-                icon: Icons.water_drop,
-                iconBg: Colors.blue.shade50,
-                iconColor: Colors.blue,
-                title: 'ดื่มน้ำ',
-                badgeText: '60%',
-                subtitle: 'เป้าหมายเช้าถึงบ่าย: 2.5 ลิตร',
-                actionWidget: ElevatedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.add, size: 16, color: Colors.white),
-                  label: const Text('+250 ml', style: TextStyle(color: Colors.white, fontSize: 12)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue.shade700,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-                  ),
-                ),
-                progressText: '1.5 / 2.5 ลิตร (60%)',
-                progressValue: 0.6,
-                progressColor: Colors.blue.shade700,
-                onPin: () => _showSnackBar('ปักหมุด "ดื่มน้ำ"'),
-                onEdit: () => _showSnackBar('แก้ไข "ดื่มน้ำ"'),
-                onDelete: () => _showSnackBar('ลบ "ดื่มน้ำ"'),
-              ),
+                // Main Goal Card
+                _buildMainGoalCard(),
+                const SizedBox(height: 24),
 
-              const SizedBox(height: 20),
+                // Daily Routines Header
+                _buildDailyRoutinesHeader(),
+                const SizedBox(height: 16),
 
-              // 🏃 ระหว่างวัน
-              _buildTimeBlockHeader('🏃 ระหว่างวัน (Afternoon / Active)', '12:00 - 18:00'),
-              _buildRoutineCard(
-                icon: Icons.directions_walk,
-                iconBg: Colors.red.shade50,
-                iconColor: Colors.red.shade400,
-                title: 'เดินสะสม',
-                badgeText: '60%',
-                badgeColor: Colors.red.shade100,
-                badgeTextColor: Colors.red.shade800,
-                subtitle: 'เป้าหมายการขยับร่างกาย: 10,000 ก้าว',
-                actionWidget: OutlinedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.sync, size: 16, color: Colors.blueGrey),
-                  label: const Text('ซิงก์ก้าว', style: TextStyle(color: Colors.blueGrey, fontSize: 12)),
-                  style: OutlinedButton.styleFrom(
-                    backgroundColor: Colors.grey.shade100,
-                    side: BorderSide.none,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-                  ),
-                ),
-                progressText: '6,000 / 10,000 ก้าว (60%)',
-                progressValue: 0.6,
-                progressColor: Colors.red.shade800,
-                onPin: () => _showSnackBar('ปักหมุด "เดินสะสม"'),
-                onEdit: () => _showSnackBar('แก้ไข "เดินสะสม"'),
-                onDelete: () => _showSnackBar('ลบ "เดินสะสม"'),
-              ),
+                // Empty state
+                if (_routines.isEmpty)
+                  _buildEmptyState(),
 
-              const SizedBox(height: 20),
+                // ☀️ ช่วงเช้า
+                if (morningRoutines.isNotEmpty) ...[
+                  _buildTimeBlockHeader('☀️ ช่วงเช้า (Morning)', '06:00 - 11:00'),
+                  ...morningRoutines.map((r) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _buildRoutineCardFromDb(r, _routines.indexOf(r)),
+                  )),
+                  const SizedBox(height: 8),
+                ],
 
-              // 🌙 ก่อนนอน
-              _buildTimeBlockHeader('🌙 ก่อนนอน (Night / Wind Down)', '21:00 - 23:00'),
-              _buildRoutineCard(
-                icon: Icons.bedtime,
-                iconBg: Colors.indigo.shade50,
-                iconColor: Colors.indigo,
-                title: 'นอนหลับ',
-                badgeText: '75%',
-                badgeColor: Colors.indigo.shade100,
-                badgeTextColor: Colors.indigo.shade800,
-                subtitle: 'พักผ่อนอย่างมีคุณภาพ: เป้าหมาย 8 ชม.',
-                actionWidget: OutlinedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.alarm, size: 16, color: Colors.blueGrey),
-                  label: const Text('ตั้งเวลา', style: TextStyle(color: Colors.blueGrey, fontSize: 12)),
-                  style: OutlinedButton.styleFrom(
-                    backgroundColor: Colors.grey.shade100,
-                    side: BorderSide.none,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-                  ),
-                ),
-                progressText: '6 / 8 ชม. (75%)',
-                progressValue: 0.75,
-                progressColor: Colors.indigo.shade400,
-                onPin: () => _showSnackBar('ปักหมุด "นอนหลับ"'),
-                onEdit: () => _showSnackBar('แก้ไข "นอนหลับ"'),
-                onDelete: () => _showSnackBar('ลบ "นอนหลับ"'),
-              ),
+                // 🏃 ระหว่างวัน
+                if (afternoonRoutines.isNotEmpty) ...[
+                  _buildTimeBlockHeader('🏃 ระหว่างวัน (Afternoon)', '12:00 - 18:00'),
+                  ...afternoonRoutines.map((r) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _buildRoutineCardFromDb(r, _routines.indexOf(r)),
+                  )),
+                  const SizedBox(height: 8),
+                ],
 
-              if (_customRoutines.isNotEmpty) ...[
-                const SizedBox(height: 20),
-                _buildTimeBlockHeader('⭐ กิจวัตรที่เพิ่มใหม่', 'จัดการโดยคุณ'),
-                ..._customRoutines.map(
-                  (item) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12.0),
-                    child: _buildCustomRoutineCard(item),
-                  ),
-                ),
+                // 🌙 ก่อนนอน
+                if (nightRoutines.isNotEmpty) ...[
+                  _buildTimeBlockHeader('🌙 ก่อนนอน (Night)', '21:00 - 23:00'),
+                  ...nightRoutines.map((r) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _buildRoutineCardFromDb(r, _routines.indexOf(r)),
+                  )),
+                  const SizedBox(height: 8),
+                ],
+
+                // ⭐ อื่นๆ
+                if (otherRoutines.isNotEmpty) ...[
+                  _buildTimeBlockHeader('⭐ กิจวัตรอื่นๆ', 'ตลอดทั้งวัน'),
+                  ...otherRoutines.map((r) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _buildRoutineCardFromDb(r, _routines.indexOf(r)),
+                  )),
+                ],
+
+                const SizedBox(height: 100),
               ],
-              const SizedBox(height: 100),
-            ],
+            ),
           ),
         ),
       ),
@@ -242,96 +550,102 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
   }
 
   PreferredSizeWidget _buildAppBar() {
+    final userName = _user?.sFirstName ?? 'ผู้ใช้งาน';
     return AppBar(
       backgroundColor: lightBg,
       elevation: 0,
-      leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.black87), onPressed: () {}),
-      title: const Column(
+      automaticallyImplyLeading: false,
+      title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('กิจวัตรของฉัน', style: TextStyle(color: Color(0xFF006432), fontWeight: FontWeight.bold, fontSize: 18)),
-          Text('(My Routines)', style: TextStyle(color: Colors.grey, fontSize: 12)),
+          Text('กิจวัตรของฉัน', style: TextStyle(color: darkGreen, fontWeight: FontWeight.bold, fontSize: 18)),
+          const Text('(My Routines)', style: TextStyle(color: Colors.grey, fontSize: 12)),
         ],
       ),
       actions: [
         IconButton(icon: const Icon(Icons.notifications_active, color: Colors.blueGrey, size: 20), onPressed: () {}),
-        const Padding(
-          padding: EdgeInsets.only(right: 16.0),
-          child: CircleAvatar(radius: 16, backgroundColor: Color(0xFF0F9C58), child: Icon(Icons.person, color: Colors.white, size: 18)),
+        Padding(
+          padding: const EdgeInsets.only(right: 16.0),
+          child: CircleAvatar(
+            radius: 16,
+            backgroundColor: primaryGreen,
+            child: Text(
+              userName.isNotEmpty ? userName[0].toUpperCase() : '?',
+              style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+            ),
+          ),
         ),
       ],
     );
   }
 
+  // --- Empty State ---
+  Widget _buildEmptyState() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.playlist_add_check_rounded, size: 64, color: Colors.grey.shade300),
+          const SizedBox(height: 16),
+          Text(
+            'ยังไม่มีกิจวัตร',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey.shade600),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'กดปุ่ม + ด้านล่างเพื่อเพิ่มกิจวัตรประจำวัน\nเช่น ดื่มน้ำ, ออกกำลังกาย, นั่งสมาธิ',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- Main Goal Card (from DB) ---
   Widget _buildMainGoalCard() {
-    return _buildBaseMainGoalCard(
-      title: _pinnedMainGoal!.title,
-      subtitle: 'เป้าหมาย: ${_pinnedMainGoal!.targetValue.toInt()} ${_pinnedMainGoal!.unit}',
-      iconData: _pinnedMainGoal!.iconData,
-      progress: '${_pinnedMainGoal!.currentValue.toInt()} / ${_pinnedMainGoal!.targetValue.toInt()} ${_pinnedMainGoal!.unit}',
-      themeColor: _pinnedMainGoal!.color,
-      isPinned: true,
-      onPin: () => setState(() => _pinnedMainGoal = null),
-      onEdit: () => _showSnackBar('เปิดหน้าแก้ไข'),
-      onDelete: () => setState(() {
-        _customRoutines.removeWhere((r) => r.id == _pinnedMainGoal!.id);
-        _pinnedMainGoal = null;
-      }),
-    );
-  }
+    final goalTitle = _userGoal?['sTitle']?.toString() ?? '';
+    final goalProgress = (_userGoal?['nProgress'] as num?)?.toDouble() ?? 0.0;
+    final goalRemaining = _userGoal?['sRemainingText']?.toString() ?? '';
 
-  Widget _buildDefaultMainGoalCard() {
-    return _buildBaseMainGoalCard(
-      title: 'วิ่งเก็บระยะทาง 15 กม.',
-      subtitle: 'โซน 2 รักษาเพซ 6:30 • สะสมเดือนนี้แล้ว 210/500 กม.',
-      iconData: Icons.directions_run,
-      progress: 'เริ่มวิ่ง',
-      themeColor: darkGreen,
-      isPinned: true,
-      onPin: () => _showSnackBar('เลิกปักหมุดวิ่ง'),
-      onEdit: () => _showSnackBar('แก้ไขวิ่ง'),
-      onDelete: () => _showSnackBar('ลบเป้าหมายวิ่ง'),
-    );
-  }
+    // Fallback to workout stats if no goal
+    final String title;
+    final String subtitle;
+    if (goalTitle.isNotEmpty) {
+      title = goalTitle;
+      subtitle = goalRemaining.isNotEmpty
+          ? goalRemaining
+          : 'ทำสำเร็จแล้ว ${(goalProgress * 100).toInt()}%';
+    } else {
+      title = 'วิ่งเก็บระยะทางสะสม';
+      subtitle = 'สะสมแล้ว ${_totalDistanceKm.toStringAsFixed(1)} กม. | $_workoutCount ครั้ง | ${_totalCaloriesBurned.toStringAsFixed(0)} kcal';
+    }
 
-  Widget _buildBaseMainGoalCard({
-    required String title,
-    required String subtitle,
-    required IconData iconData,
-    required String progress,
-    required Color themeColor,
-    required bool isPinned,
-    required VoidCallback onPin,
-    required VoidCallback onEdit,
-    required VoidCallback onDelete,
-  }) {
     return Container(
       decoration: BoxDecoration(
         color: cardGreenBg,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: primaryGreen.withAlpha(100)),
+        border: Border.all(color: primaryGreen.withValues(alpha: 0.4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(left: 16, top: 12, right: 4),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  margin: const EdgeInsets.only(top: 4),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: darkGreen, borderRadius: BorderRadius.circular(12)),
-                  child: const Text('🚩 กิจวัตรจากเป้าหมายหลัก', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                ),
-                _buildThreeDotsMenu(onPin: onPin, onEdit: onEdit, onDelete: onDelete, isPinned: isPinned),
-              ],
+            padding: const EdgeInsets.only(left: 16, top: 12, right: 16),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(color: darkGreen, borderRadius: BorderRadius.circular(12)),
+              child: const Text('🚩 กิจวัตรจากเป้าหมายหลัก', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
             ),
           ),
           Container(
-            margin: const EdgeInsets.symmetric(horizontal: 12),
+            margin: const EdgeInsets.all(12),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
             child: Column(
@@ -341,8 +655,8 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
                   children: [
                     Container(
                       padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(color: themeColor.withAlpha(30), shape: BoxShape.circle),
-                      child: Icon(iconData, color: themeColor),
+                      decoration: BoxDecoration(color: darkGreen.withValues(alpha: 0.12), shape: BoxShape.circle),
+                      child: Icon(Icons.directions_run, color: darkGreen),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -358,34 +672,31 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                SizedBox(
+                // เช็กลิสต์สรุปวันนี้
+                Container(
                   width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.play_arrow, color: Colors.white),
-                    label: Text(progress, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    style: ElevatedButton.styleFrom(backgroundColor: themeColor, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: primaryGreen.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.checklist, size: 18, color: darkGreen),
+                      const SizedBox(width: 8),
+                      Text(
+                        'วันนี้ทำสำเร็จ $_completedCount / ${_routines.length} กิจวัตร',
+                        style: TextStyle(fontSize: 13, color: darkGreen, fontWeight: FontWeight.bold),
+                      ),
+                      const Spacer(),
+                      if (_routines.isNotEmpty)
+                        Text(
+                          '${(_completedCount / _routines.length * 100).toInt()}%',
+                          style: TextStyle(fontSize: 13, color: darkGreen, fontWeight: FontWeight.bold),
+                        ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.checklist, size: 16, color: darkGreen),
-                    const SizedBox(width: 8),
-                    Text('เช็กลิสต์ย่อยประจำรอบวันนี้', style: TextStyle(fontSize: 12, color: darkGreen, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                _buildChecklistItem('วอร์มอัพ 10 นาที', _isWarmupChecked, (val) => setState(() => _isWarmupChecked = val!)),
-                const SizedBox(height: 8),
-                _buildChecklistItem('ยืดเหยียดผ่อนคลาย', _isCooldownChecked, (val) => setState(() => _isCooldownChecked = val!)),
               ],
             ),
           ),
@@ -394,33 +705,22 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     );
   }
 
-  Widget _buildChecklistItem(String title, bool isChecked, Function(bool?) onChanged) {
-    return Container(
-      decoration: BoxDecoration(
-        color: isChecked ? primaryGreen.withAlpha(50) : Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: isChecked ? primaryGreen : Colors.transparent),
-      ),
-      child: CheckboxListTile(
-        value: isChecked,
-        onChanged: onChanged,
-        title: Text(title, style: TextStyle(fontSize: 14, color: isChecked ? darkGreen : Colors.black87, fontWeight: isChecked ? FontWeight.bold : FontWeight.normal)),
-        activeColor: darkGreen,
-        checkColor: Colors.white,
-        controlAffinity: ListTileControlAffinity.leading,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-        dense: true,
-      ),
-    );
-  }
-
   Widget _buildDailyRoutinesHeader() {
-    return const Row(
+    // นับจำนวนช่วงเวลาที่มีกิจวัตร
+    int timeBlockCount = 0;
+    final times = _routines.map((r) => _getTimeBlock(r['sTime']?.toString() ?? '')).toSet();
+    timeBlockCount = times.length;
+
+    return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Text('กิจวัตรประจำวัน (Daily\nRoutines)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, height: 1.2)),
-        Text('3 ช่วง\nเวลา', textAlign: TextAlign.right, style: TextStyle(fontSize: 12, color: Colors.grey)),
+        const Text('กิจวัตรประจำวัน (Daily\nRoutines)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, height: 1.2)),
+        Text(
+          _routines.isEmpty ? 'ยังไม่มี' : '$timeBlockCount ช่วง\nเวลา',
+          textAlign: TextAlign.right,
+          style: const TextStyle(fontSize: 12, color: Colors.grey),
+        ),
       ],
     );
   }
@@ -438,115 +738,114 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     );
   }
 
-  Widget _buildCustomRoutineCard(RoutineItem item) {
-    final bool isPinned = _pinnedMainGoal?.id == item.id;
-    return _buildRoutineCard(
-      icon: item.iconData,
-      iconBg: item.color.withAlpha(30),
-      iconColor: item.color,
-      title: item.title,
-      badgeText: '${item.progressPercent}%',
-      badgeColor: item.color.withAlpha(30),
-      badgeTextColor: item.color,
-      subtitle: 'เป้าหมาย: ${item.targetValue.toInt()} ${item.unit} (${item.notificationTime})',
-      actionWidget: IconButton(
-        icon: Icon(Icons.add_circle, color: item.color),
-        onPressed: () => setState(() => item.currentValue = (item.currentValue + 1).clamp(0, item.targetValue)),
-      ),
-      progressText: '${item.currentValue.toInt()} / ${item.targetValue.toInt()} ${item.unit} (${item.progressPercent}%)',
-      progressValue: item.progressRatio,
-      progressColor: item.color,
-      onPin: () => setState(() => isPinned ? _pinnedMainGoal = null : _pinnedMainGoal = item),
-      onEdit: () => _showSnackBar('แก้ไข ${item.title}'),
-      onDelete: () => setState(() {
-        _customRoutines.removeWhere((r) => r.id == item.id);
-        if (isPinned) _pinnedMainGoal = null;
-      }),
-      isPinned: isPinned,
-    );
-  }
+  // --- Routine Card จาก Database ---
+  Widget _buildRoutineCardFromDb(Map<String, dynamic> routine, int index) {
+    final routineId = (routine['nRoutineId'] as num?)?.toInt() ?? 0;
+    final title = routine['sTitle']?.toString() ?? 'ไม่มีชื่อ';
+    final time = routine['sTime']?.toString() ?? '';
+    final isNotifActive = (routine['isNotificationActive'] as num?)?.toInt() == 1;
+    final isCompleted = _todayCompletionMap[routineId] ?? false;
+    final color = _getRoutineColor(index);
+    final icon = _getRoutineIcon(index);
 
-  Widget _buildRoutineCard({
-    required IconData icon,
-    required Color iconBg,
-    required Color iconColor,
-    required String title,
-    required String badgeText,
-    Color badgeColor = const Color(0xFFE3F2FD),
-    Color badgeTextColor = const Color(0xFF1976D2),
-    required String subtitle,
-    required Widget actionWidget,
-    required String progressText,
-    required double progressValue,
-    required Color progressColor,
-    required VoidCallback onPin,
-    required VoidCallback onEdit,
-    required VoidCallback onDelete,
-    bool isPinned = false,
-  }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isCompleted ? color.withValues(alpha: 0.05) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 10, offset: const Offset(0, 4))],
+        border: isCompleted ? Border.all(color: color.withValues(alpha: 0.3)) : null,
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Column(
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ไอคอน
               Container(
                 padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
-                child: Icon(icon, color: iconColor, size: 24),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 24),
               ),
               const SizedBox(width: 12),
+              // ชื่อ + เวลา
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(color: badgeColor, borderRadius: BorderRadius.circular(8)),
-                          child: Text(badgeText, style: TextStyle(color: badgeTextColor, fontSize: 10, fontWeight: FontWeight.bold)),
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              decoration: isCompleted ? TextDecoration.lineThrough : null,
+                              color: isCompleted ? Colors.grey : Colors.black87,
+                            ),
+                          ),
                         ),
+                        if (isCompleted)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade100,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text('✅ เสร็จแล้ว', style: TextStyle(color: Colors.green.shade800, fontSize: 10, fontWeight: FontWeight.bold)),
+                          ),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                    Row(
+                      children: [
+                        if (time.isNotEmpty) ...[
+                          Icon(Icons.access_time, size: 14, color: Colors.grey.shade500),
+                          const SizedBox(width: 4),
+                          Text(time, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                          const SizedBox(width: 12),
+                        ],
+                        if (isNotifActive)
+                          Icon(Icons.notifications_active, size: 14, color: Colors.amber.shade700)
+                        else
+                          Icon(Icons.notifications_off, size: 14, color: Colors.grey.shade400),
+                      ],
+                    ),
                   ],
                 ),
               ),
+              // Actions
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  actionWidget,
-                  _buildThreeDotsMenu(onPin: onPin, onEdit: onEdit, onDelete: onDelete, isPinned: isPinned),
+                  // Check/Uncheck Button
+                  InkWell(
+                    onTap: () => _toggleRoutineCompletion(routineId),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: isCompleted ? color.withValues(alpha: 0.15) : Colors.grey.shade100,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
+                        color: isCompleted ? color : Colors.grey,
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                  _buildThreeDotsMenu(
+                    onEdit: () => _editRoutine(routine),
+                    onDelete: () => _deleteRoutine(routineId, title),
+                  ),
                 ],
               ),
             ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('ความคืบหน้า', style: TextStyle(fontSize: 12, color: Colors.black54)),
-              Text(progressText, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: progressValue,
-              minHeight: 8,
-              backgroundColor: Colors.grey.shade200,
-              valueColor: AlwaysStoppedAnimation<Color>(progressColor),
-            ),
           ),
         ],
       ),

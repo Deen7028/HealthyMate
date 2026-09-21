@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class DailyActivityCard extends StatelessWidget {
-  final double progress; // 0.75 for 75%
+  final double progress; 
   final VoidCallback onStartWorkout;
 
   const DailyActivityCard({

@@ -1291,4 +1291,212 @@ class AppDatabase {
       );
     } catch (_) {}
   }
+
+  // ==========================================
+  // TbRoutines CRUD Operations
+  // ==========================================
+
+  /// ดึงกิจวัตรทั้งหมดของผู้ใช้
+  Future<List<Map<String, dynamic>>> getRoutines({required int userId}) async {
+    if (kIsWeb) return [];
+    final db = await database;
+    if (db == null) return [];
+    try {
+      return await db.query(
+        tableRoutines,
+        where: 'nUserId = ?',
+        whereArgs: [userId],
+        orderBy: 'nRoutineId ASC',
+      );
+    } catch (e) {
+      debugPrint('[AppDatabase] getRoutines error: $e');
+      return [];
+    }
+  }
+
+  /// เพิ่มกิจวัตรใหม่
+  Future<int> insertRoutine({
+    required int userId,
+    required String title,
+    String time = '',
+    bool isNotificationActive = true,
+  }) async {
+    if (kIsWeb) return 0;
+    final db = await database;
+    if (db == null) return 0;
+    try {
+      return await db.insert(tableRoutines, {
+        'nUserId': userId,
+        'sTitle': title,
+        'sTime': time,
+        'isNotificationActive': isNotificationActive ? 1 : 0,
+        'dtCreatedAt': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('[AppDatabase] insertRoutine error: $e');
+      return 0;
+    }
+  }
+
+  /// แก้ไขกิจวัตร
+  Future<void> updateRoutine({
+    required int routineId,
+    required String title,
+    String time = '',
+    bool isNotificationActive = true,
+  }) async {
+    if (kIsWeb) return;
+    final db = await database;
+    if (db == null) return;
+    try {
+      await db.update(
+        tableRoutines,
+        {
+          'sTitle': title,
+          'sTime': time,
+          'isNotificationActive': isNotificationActive ? 1 : 0,
+        },
+        where: 'nRoutineId = ?',
+        whereArgs: [routineId],
+      );
+    } catch (e) {
+      debugPrint('[AppDatabase] updateRoutine error: $e');
+    }
+  }
+
+  /// ลบกิจวัตร (cascade จะลบ RoutineLogs ให้อัตโนมัติ)
+  Future<void> deleteRoutine(int routineId) async {
+    if (kIsWeb) return;
+    final db = await database;
+    if (db == null) return;
+    try {
+      // ลบ logs ก่อน (กรณี PRAGMA foreign_keys ไม่ได้เปิด)
+      await db.delete(
+        tableRoutineLogs,
+        where: 'nRoutineId = ?',
+        whereArgs: [routineId],
+      );
+      await db.delete(
+        tableRoutines,
+        where: 'nRoutineId = ?',
+        whereArgs: [routineId],
+      );
+    } catch (e) {
+      debugPrint('[AppDatabase] deleteRoutine error: $e');
+    }
+  }
+
+  // ==========================================
+  // TbRoutineLogs CRUD Operations
+  // ==========================================
+
+  /// ดึง log ของกิจวัตรในวันที่ระบุ
+  Future<Map<String, dynamic>?> getRoutineLogForDate({
+    required int routineId,
+    required String dateStr, // 'yyyy-MM-dd'
+  }) async {
+    if (kIsWeb) return null;
+    final db = await database;
+    if (db == null) return null;
+    try {
+      final result = await db.query(
+        tableRoutineLogs,
+        where: 'nRoutineId = ? AND dtLogDate = ?',
+        whereArgs: [routineId, dateStr],
+        limit: 1,
+      );
+      if (result.isNotEmpty) return result.first;
+    } catch (e) {
+      debugPrint('[AppDatabase] getRoutineLogForDate error: $e');
+    }
+    return null;
+  }
+
+  /// ดึง logs ของกิจวัตรทั้งหมดของ user ในวันที่ระบุ
+  Future<List<Map<String, dynamic>>> getRoutineLogsForDate({
+    required int userId,
+    required String dateStr, // 'yyyy-MM-dd'
+  }) async {
+    if (kIsWeb) return [];
+    final db = await database;
+    if (db == null) return [];
+    try {
+      return await db.rawQuery('''
+        SELECT rl.*, r.sTitle, r.sTime, r.isNotificationActive
+        FROM $tableRoutineLogs rl
+        INNER JOIN $tableRoutines r ON rl.nRoutineId = r.nRoutineId
+        WHERE r.nUserId = ? AND rl.dtLogDate = ?
+      ''', [userId, dateStr]);
+    } catch (e) {
+      debugPrint('[AppDatabase] getRoutineLogsForDate error: $e');
+      return [];
+    }
+  }
+
+  /// สลับสถานะ เช็ค / ยกเลิกเช็ค กิจวัตรของวันนั้น
+  /// คืนค่า true = เช็คแล้ว, false = ยกเลิกเช็ค
+  Future<bool> toggleRoutineLog({
+    required int routineId,
+    required String dateStr, // 'yyyy-MM-dd'
+  }) async {
+    if (kIsWeb) return false;
+    final db = await database;
+    if (db == null) return false;
+    try {
+      final existing = await getRoutineLogForDate(
+        routineId: routineId,
+        dateStr: dateStr,
+      );
+
+      if (existing == null) {
+        // ยังไม่มี → สร้างใหม่เป็น completed
+        await db.insert(tableRoutineLogs, {
+          'nRoutineId': routineId,
+          'isCompleted': 1,
+          'dtLogDate': dateStr,
+        });
+        debugPrint('[AppDatabase] ✅ toggleRoutineLog: routineId=$routineId → checked');
+        return true;
+      } else {
+        // มีอยู่แล้ว → toggle
+        final wasCompleted = (existing['isCompleted'] as num?)?.toInt() == 1;
+        final newVal = wasCompleted ? 0 : 1;
+        await db.update(
+          tableRoutineLogs,
+          {'isCompleted': newVal},
+          where: 'nLogId = ?',
+          whereArgs: [existing['nLogId']],
+        );
+        debugPrint('[AppDatabase] 🔄 toggleRoutineLog: routineId=$routineId → ${newVal == 1 ? "checked" : "unchecked"}');
+        return newVal == 1;
+      }
+    } catch (e) {
+      debugPrint('[AppDatabase] toggleRoutineLog error: $e');
+      return false;
+    }
+  }
+
+  /// นับจำนวนกิจวัตรที่เสร็จแล้วในวันนั้น
+  Future<int> getRoutineCompletionCount({
+    required int userId,
+    required String dateStr,
+  }) async {
+    if (kIsWeb) return 0;
+    final db = await database;
+    if (db == null) return 0;
+    try {
+      final result = await db.rawQuery('''
+        SELECT COUNT(*) as cnt
+        FROM $tableRoutineLogs rl
+        INNER JOIN $tableRoutines r ON rl.nRoutineId = r.nRoutineId
+        WHERE r.nUserId = ? AND rl.dtLogDate = ? AND rl.isCompleted = 1
+      ''', [userId, dateStr]);
+      if (result.isNotEmpty) {
+        return (result.first['cnt'] as num?)?.toInt() ?? 0;
+      }
+    } catch (e) {
+      debugPrint('[AppDatabase] getRoutineCompletionCount error: $e');
+    }
+    return 0;
+  }
 }

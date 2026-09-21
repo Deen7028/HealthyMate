@@ -252,4 +252,198 @@ class HealthApiService {
     }
     return null;
   }
+
+  // ==========================================
+  // Dashboard API (Aggregated Endpoint)
+  // ==========================================
+
+  /// 7. ดึงข้อมูล Dashboard รวม (user, healthRecord, workoutStats, nutrition, goal, routines)
+  /// ใน HTTP request เดียวเพื่อลด latency
+  static Future<Map<String, dynamic>?> fetchDashboardData({
+    required int userId,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl/dashboard.php?nUserId=$userId');
+      final response = await http
+          .get(uri, headers: defaultHeaders)
+          .timeout(const Duration(seconds: 8));
+
+      debugPrint('[API] fetchDashboardData HTTP ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body['status'] == 'success' && body['data'] is Map) {
+          return Map<String, dynamic>.from(body['data'] as Map);
+        } else {
+          debugPrint('[API ERROR] fetchDashboardData: ${response.body}');
+        }
+      } else {
+        debugPrint('[API ERROR] fetchDashboardData HTTP ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[API EXCEPTION] fetchDashboardData failed: $e');
+    }
+    return null;
+  }
+
+  // ==========================================
+  // Routines API
+  // ==========================================
+
+  /// 8. ดึงกิจวัตรทั้งหมดจาก Server พร้อมสถานะวันนี้
+  static Future<Map<String, dynamic>?> fetchRoutines({
+    required int userId,
+    String? date,
+  }) async {
+    try {
+      final dateStr = date ?? _todayDateStr();
+      final uri = Uri.parse('$baseUrl/routines.php?nUserId=$userId&date=$dateStr');
+      final response = await http
+          .get(uri, headers: defaultHeaders)
+          .timeout(const Duration(seconds: 8));
+
+      debugPrint('[API] fetchRoutines HTTP ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body['status'] == 'success') {
+          return Map<String, dynamic>.from(body as Map);
+        }
+      } else {
+        debugPrint('[API ERROR] fetchRoutines HTTP ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('[API EXCEPTION] fetchRoutines failed: $e');
+    }
+    return null;
+  }
+
+  /// 9. เพิ่มกิจวัตรใหม่ขึ้น Server
+  static Future<int> insertRoutineRemote({
+    required int userId,
+    required String title,
+    String time = '',
+    bool isNotificationActive = true,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl/routines.php');
+      final response = await http
+          .post(
+            uri,
+            headers: defaultHeaders,
+            body: jsonEncode({
+              'action': 'insert',
+              'nUserId': userId,
+              'sTitle': title,
+              'sTime': time,
+              'isNotificationActive': isNotificationActive ? 1 : 0,
+            }),
+          )
+          .timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body['status'] == 'success') {
+          debugPrint('[API] ✅ insertRoutineRemote: $title (ID=${body['nRoutineId']})');
+          return (body['nRoutineId'] as num?)?.toInt() ?? 0;
+        }
+      }
+      debugPrint('[API ERROR] insertRoutineRemote HTTP ${response.statusCode}: ${response.body}');
+    } catch (e) {
+      debugPrint('[API EXCEPTION] insertRoutineRemote failed: $e');
+    }
+    return 0;
+  }
+
+  /// 10. แก้ไขกิจวัตรบน Server
+  static Future<bool> updateRoutineRemote({
+    required int routineId,
+    required String title,
+    String time = '',
+    bool isNotificationActive = true,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl/routines.php');
+      final response = await http
+          .put(
+            uri,
+            headers: defaultHeaders,
+            body: jsonEncode({
+              'nRoutineId': routineId,
+              'sTitle': title,
+              'sTime': time,
+              'isNotificationActive': isNotificationActive ? 1 : 0,
+            }),
+          )
+          .timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        return body['status'] == 'success';
+      }
+    } catch (e) {
+      debugPrint('[API EXCEPTION] updateRoutineRemote failed: $e');
+    }
+    return false;
+  }
+
+  /// 11. ลบกิจวัตรจาก Server
+  static Future<bool> deleteRoutineRemote(int routineId) async {
+    try {
+      final uri = Uri.parse('$baseUrl/routines.php');
+      final response = await http
+          .delete(
+            uri,
+            headers: defaultHeaders,
+            body: jsonEncode({'nRoutineId': routineId}),
+          )
+          .timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        return body['status'] == 'success';
+      }
+    } catch (e) {
+      debugPrint('[API EXCEPTION] deleteRoutineRemote failed: $e');
+    }
+    return false;
+  }
+
+  /// 12. สลับสถานะเช็ค/ยกเลิกเช็คกิจวัตรบน Server
+  static Future<bool?> toggleRoutineLogRemote({
+    required int routineId,
+    String? date,
+  }) async {
+    try {
+      final dateStr = date ?? _todayDateStr();
+      final uri = Uri.parse('$baseUrl/routines.php');
+      final response = await http
+          .post(
+            uri,
+            headers: defaultHeaders,
+            body: jsonEncode({
+              'action': 'toggle_log',
+              'nRoutineId': routineId,
+              'dtLogDate': dateStr,
+            }),
+          )
+          .timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body['status'] == 'success') {
+          return (body['isCompleted'] as num?)?.toInt() == 1;
+        }
+      }
+    } catch (e) {
+      debugPrint('[API EXCEPTION] toggleRoutineLogRemote failed: $e');
+    }
+    return null;
+  }
+
+  /// Helper: วันที่วันนี้ในรูปแบบ yyyy-MM-dd
+  static String _todayDateStr() {
+    final now = DateTime.now();
+    return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+  }
 }

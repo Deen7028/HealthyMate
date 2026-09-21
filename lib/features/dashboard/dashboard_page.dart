@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:percent_indicator/percent_indicator.dart';
-
-// สมมติว่ามีการ import ข้อมูล/State เข้ามา
-// import 'package:healthymate/features/health_calculator/state/health_calculator_state.dart';
 import 'package:healthymate/shared/widgets/sync_status_badge.dart';
-import 'models/dashboard_data.dart';
-import 'widgets/daily_routine_checklist.dart';
+import 'package:healthymate/core/database/app_database.dart';
+import 'package:healthymate/core/services/api_service.dart';
+import 'package:healthymate/core/utils/health_calculator.dart';
+import 'package:healthymate/features/health_calculator/models/user_model.dart';
+import 'package:healthymate/features/health_calculator/models/health_record_model.dart';
+import 'package:healthymate/features/health_calculator/models/activity_level.dart';
 
 class DashboardPageUpdated extends StatefulWidget {
   final VoidCallback? onNavigateToCalculator;
@@ -31,6 +33,160 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
   final Color darkGreen = const Color(0xFF006432);
   final Color lightBg = const Color(0xFFF7F9FB);
 
+  // ---------- Database-driven state ----------
+  bool _isLoading = true;
+  TbUser? _user;
+  TbHealthRecord? _latestRecord;
+  int _workoutCount = 0;
+  double _totalDistanceKm = 0.0;
+  double _totalCaloriesBurned = 0.0;
+  int _totalWorkoutDurationSec = 0;
+  int _todayNutritionCalories = 0;
+  Map<String, dynamic>? _userGoal;
+
+  // วันในสัปดาห์ปัจจุบัน
+  final DateTime _now = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboardData();
+  }
+
+  Future<void> _loadDashboardData() async {
+    try {
+      final db = AppDatabase.instance;
+
+      // 1. หา userId จาก Session
+      final email = await db.getLoggedInUserEmail();
+      TbUser? user;
+      if (email != null && email.isNotEmpty) {
+        user = await db.getUserByEmail(email);
+      }
+      user ??= await db.getUser(userId: 1);
+
+      if (user == null) {
+        debugPrint('[Dashboard] ❌ ไม่พบข้อมูลผู้ใช้ใน DB');
+        if (mounted) setState(() => _isLoading = false);
+        return;
+      }
+
+      final userId = user.nUserId;
+      debugPrint('[Dashboard] ✅ โหลดข้อมูลผู้ใช้: ${user.sFullName} (ID=$userId)');
+
+      // 2. ดึง Health Record ล่าสุด
+      final records = await db.getHealthRecords(userId: userId);
+      final latestRecord = records.isNotEmpty ? records.first : null;
+      debugPrint('[Dashboard] 📋 HealthRecords: ${records.length} รายการ');
+
+      // 3. ดึงข้อมูล Workouts
+      final workouts = await db.getWorkouts(userId: userId);
+      final workoutCount = workouts.length;
+      double totalDist = 0.0;
+      double totalCal = 0.0;
+      int totalDur = 0;
+      for (final w in workouts) {
+        totalDist += (w['nDistance'] as num?)?.toDouble() ?? 0.0;
+        totalCal += (w['nCaloriesBurned'] as num?)?.toDouble() ?? 0.0;
+        totalDur += (w['nDuration'] as num?)?.toInt() ?? 0;
+      }
+      debugPrint('[Dashboard] 🏃 Workouts: $workoutCount | ระยะทาง: ${totalDist.toStringAsFixed(1)} km | แคล: ${totalCal.toStringAsFixed(0)}');
+
+      // 4. ดึง Nutrition วันนี้
+      final nutritionToday = await db.getNutritionLogsToday(userId);
+      int todayCal = 0;
+      for (final n in nutritionToday) {
+        todayCal += (n['nCalories'] as num?)?.toInt() ?? 0;
+      }
+      debugPrint('[Dashboard] 🍽️ Nutrition วันนี้: $todayCal kcal (${nutritionToday.length} รายการ)');
+
+      // 5. ดึงเป้าหมาย
+      final goal = await db.getUserGoal(userId);
+      debugPrint('[Dashboard] 🎯 Goal: ${goal?['sTitle'] ?? 'ยังไม่มี'}');
+
+      if (mounted) {
+        setState(() {
+          _user = user;
+          _latestRecord = latestRecord;
+          _workoutCount = workoutCount;
+          _totalDistanceKm = totalDist;
+          _totalCaloriesBurned = totalCal;
+          _totalWorkoutDurationSec = totalDur;
+          _todayNutritionCalories = todayCal;
+          _userGoal = goal;
+          _isLoading = false;
+        });
+      }
+
+      // 6. Sync จาก Server (background - ไม่ block UI)
+      _syncFromServer(userId);
+    } catch (e, stack) {
+      debugPrint('[Dashboard] ❌ Error loading data: $e');
+      debugPrint('[Dashboard] Stack: $stack');
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  /// ดึงข้อมูลจาก Server แบบ background แล้วอัปเดต UI ถ้ามีข้อมูลใหม่
+  Future<void> _syncFromServer(int userId) async {
+    try {
+      debugPrint('[Dashboard] 🌐 กำลังซิงค์จาก Server...');
+      final serverData = await HealthApiService.fetchDashboardData(userId: userId);
+
+      if (serverData == null) {
+        debugPrint('[Dashboard] 🌐 Server ไม่ตอบ — ใช้ข้อมูล Local');
+        return;
+      }
+
+      debugPrint('[Dashboard] 🌐 ✅ ได้ข้อมูลจาก Server สำเร็จ');
+
+      // แกะข้อมูล workout stats จาก server
+      final wsMap = serverData['workoutStats'] as Map<String, dynamic>?;
+      final serverWorkoutCount = (wsMap?['totalCount'] as num?)?.toInt() ?? 0;
+      final serverDistance = (wsMap?['totalDistance'] as num?)?.toDouble() ?? 0.0;
+      final serverCalories = (wsMap?['totalCalories'] as num?)?.toDouble() ?? 0.0;
+      final serverDuration = (wsMap?['totalDuration'] as num?)?.toInt() ?? 0;
+
+      // แกะ nutrition วันนี้
+      final ntMap = serverData['nutritionToday'] as Map<String, dynamic>?;
+      final serverNutritionCal = (ntMap?['totalCalories'] as num?)?.toInt() ?? 0;
+
+      // แกะ goal
+      final goalMap = serverData['goal'] as Map<String, dynamic>?;
+
+      // แกะ health record
+      final hrMap = serverData['latestHealthRecord'] as Map<String, dynamic>?;
+      TbHealthRecord? serverRecord;
+      if (hrMap != null) {
+        serverRecord = TbHealthRecord.fromMap(hrMap);
+      }
+
+      // แกะ user
+      final userMap = serverData['user'] as Map<String, dynamic>?;
+      TbUser? serverUser;
+      if (userMap != null) {
+        serverUser = TbUser.fromMap(userMap);
+      }
+
+      // ใช้ค่าที่มากกว่า (Server อาจมีข้อมูลจากหลายเครื่อง)
+      if (mounted) {
+        setState(() {
+          if (serverUser != null) _user = serverUser;
+          if (serverRecord != null) _latestRecord = serverRecord;
+          if (serverWorkoutCount > _workoutCount) _workoutCount = serverWorkoutCount;
+          if (serverDistance > _totalDistanceKm) _totalDistanceKm = serverDistance;
+          if (serverCalories > _totalCaloriesBurned) _totalCaloriesBurned = serverCalories;
+          if (serverDuration > _totalWorkoutDurationSec) _totalWorkoutDurationSec = serverDuration;
+          if (serverNutritionCal > _todayNutritionCalories) _todayNutritionCalories = serverNutritionCal;
+          if (goalMap != null) _userGoal = goalMap;
+        });
+        debugPrint('[Dashboard] 🌐 ✅ อัปเดต UI จาก Server เรียบร้อย');
+      }
+    } catch (e) {
+      debugPrint('[Dashboard] 🌐 ❌ Sync error (ใช้ local data): $e');
+    }
+  }
+
   void _handleStartWorkout() {
     if (widget.onNavigateToWorkout != null) {
       widget.onNavigateToWorkout!();
@@ -47,41 +203,108 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
     }
   }
 
+  // ---------- Helper จัดรูปแบบตัวเลข ----------
+  String _formatNumber(double val) {
+    if (val >= 1000) {
+      return NumberFormat('#,##0', 'th').format(val.round());
+    }
+    return val.toStringAsFixed(val.truncateToDouble() == val ? 0 : 1);
+  }
+
+  String _formatInt(int val) {
+    return NumberFormat('#,##0', 'th').format(val);
+  }
+
+  // ---------- Greeting ตามเวลา ----------
+  String _getGreeting() {
+    final hour = _now.hour;
+    if (hour < 12) return 'อรุณสวัสดิ์';
+    if (hour < 17) return 'สวัสดีตอนบ่าย';
+    return 'สวัสดีตอนเย็น';
+  }
+
+  String _getGreetingEmoji() {
+    final hour = _now.hour;
+    if (hour < 12) return '☀️';
+    if (hour < 17) return '🌤️';
+    return '🌙';
+  }
+
+  // ---------- สัปดาห์ปัจจุบัน ----------
+  int get _weekOfMonth {
+    final firstDayOfMonth = DateTime(_now.year, _now.month, 1);
+    return ((_now.day + firstDayOfMonth.weekday - 2) / 7).ceil();
+  }
+
+  String get _thaiDayName {
+    const days = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'];
+    return days[_now.weekday - 1];
+  }
+
+  String get _thaiMonthName {
+    const months = [
+      'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+      'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+    ];
+    return months[_now.month - 1];
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: lightBg,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: primaryGreen),
+              const SizedBox(height: 16),
+              Text('กำลังโหลดข้อมูลสุขภาพ...', style: TextStyle(color: Colors.grey.shade600)),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: lightBg, // สีพื้นหลังโทนสว่าง
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 1. Top Header
-                _buildHeader(),
-                const SizedBox(height: 24),
+        child: RefreshIndicator(
+          color: primaryGreen,
+          onRefresh: _loadDashboardData,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 1. Top Header
+                  _buildHeader(),
+                  const SizedBox(height: 24),
 
-                // 2. แถบปฏิทินกิจวัตรประจำสัปดาห์ (Calendar Strip)
-                _buildCalendarStrip(),
-                const SizedBox(height: 20),
+                  // 2. แถบปฏิทินกิจวัตรประจำสัปดาห์ (Calendar Strip)
+                  _buildCalendarStrip(),
+                  const SizedBox(height: 20),
 
-                // 3. ข้อมูลสุขภาพส่วนบุคคล (Health Summary Card)
-                _buildHealthSummaryCard(),
-                const SizedBox(height: 20),
+                  // 3. ข้อมูลสุขภาพส่วนบุคคล (Health Summary Card)
+                  _buildHealthSummaryCard(),
+                  const SizedBox(height: 20),
 
-                // 3. เป้าหมายหลักของฉัน (Main Goal Card)
-                _buildMainGoalCard(),
-                const SizedBox(height: 20),
+                  // 3. เป้าหมายหลักของฉัน (Main Goal Card)
+                  _buildMainGoalCard(),
+                  const SizedBox(height: 20),
 
-                // 4. ปุ่มลัดเริ่มออกกำลังกาย
-                _buildActionButtons(),
-                const SizedBox(height: 20),
+                  // 4. ปุ่มลัดเริ่มออกกำลังกาย
+                  _buildActionButtons(),
+                  const SizedBox(height: 20),
 
-                // 5. เป้าหมายอื่นๆ (Other Goals & Routines)
-                _buildOtherGoalsCard(),
-                const SizedBox(height: 40),
-              ],
+                  // 5. เป้าหมายอื่นๆ (Other Goals & Routines)
+                  _buildOtherGoalsCard(),
+                  const SizedBox(height: 40),
+                ],
+              ),
             ),
           ),
         ),
@@ -91,6 +314,9 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
 
   // --- Widget ส่วนบน (Header) ---
   Widget _buildHeader() {
+    final userName = _user?.sFirstName ?? 'ผู้ใช้งาน';
+    final profilePath = _user?.sProfileImagePath ?? '';
+
     return Padding(
       padding: const EdgeInsets.only(top: 16.0),
       child: Column(
@@ -103,9 +329,22 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                 children: [
                   CircleAvatar(
                     radius: 20,
-                    backgroundImage: NetworkImage(
-                      'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&q=80',
-                    ),
+                    backgroundColor: primaryGreen.withValues(alpha: 0.2),
+                    backgroundImage: profilePath.isNotEmpty
+                        ? (profilePath.startsWith('http')
+                            ? NetworkImage(profilePath)
+                            : null)
+                        : null,
+                    child: profilePath.isEmpty
+                        ? Text(
+                            userName.isNotEmpty ? userName[0].toUpperCase() : '?',
+                            style: TextStyle(
+                              color: darkGreen,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                            ),
+                          )
+                        : null,
                   ),
                   const SizedBox(width: 12),
                   Column(
@@ -123,9 +362,9 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                         children: [
                           Icon(Icons.circle, color: primaryGreen, size: 8),
                           const SizedBox(width: 4),
-                          const Text(
-                            'เข้าสู่วันจันทร์ • สัปดาห์ที่ 3',
-                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          Text(
+                            'เข้าสู่วัน$_thaiDayName • สัปดาห์ที่ $_weekOfMonth',
+                            style: const TextStyle(fontSize: 12, color: Colors.grey),
                           ),
                         ],
                       ),
@@ -148,16 +387,16 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
           ),
           const SizedBox(height: 20),
           RichText(
-            text: const TextSpan(
-              style: TextStyle(color: Colors.black87, fontSize: 24),
+            text: TextSpan(
+              style: const TextStyle(color: Colors.black87, fontSize: 24),
               children: [
                 TextSpan(
-                  text: 'อรุณสวัสดิ์, สมชาย! ☀️\n',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  text: '${_getGreeting()}, $userName! ${_getGreetingEmoji()}\n',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
-                TextSpan(
+                const TextSpan(
                   text:
-                      'พร้อมออกไปวิ่งรับพลังงานยามเช้าและดูแลสุขภาพที่ดีหรือยัง?',
+                      'พร้อมออกไปวิ่งรับพลังงานและดูแลสุขภาพที่ดีหรือยัง?',
                   style: TextStyle(fontSize: 14, color: Colors.black54),
                 ),
               ],
@@ -170,6 +409,11 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
 
   // --- Calendar Strip ---
   Widget _buildCalendarStrip() {
+    // คำนวณวันในสัปดาห์ปัจจุบัน (จันทร์ - อาทิตย์)
+    final monday = _now.subtract(Duration(days: _now.weekday - 1));
+    final days = List.generate(7, (i) => monday.add(Duration(days: i)));
+    const dayLabels = ['จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.', 'อา.'];
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -182,13 +426,13 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Row(
+              Row(
                 children: [
-                  Icon(Icons.calendar_today, size: 16, color: Colors.blueGrey),
-                  SizedBox(width: 8),
+                  const Icon(Icons.calendar_today, size: 16, color: Colors.blueGrey),
+                  const SizedBox(width: 8),
                   Text(
-                    'สัปดาห์นี้ • พฤษภาคม 2025',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    'สัปดาห์นี้ • $_thaiMonthName ${_now.year + 543}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -198,23 +442,23 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.red.shade50,
+                  color: Colors.orange.shade50,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   children: [
                     Text(
-                      '🔥 ',
+                      '🏃 ',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.red.shade400,
+                        color: Colors.orange.shade400,
                       ),
                     ),
                     Text(
-                      '18 วันต่อเนื่อง',
+                      '$_workoutCount ครั้งออกกำลังกาย',
                       style: TextStyle(
                         fontSize: 10,
-                        color: Colors.red.shade800,
+                        color: Colors.orange.shade800,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -227,33 +471,31 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
           // Days Row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildDayItem('จ.', '16', false),
-              _buildDayItem('อ.', '17', false),
-              _buildDayItem('พ.', '18', true),
-              _buildDayItem('พฤ.', '19', false),
-              _buildDayItem('ศ.', '20', false),
-              _buildDayItem('ส.', '21', false),
-              _buildDayItem('อา.', '22', false),
-            ],
+            children: List.generate(7, (i) {
+              final isToday = days[i].day == _now.day &&
+                  days[i].month == _now.month &&
+                  days[i].year == _now.year;
+              final isPast = days[i].isBefore(DateTime(_now.year, _now.month, _now.day));
+              return _buildDayItem(dayLabels[i], '${days[i].day}', isToday, isPast);
+            }),
           ),
           const SizedBox(height: 16),
           const Divider(height: 1),
           const SizedBox(height: 12),
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
                 children: [
-                  Icon(
-                    Icons.check_circle_outline,
+                  const Icon(
+                    Icons.fitness_center,
                     size: 14,
                     color: Colors.teal,
                   ),
-                  SizedBox(width: 4),
+                  const SizedBox(width: 4),
                   Text(
-                    'วันนี้ทำสำเร็จแล้ว 2/5 กิจวัตร',
-                    style: TextStyle(
+                    'ออกกำลังกายแล้ว $_workoutCount ครั้ง | ${_totalDistanceKm.toStringAsFixed(1)} กม.',
+                    style: const TextStyle(
                       fontSize: 12,
                       color: Colors.teal,
                       fontWeight: FontWeight.bold,
@@ -262,8 +504,8 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                 ],
               ),
               Text(
-                '60% Complete',
-                style: TextStyle(
+                '${_totalCaloriesBurned.toStringAsFixed(0)} kcal',
+                style: const TextStyle(
                   fontSize: 12,
                   color: Colors.teal,
                   fontWeight: FontWeight.bold,
@@ -276,7 +518,7 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
     );
   }
 
-  Widget _buildDayItem(String day, String date, bool isSelected) {
+  Widget _buildDayItem(String day, String date, bool isSelected, bool isPast) {
     return Column(
       children: [
         Text(
@@ -311,7 +553,7 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
           decoration: BoxDecoration(
             color: isSelected
                 ? Colors.greenAccent
-                : (int.parse(date) < 18 ? darkGreen : Colors.grey.shade300),
+                : (isPast ? darkGreen : Colors.grey.shade300),
             shape: BoxShape.circle,
           ),
         ),
@@ -321,6 +563,53 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
 
   // --- Widget การ์ดข้อมูลสุขภาพ (Card 1) ---
   Widget _buildHealthSummaryCard() {
+    // ดึงข้อมูลจาก user หรือ health record
+    final weight = _latestRecord?.nWeight ?? _user?.nWeight ?? 0.0;
+    final height = _latestRecord?.nHeight ?? _user?.nHeight ?? 0.0;
+    final bmi = _latestRecord?.nBmi ?? (weight > 0 && height > 0
+        ? HealthCalculator.calculateBMI(weightKg: weight, heightCm: height)
+        : 0.0);
+    final bmiCategory = HealthCalculator.getBMICategory(bmi);
+
+    // คำนวณ BMR / TDEE
+    final age = _user?.nAge ?? 0;
+    final gender = _user?.genderEnum ?? Gender.male;
+    final activityLevel = _user?.activityLevelObj ?? ActivityLevel.options[1];
+
+    double bmr = _latestRecord?.computedBmr ?? 0.0;
+    double tdee = _latestRecord?.nTdee ?? 0.0;
+
+    if (bmr <= 0 && weight > 0 && height > 0 && age > 0) {
+      bmr = HealthCalculator.calculateBMR(
+        gender: gender,
+        weightKg: weight,
+        heightCm: height,
+        age: age,
+      );
+    }
+    if (tdee <= 0 && bmr > 0) {
+      tdee = HealthCalculator.calculateTDEE(
+        bmr: bmr,
+        activityMultiplier: activityLevel.multiplier,
+      );
+    }
+
+    // เวลาที่คำนวณล่าสุด
+    String lastRecordText = 'ยังไม่มีข้อมูล';
+    if (_latestRecord != null) {
+      final diff = _now.difference(_latestRecord!.dtRecordedAt);
+      if (diff.inMinutes < 60) {
+        lastRecordText = 'คำนวณล่าสุดเมื่อ ${diff.inMinutes} นาทีที่แล้ว';
+      } else if (diff.inHours < 24) {
+        lastRecordText = 'คำนวณล่าสุดเมื่อ ${diff.inHours} ชม. ที่แล้ว';
+      } else {
+        lastRecordText = 'คำนวณล่าสุดเมื่อ ${diff.inDays} วันที่แล้ว';
+      }
+    }
+
+    // เป้าหมายเผาผลาญ (ถ้ามี TDEE จะคำนวณ ~20% ของ TDEE)
+    final burnTarget = tdee > 0 ? (tdee * 0.2).round() : 400;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -343,10 +632,10 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                 children: [
                   Icon(Icons.health_and_safety, color: darkGreen),
                   const SizedBox(width: 8),
-                  const Column(
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         'ข้อมูลสุขภาพส่วนบุคคล',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
@@ -354,8 +643,8 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                         ),
                       ),
                       Text(
-                        'คำนวณล่าสุดเมื่อเช้านี้',
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                        lastRecordText,
+                        style: const TextStyle(fontSize: 12, color: Colors.grey),
                       ),
                     ],
                   ),
@@ -383,12 +672,17 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildStatItem('น้ำหนัก / ส่วนสูง', '65 กก. | 170 ซม.'),
+              _buildStatItem(
+                'น้ำหนัก / ส่วนสูง',
+                weight > 0
+                    ? '${_formatNumber(weight)} กก. | ${_formatNumber(height)} ซม.'
+                    : 'ยังไม่ระบุ',
+              ),
               _buildStatItemWithBadge(
                 'ดัชนีมวลกาย',
-                '22.4',
-                'สมส่วน (Normal)',
-                Colors.green,
+                bmi > 0 ? bmi.toStringAsFixed(1) : '-',
+                bmi > 0 ? bmiCategory.badgeText : 'ยังไม่ระบุ',
+                bmi > 0 ? bmiCategory.color : Colors.grey,
               ),
             ],
           ),
@@ -398,12 +692,12 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
             children: [
               _buildStatItem(
                 'BMR พลังงานพื้นฐาน',
-                '1,520 kcal',
+                bmr > 0 ? '${_formatInt(bmr.round())} kcal' : '- kcal',
                 icon: Icons.bolt,
               ),
               _buildStatItem(
                 'TDEE ต้องการต่อวัน',
-                '2,100 kcal',
+                tdee > 0 ? '${_formatInt(tdee.round())} kcal' : '- kcal',
                 icon: Icons.local_fire_department,
               ),
             ],
@@ -420,11 +714,11 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
               children: [
                 Icon(Icons.track_changes, color: primaryGreen),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         'เป้าหมายเผาผลาญจากการออกกำลังกาย',
                         style: TextStyle(
                           fontSize: 12,
@@ -433,14 +727,14 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                         ),
                       ),
                       Text(
-                        'เพื่อช่วยลดไขมันและรักษารูปร่างตามเป้าหมายหลัก',
-                        style: TextStyle(fontSize: 10, color: Colors.black54),
+                        'เผาผลาญแล้ววันนี้ ${_totalCaloriesBurned.toStringAsFixed(0)} kcal',
+                        style: const TextStyle(fontSize: 10, color: Colors.black54),
                       ),
                     ],
                   ),
                 ),
                 Text(
-                  '400\nkcal/วัน',
+                  '$burnTarget\nkcal/วัน',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
@@ -530,6 +824,34 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
 
   // --- Widget การ์ดเป้าหมายหลัก (Card 2) ---
   Widget _buildMainGoalCard() {
+    // ดึง goal จาก DB
+    final goalTitle = _userGoal?['sTitle']?.toString() ?? 'วิ่งสะสม 100 กิโลเมตร';
+    final goalProgress = (_userGoal?['nProgress'] as num?)?.toDouble() ?? 0.0;
+    final goalRemaining = _userGoal?['sRemainingText']?.toString() ?? '';
+
+    // ถ้าไม่มี goal จาก DB ให้คำนวณจาก workout data
+    final double progress;
+    final String displayTitle;
+    final String displayDetail;
+
+    if (_userGoal != null && goalProgress > 0) {
+      progress = goalProgress.clamp(0.0, 1.0);
+      displayTitle = '🏃 $goalTitle';
+      displayDetail = goalRemaining.isNotEmpty
+          ? goalRemaining
+          : 'ทำสำเร็จแล้ว ${(progress * 100).toInt()}%';
+    } else {
+      // คำนวณจากข้อมูลจริง - ตั้งเป้า 100 กม.
+      const targetKm = 100.0;
+      progress = (_totalDistanceKm / targetKm).clamp(0.0, 1.0);
+      displayTitle = '🏃 วิ่งสะสม ${targetKm.toInt()} กิโลเมตร';
+      displayDetail = 'วิ่งสะสม: ${_totalDistanceKm.toStringAsFixed(1)} / ${targetKm.toInt()} กม. (เหลือ ${(targetKm - _totalDistanceKm).clamp(0, targetKm).toStringAsFixed(1)} กม.)';
+    }
+
+    // คำนวณวันที่เหลือจนจบเดือน
+    final lastDayOfMonth = DateTime(_now.year, _now.month + 1, 0);
+    final daysRemaining = lastDayOfMonth.difference(_now).inDays;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -566,7 +888,7 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  'เหลืออีก 12 วัน',
+                  'เหลืออีก $daysRemaining วัน',
                   style: TextStyle(
                     color: darkGreen,
                     fontSize: 12,
@@ -581,15 +903,15 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
           CircularPercentIndicator(
             radius: 60.0,
             lineWidth: 12.0,
-            percent: 0.68,
-            center: const Column(
+            percent: progress,
+            center: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  "68%",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
+                  "${(progress * 100).toInt()}%",
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
                 ),
-                Text(
+                const Text(
                   "สำเร็จแล้ว",
                   style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
@@ -600,14 +922,14 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
             circularStrokeCap: CircularStrokeCap.round,
           ),
           const SizedBox(height: 24),
-          const Text(
-            '🏃 วิ่ง 500 กิโลเมตร ใน 1 เดือน',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          Text(
+            displayTitle,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
           const SizedBox(height: 4),
-          const Text(
-            'วิ่งสะสม: 340 / 500 กม. (เหลือ 160 กม.)',
-            style: TextStyle(fontSize: 14, color: Colors.black87),
+          Text(
+            displayDetail,
+            style: const TextStyle(fontSize: 14, color: Colors.black87),
           ),
           const SizedBox(height: 16),
           // Tip Box
@@ -629,7 +951,9 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'คำแนะนำวันนี้: เพื่อให้ถึงเป้าหมาย 500 กม. ควรเก็บระยะทางวันนี้ 15-18 กม. คุมโซน 2 เพื่อรักษาระดับความฟิตและป้องกันการล้า',
+                    _workoutCount > 0
+                        ? 'สถิติของคุณ: ออกกำลังกายแล้ว $_workoutCount ครั้ง เผาผลาญไป ${_totalCaloriesBurned.toStringAsFixed(0)} kcal ระยะทางรวม ${_totalDistanceKm.toStringAsFixed(1)} กม. สู้ต่อไป! 💪'
+                        : 'คำแนะนำวันนี้: เริ่มต้นออกกำลังกายเพื่อเก็บสถิติการวิ่งสะสมของคุณ 🏃',
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.orange.shade900,
@@ -712,6 +1036,42 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
 
   // --- Widget เป้าหมายอื่นๆ (Card 3) ---
   Widget _buildOtherGoalsCard() {
+    // ใช้ข้อมูลจาก TDEE เพื่อคำนวณ calorie target
+    final weight = _latestRecord?.nWeight ?? _user?.nWeight ?? 0.0;
+    final height = _latestRecord?.nHeight ?? _user?.nHeight ?? 0.0;
+    final age = _user?.nAge ?? 0;
+    final gender = _user?.genderEnum ?? Gender.male;
+    final activityLevel = _user?.activityLevelObj ?? ActivityLevel.options[1];
+
+    double tdee = _latestRecord?.nTdee ?? 0.0;
+    if (tdee <= 0 && weight > 0 && height > 0 && age > 0) {
+      final bmr = HealthCalculator.calculateBMR(
+        gender: gender,
+        weightKg: weight,
+        heightCm: height,
+        age: age,
+      );
+      tdee = HealthCalculator.calculateTDEE(
+        bmr: bmr,
+        activityMultiplier: activityLevel.multiplier,
+      );
+    }
+
+    // คำนวณ Nutrition progress
+    final calorieTarget = tdee > 0 ? tdee.round() : 2000;
+    final nutritionPercent = calorieTarget > 0
+        ? (_todayNutritionCalories / calorieTarget).clamp(0.0, 1.0)
+        : 0.0;
+
+    // คำนวณ workout minutes จาก duration (seconds -> minutes)
+    final workoutMinutes = (_totalWorkoutDurationSec / 60).round();
+    const workoutTargetMinutes = 150; // เป้าหมายต่อสัปดาห์ ตาม WHO
+    final workoutPercent = (workoutMinutes / workoutTargetMinutes).clamp(0.0, 1.0);
+
+    // ระยะทาง
+    const distanceTarget = 50.0; // กม./เดือน
+    final distancePercent = (_totalDistanceKm / distanceTarget).clamp(0.0, 1.0);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -719,7 +1079,7 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -751,30 +1111,30 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
           ),
           const SizedBox(height: 12),
           _buildMiniGoalProgress(
-            icon: Icons.water_drop,
+            icon: Icons.restaurant,
             color: Colors.blue,
-            title: 'ดื่มน้ำ',
-            current: '1.5',
-            target: '2.5 ลิตร',
-            percent: 0.6,
+            title: 'แคลอรี่วันนี้',
+            current: _formatInt(_todayNutritionCalories),
+            target: '${_formatInt(calorieTarget)} kcal',
+            percent: nutritionPercent,
           ),
           const SizedBox(height: 16),
           _buildMiniGoalProgress(
-            icon: Icons.directions_walk,
+            icon: Icons.timer,
             color: Colors.orange,
-            title: 'เดิน',
-            current: '6,000',
-            target: '10,000 ก้าว',
-            percent: 0.6,
+            title: 'เวลาออกกำลังกาย',
+            current: '$workoutMinutes',
+            target: '$workoutTargetMinutes นาที/สัปดาห์',
+            percent: workoutPercent,
           ),
           const SizedBox(height: 16),
           _buildMiniGoalProgress(
-            icon: Icons.bedtime,
+            icon: Icons.directions_run,
             color: Colors.purple,
-            title: 'นอนหลับ',
-            current: '6',
-            target: '8 ชม.',
-            percent: 0.75,
+            title: 'ระยะทางวิ่ง',
+            current: _totalDistanceKm.toStringAsFixed(1),
+            target: '${distanceTarget.toInt()} กม./เดือน',
+            percent: distancePercent,
           ),
         ],
       ),
