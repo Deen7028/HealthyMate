@@ -72,7 +72,9 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
       }
 
       final userId = user.nUserId;
-      debugPrint('[Dashboard] ✅ โหลดข้อมูลผู้ใช้: ${user.sFullName} (ID=$userId)');
+      debugPrint(
+        '[Dashboard] ✅ โหลดข้อมูลผู้ใช้: ${user.sFullName} (ID=$userId)',
+      );
 
       // 2. ดึง Health Record ล่าสุด
       final records = await db.getHealthRecords(userId: userId);
@@ -90,7 +92,9 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
         totalCal += (w['nCaloriesBurned'] as num?)?.toDouble() ?? 0.0;
         totalDur += (w['nDuration'] as num?)?.toInt() ?? 0;
       }
-      debugPrint('[Dashboard] 🏃 Workouts: $workoutCount | ระยะทาง: ${totalDist.toStringAsFixed(1)} km | แคล: ${totalCal.toStringAsFixed(0)}');
+      debugPrint(
+        '[Dashboard] 🏃 Workouts: $workoutCount | ระยะทาง: ${totalDist.toStringAsFixed(1)} km | แคล: ${totalCal.toStringAsFixed(0)}',
+      );
 
       // 4. ดึง Nutrition วันนี้
       final nutritionToday = await db.getNutritionLogsToday(userId);
@@ -98,7 +102,9 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
       for (final n in nutritionToday) {
         todayCal += (n['nCalories'] as num?)?.toInt() ?? 0;
       }
-      debugPrint('[Dashboard] 🍽️ Nutrition วันนี้: $todayCal kcal (${nutritionToday.length} รายการ)');
+      debugPrint(
+        '[Dashboard] 🍽️ Nutrition วันนี้: $todayCal kcal (${nutritionToday.length} รายการ)',
+      );
 
       // 5. ดึงเป้าหมาย
       final goal = await db.getUserGoal(userId);
@@ -131,7 +137,9 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
   Future<void> _syncFromServer(int userId) async {
     try {
       debugPrint('[Dashboard] 🌐 กำลังซิงค์จาก Server...');
-      final serverData = await HealthApiService.fetchDashboardData(userId: userId);
+      final serverData = await HealthApiService.fetchDashboardData(
+        userId: userId,
+      );
 
       if (serverData == null) {
         debugPrint('[Dashboard] 🌐 Server ไม่ตอบ — ใช้ข้อมูล Local');
@@ -143,13 +151,16 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
       // แกะข้อมูล workout stats จาก server
       final wsMap = serverData['workoutStats'] as Map<String, dynamic>?;
       final serverWorkoutCount = (wsMap?['totalCount'] as num?)?.toInt() ?? 0;
-      final serverDistance = (wsMap?['totalDistance'] as num?)?.toDouble() ?? 0.0;
-      final serverCalories = (wsMap?['totalCalories'] as num?)?.toDouble() ?? 0.0;
+      final serverDistance =
+          (wsMap?['totalDistance'] as num?)?.toDouble() ?? 0.0;
+      final serverCalories =
+          (wsMap?['totalCalories'] as num?)?.toDouble() ?? 0.0;
       final serverDuration = (wsMap?['totalDuration'] as num?)?.toInt() ?? 0;
 
       // แกะ nutrition วันนี้
       final ntMap = serverData['nutritionToday'] as Map<String, dynamic>?;
-      final serverNutritionCal = (ntMap?['totalCalories'] as num?)?.toInt() ?? 0;
+      final serverNutritionCal =
+          (ntMap?['totalCalories'] as num?)?.toInt() ?? 0;
 
       // แกะ goal
       final goalMap = serverData['goal'] as Map<String, dynamic>?;
@@ -173,11 +184,16 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
         setState(() {
           if (serverUser != null) _user = serverUser;
           if (serverRecord != null) _latestRecord = serverRecord;
-          if (serverWorkoutCount > _workoutCount) _workoutCount = serverWorkoutCount;
-          if (serverDistance > _totalDistanceKm) _totalDistanceKm = serverDistance;
-          if (serverCalories > _totalCaloriesBurned) _totalCaloriesBurned = serverCalories;
-          if (serverDuration > _totalWorkoutDurationSec) _totalWorkoutDurationSec = serverDuration;
-          if (serverNutritionCal > _todayNutritionCalories) _todayNutritionCalories = serverNutritionCal;
+          if (serverWorkoutCount > _workoutCount)
+            _workoutCount = serverWorkoutCount;
+          if (serverDistance > _totalDistanceKm)
+            _totalDistanceKm = serverDistance;
+          if (serverCalories > _totalCaloriesBurned)
+            _totalCaloriesBurned = serverCalories;
+          if (serverDuration > _totalWorkoutDurationSec)
+            _totalWorkoutDurationSec = serverDuration;
+          if (serverNutritionCal > _todayNutritionCalories)
+            _todayNutritionCalories = serverNutritionCal;
           if (goalMap != null) _userGoal = goalMap;
         });
         debugPrint('[Dashboard] 🌐 ✅ อัปเดต UI จาก Server เรียบร้อย');
@@ -237,14 +253,32 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
   }
 
   String get _thaiDayName {
-    const days = ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'];
+    const days = [
+      'จันทร์',
+      'อังคาร',
+      'พุธ',
+      'พฤหัสบดี',
+      'ศุกร์',
+      'เสาร์',
+      'อาทิตย์',
+    ];
     return days[_now.weekday - 1];
   }
 
   String get _thaiMonthName {
     const months = [
-      'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
-      'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+      'มกราคม',
+      'กุมภาพันธ์',
+      'มีนาคม',
+      'เมษายน',
+      'พฤษภาคม',
+      'มิถุนายน',
+      'กรกฎาคม',
+      'สิงหาคม',
+      'กันยายน',
+      'ตุลาคม',
+      'พฤศจิกายน',
+      'ธันวาคม',
     ];
     return months[_now.month - 1];
   }
@@ -260,7 +294,10 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
             children: [
               CircularProgressIndicator(color: primaryGreen),
               const SizedBox(height: 16),
-              Text('กำลังโหลดข้อมูลสุขภาพ...', style: TextStyle(color: Colors.grey.shade600)),
+              Text(
+                'กำลังโหลดข้อมูลสุขภาพ...',
+                style: TextStyle(color: Colors.grey.shade600),
+              ),
             ],
           ),
         ),
@@ -332,12 +369,14 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                     backgroundColor: primaryGreen.withValues(alpha: 0.2),
                     backgroundImage: profilePath.isNotEmpty
                         ? (profilePath.startsWith('http')
-                            ? NetworkImage(profilePath)
-                            : null)
+                              ? NetworkImage(profilePath)
+                              : null)
                         : null,
                     child: profilePath.isEmpty
                         ? Text(
-                            userName.isNotEmpty ? userName[0].toUpperCase() : '?',
+                            userName.isNotEmpty
+                                ? userName[0].toUpperCase()
+                                : '?',
                             style: TextStyle(
                               color: darkGreen,
                               fontWeight: FontWeight.bold,
@@ -364,7 +403,10 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                           const SizedBox(width: 4),
                           Text(
                             'เข้าสู่วัน$_thaiDayName • สัปดาห์ที่ $_weekOfMonth',
-                            style: const TextStyle(fontSize: 12, color: Colors.grey),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
                           ),
                         ],
                       ),
@@ -391,12 +433,12 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
               style: const TextStyle(color: Colors.black87, fontSize: 24),
               children: [
                 TextSpan(
-                  text: '${_getGreeting()}, $userName! ${_getGreetingEmoji()}\n',
+                  text:
+                      '${_getGreeting()}, $userName! ${_getGreetingEmoji()}\n',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const TextSpan(
-                  text:
-                      'พร้อมออกไปวิ่งรับพลังงานและดูแลสุขภาพที่ดีหรือยัง?',
+                  text: 'พร้อมออกไปวิ่งรับพลังงานและดูแลสุขภาพที่ดีหรือยัง?',
                   style: TextStyle(fontSize: 14, color: Colors.black54),
                 ),
               ],
@@ -428,7 +470,11 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.calendar_today, size: 16, color: Colors.blueGrey),
+                  const Icon(
+                    Icons.calendar_today,
+                    size: 16,
+                    color: Colors.blueGrey,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     'สัปดาห์นี้ • $_thaiMonthName ${_now.year + 543}',
@@ -472,11 +518,19 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: List.generate(7, (i) {
-              final isToday = days[i].day == _now.day &&
+              final isToday =
+                  days[i].day == _now.day &&
                   days[i].month == _now.month &&
                   days[i].year == _now.year;
-              final isPast = days[i].isBefore(DateTime(_now.year, _now.month, _now.day));
-              return _buildDayItem(dayLabels[i], '${days[i].day}', isToday, isPast);
+              final isPast = days[i].isBefore(
+                DateTime(_now.year, _now.month, _now.day),
+              );
+              return _buildDayItem(
+                dayLabels[i],
+                '${days[i].day}',
+                isToday,
+                isPast,
+              );
             }),
           ),
           const SizedBox(height: 16),
@@ -566,9 +620,11 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
     // ดึงข้อมูลจาก user หรือ health record
     final weight = _latestRecord?.nWeight ?? _user?.nWeight ?? 0.0;
     final height = _latestRecord?.nHeight ?? _user?.nHeight ?? 0.0;
-    final bmi = _latestRecord?.nBmi ?? (weight > 0 && height > 0
-        ? HealthCalculator.calculateBMI(weightKg: weight, heightCm: height)
-        : 0.0);
+    final bmi =
+        _latestRecord?.nBmi ??
+        (weight > 0 && height > 0
+            ? HealthCalculator.calculateBMI(weightKg: weight, heightCm: height)
+            : 0.0);
     final bmiCategory = HealthCalculator.getBMICategory(bmi);
 
     // คำนวณ BMR / TDEE
@@ -644,7 +700,10 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                       ),
                       Text(
                         lastRecordText,
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
                       ),
                     ],
                   ),
@@ -728,7 +787,10 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                       ),
                       Text(
                         'เผาผลาญแล้ววันนี้ ${_totalCaloriesBurned.toStringAsFixed(0)} kcal',
-                        style: const TextStyle(fontSize: 10, color: Colors.black54),
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.black54,
+                        ),
                       ),
                     ],
                   ),
@@ -825,7 +887,8 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
   // --- Widget การ์ดเป้าหมายหลัก (Card 2) ---
   Widget _buildMainGoalCard() {
     // ดึง goal จาก DB
-    final goalTitle = _userGoal?['sTitle']?.toString() ?? 'วิ่งสะสม 100 กิโลเมตร';
+    final goalTitle =
+        _userGoal?['sTitle']?.toString() ?? 'วิ่งสะสม 100 กิโลเมตร';
     final goalProgress = (_userGoal?['nProgress'] as num?)?.toDouble() ?? 0.0;
     final goalRemaining = _userGoal?['sRemainingText']?.toString() ?? '';
 
@@ -845,7 +908,8 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
       const targetKm = 100.0;
       progress = (_totalDistanceKm / targetKm).clamp(0.0, 1.0);
       displayTitle = '🏃 วิ่งสะสม ${targetKm.toInt()} กิโลเมตร';
-      displayDetail = 'วิ่งสะสม: ${_totalDistanceKm.toStringAsFixed(1)} / ${targetKm.toInt()} กม. (เหลือ ${(targetKm - _totalDistanceKm).clamp(0, targetKm).toStringAsFixed(1)} กม.)';
+      displayDetail =
+          'วิ่งสะสม: ${_totalDistanceKm.toStringAsFixed(1)} / ${targetKm.toInt()} กม. (เหลือ ${(targetKm - _totalDistanceKm).clamp(0, targetKm).toStringAsFixed(1)} กม.)';
     }
 
     // คำนวณวันที่เหลือจนจบเดือน
@@ -909,7 +973,10 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
               children: [
                 Text(
                   "${(progress * 100).toInt()}%",
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 24,
+                  ),
                 ),
                 const Text(
                   "สำเร็จแล้ว",
@@ -930,6 +997,54 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
           Text(
             displayDetail,
             style: const TextStyle(fontSize: 14, color: Colors.black87),
+          ),
+          const SizedBox(height: 16),
+
+          // --- สถิติจากข้อมูล Workout ---
+          Row(
+            children: [
+              Expanded(
+                child: _buildGoalStatItem(
+                  icon: Icons.straighten,
+                  label: 'ระยะทาง',
+                  value: '${_totalDistanceKm.toStringAsFixed(2)} km',
+                  color: primaryGreen,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildGoalStatItem(
+                  icon: Icons.local_fire_department,
+                  label: 'แคลอรี่',
+                  value: '${_totalCaloriesBurned.toStringAsFixed(0)} kcal',
+                  color: Colors.redAccent,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _buildGoalStatItem(
+                  icon: Icons.fitness_center,
+                  label: 'ออกกำลังกาย',
+                  value: '$_workoutCount ครั้ง',
+                  color: Colors.blueAccent,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildGoalStatItem(
+                  icon: Icons.timer,
+                  label: 'เวลารวม',
+                  value: _totalWorkoutDurationSec >= 3600
+                      ? '${_totalWorkoutDurationSec ~/ 3600} ชม. ${(_totalWorkoutDurationSec % 3600) ~/ 60} น.'
+                      : '${(_totalWorkoutDurationSec % 3600) ~/ 60} นาที',
+                  color: Colors.orange,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           // Tip Box
@@ -1066,7 +1181,10 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
     // คำนวณ workout minutes จาก duration (seconds -> minutes)
     final workoutMinutes = (_totalWorkoutDurationSec / 60).round();
     const workoutTargetMinutes = 150; // เป้าหมายต่อสัปดาห์ ตาม WHO
-    final workoutPercent = (workoutMinutes / workoutTargetMinutes).clamp(0.0, 1.0);
+    final workoutPercent = (workoutMinutes / workoutTargetMinutes).clamp(
+      0.0,
+      1.0,
+    );
 
     // ระยะทาง
     const distanceTarget = 50.0; // กม./เดือน
@@ -1196,6 +1314,48 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
           padding: EdgeInsets.zero,
         ),
       ],
+    );
+  }
+
+  // --- Widget สถิติย่อยในเป้าหมายหลัก ---
+  Widget _buildGoalStatItem({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+                Text(
+                  label,
+                  style: const TextStyle(fontSize: 11, color: Colors.black54),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
