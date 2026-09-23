@@ -12,7 +12,7 @@
     <application
         android:label="healthymate"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/launch_background"
         android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"

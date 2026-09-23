@@ -417,7 +417,7 @@ class _WorkoutHistoryScreenState extends State<WorkoutHistoryScreen> {
                             target: routePoints.first,
                             zoom: 16.0,
                           ),
-                          liteModeEnabled: false,
+                          liteModeEnabled: true,
                           zoomGesturesEnabled: false,
                           zoomControlsEnabled: false,
                           scrollGesturesEnabled: false,

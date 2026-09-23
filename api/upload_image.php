@@ -99,6 +99,20 @@ if ($json && !empty($json['base64Image'])) {
         exit();
     }
 
+    // ตรวจสอบ Magic Bytes (MIME Type) ที่แท้จริงของไฟล์ป้องกันการอัปโหลดโค้ดอันตราย
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mimeType = finfo_buffer($finfo, $decodedData);
+    finfo_close($finfo);
+
+    $allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+    if (!in_array($mimeType, $allowedMimes)) {
+        echo json_encode([
+            "status" => "error",
+            "message" => "ไฟล์รูปภาพไม่ถูกต้อง หรือเป็นประเภทไฟล์ที่ไม่ได้รับอนุญาต ($mimeType)"
+        ], JSON_UNESCAPED_UNICODE);
+        exit();
+    }
+
     $newFileName = uniqid($type . "_", true) . "." . $extension;
     $destPath = $targetDir . $newFileName;
 

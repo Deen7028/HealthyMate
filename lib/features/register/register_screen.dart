@@ -3,6 +3,7 @@ import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/api_service.dart';
 import 'package:healthymate/core/services/sync_service.dart';
 import 'package:healthymate/core/theme/app_theme.dart';
+import 'package:healthymate/features/auth/widgets/otp_verification_dialog.dart';
 
 class RegisterScreen extends StatefulWidget {
   final VoidCallback? onRegisterSuccess;
@@ -111,29 +112,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
+    final sEmail = _emailController.text.trim();
+
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final String firstName = _firstNameController.text.trim();
-      final String lastName = _lastNameController.text.trim();
-      final String email = _emailController.text.trim();
-      final String password = _passwordController.text;
-
-      // 1. ตรวจสอบว่ามีอีเมลนี้ในฐานข้อมูล TbUsers หรือยัง
-      final isExist = await AppDatabase.instance.isEmailExists(email);
-      if (isExist) {
+      // 1. ตรวจสอบว่ามีอีเมลนี้ในฐานข้อมูล TbUsers ในเครื่องหรือบน Server หรือยัง
+      final isLocalExist = await AppDatabase.instance.isEmailExists(sEmail);
+      if (isLocalExist) {
         if (!mounted) return;
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Row(
+            content: Row(
               children: [
-                Icon(Icons.error_outline_rounded, color: Colors.white),
-                SizedBox(width: 10),
+                const Icon(Icons.error_outline_rounded, color: Colors.white),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text('อีเมลนี้ถูกใช้งานแล้ว กรุณาใช้อีเมลอื่นหรือเข้าสู่ระบบ'),
                 ),
@@ -147,33 +143,121 @@ class _RegisterScreenState extends State<RegisterScreen> {
         return;
       }
 
-      // 2. บันทึกข้อมูลสมาชิกใหม่ลงในตาราง TbUsers (SQLite)
+      // ตรวจสอบกับ Remote Server เผื่อกรณีลบแอปแล้วติดตั้งใหม่ (Server Duplication Check)
+      final remoteCheck = await HealthApiService.loginRemote(email: sEmail, password: '');
+      if (remoteCheck['status'] == 'success' || remoteCheck['status'] == 'invalid_password') {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline_rounded, color: Colors.white),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text('อีเมลนี้ถูกลงทะเบียนไว้บนระบบเซิร์ฟเวอร์แล้ว กรุณาเข้าสู่ระบบ'),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+        return;
+      }
+
+      // 2. ส่งรหัส OTP ไปยังอีเมลผ่าน Backend API
+      final objOtpResult = await HealthApiService.sendEmailOtp(sEmail);
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      if (objOtpResult['status'] != 'success') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline_rounded, color: Colors.white),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(objOtpResult['message'] ?? 'ไม่สามารถส่งรหัส OTP ได้'),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+        return;
+      }
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => OtpVerificationDialog(
+          sEmail: sEmail,
+          onVerificationSuccess: () async {
+            // ดำเนินการบันทึกบัญชีลง SQLite และ Sync ขึ้น MySQL เมื่อยืนยันสำเร็จ
+            await _executeUserCreation();
+          },
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline_rounded, color: Colors.white),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text('เกิดข้อผิดพลาด: $e'),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
+  }
+
+  /// เมธอดสร้างผู้ใช้จริงหลังผ่านการยืนยัน OTP เรียบร้อยแล้ว
+  Future<void> _executeUserCreation() async {
+    setState(() => _isLoading = true);
+    try {
+      final String sFirstName = _firstNameController.text.trim();
+      final String sLastName = _lastNameController.text.trim();
+      final String sEmail = _emailController.text.trim();
+      final String sPassword = _passwordController.text;
+
+      // 1. บันทึกข้อมูลสมาชิกลงในตาราง TbUsers (SQLite)
       final newUser = await AppDatabase.instance.registerUser(
-        firstName: firstName,
-        lastName: lastName,
-        email: email,
-        password: password,
+        firstName: sFirstName,
+        lastName: sLastName,
+        email: sEmail,
+        password: sPassword,
       );
 
-      // 3. ส่งข้อมูลไปอัปเดต/สร้างบัญชีบนเซิร์ฟเวอร์ PHP Database
+      // 2. ส่งข้อมูลไปอัปเดต/สร้างบัญชีบนเซิร์ฟเวอร์ MySQL ผ่าน PHP API
       try {
         final serverSuccess = await HealthApiService.updateUserProfile(newUser.toMap());
         if (serverSuccess) {
           await AppDatabase.instance.markUserAsSynced(newUser.nUserId);
         }
       } catch (e) {
-        debugPrint('Failed to sync new user to server immediately: $e');
+        debugPrint('Sync new user error: $e');
       }
 
-      // สั่งกระตุ้น SyncService ในเบื้องหลัง
+      // 3. กระตุ้น SyncService ในเบื้องหลัง
       SyncService.instance.updatePendingCount();
       SyncService.instance.syncPendingData();
 
       if (!mounted) return;
-
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -199,9 +283,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(

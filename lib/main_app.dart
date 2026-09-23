@@ -33,6 +33,8 @@ class _MainAppShellState extends State<MainAppShell> {
 
   @override
   Widget build(BuildContext context) {
+    final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
+
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
@@ -59,9 +61,12 @@ class _MainAppShellState extends State<MainAppShell> {
         ],
       ),
       // ปุ่มลอยกลาง (Center Docked FAB) ไอคอนกล้องถ่ายรูปสำหรับ AI Food Recognition
-      floatingActionButton: _CameraDockedFab(
-        onTap: () => FoodSourceBottomSheet.show(context),
-      ),
+      // ซ่อนปุ่มเมื่อคีย์บอร์ดถูกเปิดขึ้นมา เพื่อไม่ให้ปุ่มลอยขึ้นมาทับช่องกรอกข้อมูล
+      floatingActionButton: isKeyboardOpen
+          ? null
+          : _CameraDockedFab(
+              onTap: () => FoodSourceBottomSheet.show(context),
+            ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       // ใช้งาน VitalityBottomNavBar ที่รองรับ Center Notch Cutout
       bottomNavigationBar: VitalityBottomNavBar(

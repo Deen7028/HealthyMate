@@ -206,6 +206,8 @@ class ProfileHeaderCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     hasGoal ? goalTitle : 'ยังไม่ได้กำหนดเป้าหมาย',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,

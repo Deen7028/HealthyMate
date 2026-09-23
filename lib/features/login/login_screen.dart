@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:healthymate/core/database/app_database.dart';
+import 'package:healthymate/core/services/api_service.dart';
 import 'package:healthymate/core/services/auth_service.dart';
 import 'package:healthymate/core/services/sync_service.dart';
 import 'package:healthymate/core/theme/app_theme.dart';
+import 'package:healthymate/features/auth/screens/forgot_password_screen.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
 import 'package:healthymate/features/register/register_screen.dart';
-import 'package:healthymate/main_app.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback? onClose;
@@ -26,7 +29,80 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final FocusNode _emailFocusNode = FocusNode();
   final FocusNode _passwordFocusNode = FocusNode();
+  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
 
+  void _showError(String message) {
+    setState(() {
+      _errorMessage = message;
+    });
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    setState(() => _isLoading = true);
+    try {
+      if (!_googleSignIn.supportsAuthenticate()) {
+        setState(() => _isLoading = false);
+        _showError('แพลตฟอร์มนี้ยังไม่รองรับ Google Sign-In');
+        return;
+      }
+
+      final GoogleSignInAccount user = await _googleSignIn.authenticate();
+      final names = user.displayName?.split(' ') ?? ['Google', 'User'];
+      final firstName = names.isNotEmpty ? names.first : 'Google';
+      final lastName = names.length > 1 ? names.sublist(1).join(' ') : '';
+
+      final googleData = {
+        'sEmail': user.email,
+        'sFirstName': firstName,
+        'sLastName': lastName,
+        'sProfileImagePath': user.photoUrl ?? '',
+        'sGoogleId': user.id,
+      };
+
+      final result = await HealthApiService.loginWithGoogle(googleData);
+
+      if (result['status'] == 'success') {
+        final userData = result['user'];
+        final tbUser = await AppDatabase.instance.upsertUserFromServer(userData);
+        await AuthService.instance.setLoginSession(tbUser.sEmail);
+
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('เข้าสู่ระบบสำเร็จ!'),
+            backgroundColor: AppTheme.primaryGreen,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+
+        if (widget.onLoginSuccess != null) {
+          widget.onLoginSuccess!();
+        }
+      } else {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        _showError(result['message'] ?? 'เข้าสู่ระบบด้วย Google ไม่สำเร็จ');
+        await _googleSignIn.signOut();
+      }
+    } on GoogleSignInException catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      if (e.code == GoogleSignInExceptionCode.clientConfigurationError) {
+        _showError('กรุณาตั้งค่า OAuth Web Client ID หรือ google-services.json บน Android ให้เรียบร้อยก่อนใช้งาน Google Sign-In');
+      } else if (e.code == GoogleSignInExceptionCode.canceled) {
+        // ผู้ใช้กดยกเลิกการล็อกอิน ไม่ต้องแสดง error แดง
+        return;
+      } else {
+        _showError('เกิดข้อผิดพลาดในการเข้าสู่ระบบ Google: ${e.description ?? e.code.name}');
+      }
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      _showError('เกิดข้อผิดพลาด: $error');
+    }
+  }
   bool _isPasswordVisible = false;
   bool _isLoading = false;
   String? _errorMessage;
@@ -160,10 +236,6 @@ class _LoginScreenState extends State<LoginScreen> {
         widget.onLoginSuccess!();
       } else if (Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
-      } else {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const MainAppShell()),
-        );
       }
     } catch (e, stack) {
       debugPrint('LoginScreen: Exception during _handleLogin: $e\n$stack');
@@ -184,6 +256,10 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _handleSocialLogin(String provider) {
+    if (provider == 'Google') {
+      _handleGoogleSignIn();
+      return;
+    }
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -406,12 +482,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                     GestureDetector(
                                       onTap: () {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: const Text('ระบบจะส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมลของคุณ'),
-                                            backgroundColor: AppTheme.primaryGreen,
-                                            behavior: SnackBarBehavior.floating,
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (context) => const ForgotPasswordScreen(),
                                           ),
                                         );
                                       },

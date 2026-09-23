@@ -150,8 +150,8 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
         '[Routines] 🌐 ✅ Server routines: ${serverRoutines.length} รายการ',
       );
 
-      // Merge: ถ้า server มีมากกว่า local ให้ใช้ server
-      if (serverRoutines.length >= _routines.length && mounted) {
+      // Merge: เมื่อ Server ตอบกลับสถานะสำเร็จ ให้อัปเดต UI และสถานะเช็คของวันนี้ (รวมถึงกรณีการลบรายการ)
+      if (serverResult['status'] == 'success' && mounted) {
         final Map<int, bool> newCompletionMap = {};
         for (final r in serverRoutines) {
           final routineId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
@@ -163,7 +163,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
           _todayCompletionMap = newCompletionMap;
           _completedCount = newCompletionMap.values.where((v) => v).length;
         });
-        debugPrint('[Routines] 🌐 ✅ UI อัปเดตจาก Server');
+        debugPrint('[Routines] 🌐 ✅ UI อัปเดตจาก Server (รวมการลบ/สลับสถานะ)');
       }
     } catch (e) {
       debugPrint('[Routines] 🌐 ❌ Sync error: $e');

@@ -106,7 +106,10 @@ class _ConnectedDevicesBottomSheetState
 
   @override
   Widget build(BuildContext context) {
-    final activeCount = widget.connectedDevices.where((d) => (d['isSynced'] as num?)?.toInt() == 1).length;
+    final displayDevices = widget.connectedDevices
+        .where((d) => d['sProviderName'] != 'workout_sync_timestamp')
+        .toList();
+    final activeCount = displayDevices.where((d) => (d['isSynced'] as num?)?.toInt() == 1).length;
 
     return SafeArea(
       child: Padding(
@@ -144,7 +147,7 @@ class _ConnectedDevicesBottomSheetState
               ],
             ),
             const SizedBox(height: 16),
-            if (widget.connectedDevices.isEmpty)
+            if (displayDevices.isEmpty)
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
@@ -177,7 +180,7 @@ class _ConnectedDevicesBottomSheetState
                 ),
               )
             else
-              ...widget.connectedDevices.map((device) {
+              ...displayDevices.map((device) {
                 final int id = (device['nIntegrationId'] as num?)?.toInt() ?? 0;
                 final bool isActive = (device['isSynced'] as num?)?.toInt() == 1;
                 final String name = device['sProviderName']?.toString() ?? 'อุปกรณ์';

@@ -1,18 +1,19 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:healthymate/core/config/app_config.dart';
 import 'package:healthymate/features/health_calculator/models/health_record_model.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
 
 class HealthApiService {
-  // Base URL ของเซิร์ฟเวอร์ PHP API
-  static String baseUrl = "https://172.18.111.30/6620310001/html/HealthyMate/api";
+  // Base URL ของเซิร์ฟเวอร์ PHP API ดึงจาก .env (AppConfig)
+  static String get baseUrl => AppConfig.baseUrl;
 
   /// Headers พื้นฐานสำหรับ Virtual Host Apache ของ ม.อ. และระบบความปลอดภัยป้องกันการเข้าถึงตรง
   static Map<String, String> get defaultHeaders => {
-    'Host': 'std.mcs.psu.ac.th',
+    'Host': AppConfig.hostHeader,
     'Content-Type': 'application/json; charset=utf-8',
-    'X-App-Key': 'HealthyMate_Secure_App_2026',
+    'X-App-Key': AppConfig.appKey,
   };
 
   /// 0. ยืนยันตัวตนกับ Remote Server (`login.php`) เมื่อติดตั้งใหม่หรือไม่มีข้อมูลในเครื่อง
@@ -52,6 +53,58 @@ class HealthApiService {
       debugPrint('HealthApiService: Remote login error or offline: $e');
     }
     return {'status': 'offline_or_error', 'message': 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้'};
+  }
+  
+  /// ส่งคำขอ OTP ไปยังอีเมล
+  static Future<Map<String, dynamic>> sendEmailOtp(String sEmail) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/send_email_otp.php'),
+            headers: defaultHeaders,
+            body: jsonEncode({'sEmail': sEmail}),
+          )
+          .timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body is Map<String, dynamic>) {
+          return body;
+        }
+      }
+      return {
+        'status': 'error',
+        'message': 'ตอบกลับจากเซิร์ฟเวอร์ไม่ถูกต้อง (HTTP ${response.statusCode})',
+      };
+    } catch (e) {
+      return {'status': 'error', 'message': 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้: $e'};
+    }
+  }
+
+  /// ยืนยันรหัส OTP
+  static Future<Map<String, dynamic>> verifyEmailOtp(String sEmail, String sOtpCode) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/verify_email_otp.php'),
+            headers: defaultHeaders,
+            body: jsonEncode({'sEmail': sEmail, 'sOtpCode': sOtpCode}),
+          )
+          .timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body is Map<String, dynamic>) {
+          return body;
+        }
+      }
+      return {
+        'status': 'error',
+        'message': 'ตอบกลับจากเซิร์ฟเวอร์ไม่ถูกต้อง (HTTP ${response.statusCode})',
+      };
+    } catch (e) {
+      return {'status': 'error', 'message': 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้: $e'};
+    }
   }
 
   /// 1. ดึงข้อมูลประวัติสุขภาพจาก PHP API (`health_records.php`)
@@ -229,8 +282,8 @@ class HealthApiService {
       final uri = Uri.parse('$baseUrl/upload_image.php');
       final request = http.MultipartRequest('POST', uri)
         ..headers.addAll({
-          'Host': 'std.mcs.psu.ac.th',
-          'X-App-Key': 'HealthyMate_Secure_App_2026',
+          'Host': AppConfig.hostHeader,
+          'X-App-Key': AppConfig.appKey,
         })
         ..fields['type'] = type
         ..files.add(await http.MultipartFile.fromPath('image', localFilePath));
@@ -445,5 +498,82 @@ class HealthApiService {
   static String _todayDateStr() {
     final now = DateTime.now();
     return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+  }
+
+  /// ส่งคำขอ OTP สำหรับลืมรหัสผ่าน
+  static Future<Map<String, dynamic>> sendForgotPasswordOtp(String sEmail) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/send_forgot_password_otp.php'),
+            headers: defaultHeaders,
+            body: jsonEncode({'sEmail': sEmail}),
+          )
+          .timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body is Map<String, dynamic>) {
+          return body;
+        }
+      }
+      return {
+        'status': 'error',
+        'message': 'ตอบกลับจากเซิร์ฟเวอร์ไม่ถูกต้อง (HTTP ${response.statusCode})',
+      };
+    } catch (e) {
+      return {'status': 'error', 'message': 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้: $e'};
+    }
+  }
+
+  /// รีเซ็ตรหัสผ่านใหม่
+  static Future<Map<String, dynamic>> resetPassword(String sEmail, String sNewPassword) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/reset_password.php'),
+            headers: defaultHeaders,
+            body: jsonEncode({'sEmail': sEmail, 'sNewPassword': sNewPassword}),
+          )
+          .timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body is Map<String, dynamic>) {
+          return body;
+        }
+      }
+      return {
+        'status': 'error',
+        'message': 'ตอบกลับจากเซิร์ฟเวอร์ไม่ถูกต้อง (HTTP ${response.statusCode})',
+      };
+    } catch (e) {
+      return {'status': 'error', 'message': 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> loginWithGoogle(Map<String, dynamic> googleUserData) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/google_login.php'),
+            headers: defaultHeaders,
+            body: jsonEncode(googleUserData),
+          )
+          .timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body is Map<String, dynamic>) {
+          return body;
+        }
+      }
+      return {
+        'status': 'error',
+        'message': 'ตอบกลับจากเซิร์ฟเวอร์ไม่ถูกต้อง (HTTP ${response.statusCode})',
+      };
+    } catch (e) {
+      return {'status': 'error', 'message': 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้: $e'};
+    }
   }
 }
