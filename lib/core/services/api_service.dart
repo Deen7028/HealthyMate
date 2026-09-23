@@ -499,4 +499,56 @@ class HealthApiService {
     final now = DateTime.now();
     return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
   }
+
+  /// ส่งคำขอ OTP สำหรับลืมรหัสผ่าน
+  static Future<Map<String, dynamic>> sendForgotPasswordOtp(String sEmail) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/send_forgot_password_otp.php'),
+            headers: defaultHeaders,
+            body: jsonEncode({'sEmail': sEmail}),
+          )
+          .timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body is Map<String, dynamic>) {
+          return body;
+        }
+      }
+      return {
+        'status': 'error',
+        'message': 'ตอบกลับจากเซิร์ฟเวอร์ไม่ถูกต้อง (HTTP ${response.statusCode})',
+      };
+    } catch (e) {
+      return {'status': 'error', 'message': 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้: $e'};
+    }
+  }
+
+  /// รีเซ็ตรหัสผ่านใหม่
+  static Future<Map<String, dynamic>> resetPassword(String sEmail, String sNewPassword) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/reset_password.php'),
+            headers: defaultHeaders,
+            body: jsonEncode({'sEmail': sEmail, 'sNewPassword': sNewPassword}),
+          )
+          .timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body is Map<String, dynamic>) {
+          return body;
+        }
+      }
+      return {
+        'status': 'error',
+        'message': 'ตอบกลับจากเซิร์ฟเวอร์ไม่ถูกต้อง (HTTP ${response.statusCode})',
+      };
+    } catch (e) {
+      return {'status': 'error', 'message': 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้: $e'};
+    }
+  }
 }

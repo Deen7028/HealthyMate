@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:healthymate/core/services/auth_service.dart';
 import 'package:healthymate/core/services/sync_service.dart';
 import 'package:healthymate/core/theme/app_theme.dart';
+import 'package:healthymate/features/auth/screens/forgot_password_screen.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
 import 'package:healthymate/features/register/register_screen.dart';
 
@@ -401,12 +402,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                     GestureDetector(
                                       onTap: () {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: const Text('ระบบจะส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมลของคุณ'),
-                                            backgroundColor: AppTheme.primaryGreen,
-                                            behavior: SnackBarBehavior.floating,
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (context) => const ForgotPasswordScreen(),
                                           ),
                                         );
                                       },

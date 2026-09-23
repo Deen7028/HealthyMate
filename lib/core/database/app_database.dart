@@ -1511,4 +1511,26 @@ class AppDatabase {
     }
     return 0;
   }
+
+  Future<void> updateLocalPassword(String email, String newPassword) async {
+    final cleanEmail = email.trim().toLowerCase();
+    final hashedPassword = hashPassword(newPassword, salt: cleanEmail);
+
+    if (kIsWeb) {
+      final idx = _webUsers.indexWhere((u) => u['sEmail']?.toString().toLowerCase() == cleanEmail);
+      if (idx != -1) {
+        _webUsers[idx]['sPasswordHash'] = hashedPassword;
+      }
+      return;
+    }
+
+    final db = await database;
+    if (db == null) return;
+    await db.update(
+      tableUsers,
+      {'sPasswordHash': hashedPassword, 'isSynced': 1},
+      where: 'LOWER(sEmail) = ?',
+      whereArgs: [cleanEmail],
+    );
+  }
 }
