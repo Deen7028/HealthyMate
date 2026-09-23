@@ -6,7 +6,8 @@ import 'models/routine_item.dart';
 import 'widgets/add_routine_dialog.dart';
 
 class MyRoutinesPage extends StatefulWidget {
-  const MyRoutinesPage({super.key});
+  final bool isActive;
+  const MyRoutinesPage({super.key, this.isActive = true});
 
   @override
   State<MyRoutinesPage> createState() => _MyRoutinesPageState();
@@ -26,11 +27,16 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
   Map<int, bool> _todayCompletionMap = {};
   int _completedCount = 0;
   Map<String, dynamic>? _userGoal;
+  // เก็บสถิติออกกำลังกายของวันนี้แยกตามประเภท (เช่น 'วิ่ง', 'เดิน')
+  Map<String, Map<String, double>> _todayWorkoutStats = {};
 
-  // ข้อมูล workout สำหรับ main goal card
-  double _totalDistanceKm = 0.0;
-  double _totalCaloriesBurned = 0.0;
-  int _workoutCount = 0;
+  @override
+  void didUpdateWidget(covariant MyRoutinesPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive && !oldWidget.isActive) {
+      _loadData();
+    }
+  }
 
   String get _todayStr {
     final now = DateTime.now();
@@ -83,13 +89,27 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
       // 4. ดึงเป้าหมายหลัก
       final goal = await db.getUserGoal(userId);
 
-      // 5. ดึงข้อมูล workout
+      // 5. ดึงข้อมูล workout และแยกสถิติของวันนี้
       final workouts = await db.getWorkouts(userId: userId);
-      double totalDist = 0.0;
-      double totalCal = 0.0;
+      Map<String, Map<String, double>> todayStats = {};
+
       for (final w in workouts) {
-        totalDist += (w['nDistance'] as num?)?.toDouble() ?? 0.0;
-        totalCal += (w['nCaloriesBurned'] as num?)?.toDouble() ?? 0.0;
+        // คำนวณเฉพาะข้อมูลของวันนี้ เพื่อนำไปแสดงในกล่องกิจวัตรแต่ละประเภท
+        final workoutDate = w['dtWorkoutDate']?.toString() ?? '';
+        if (workoutDate.startsWith(_todayStr)) {
+          final type = w['sType']?.toString() ?? 'อื่นๆ'; // เช่น 'วิ่ง', 'เดิน'
+          final dist = (w['nDistance'] as num?)?.toDouble() ?? 0.0;
+          final duration =
+              (w['nDuration'] as num?)?.toDouble() ?? 0.0; // เป็นนาที
+
+          if (!todayStats.containsKey(type)) {
+            todayStats[type] = {'distance': 0.0, 'duration': 0.0};
+          }
+          todayStats[type]!['distance'] =
+              (todayStats[type]!['distance'] ?? 0) + dist;
+          todayStats[type]!['duration'] =
+              (todayStats[type]!['duration'] ?? 0) + duration;
+        }
       }
 
       if (mounted) {
@@ -98,10 +118,8 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
           _routines = routines;
           _todayCompletionMap = completionMap;
           _completedCount = completedCount;
-          _userGoal = goal;
-          _totalDistanceKm = totalDist;
-          _totalCaloriesBurned = totalCal;
-          _workoutCount = workouts.length;
+          _userGoal = _userGoal ?? goal;
+          _todayWorkoutStats = todayStats; // 🔥 นำค่าของวันนี้มาเก็บไว้ใน State
           _isLoading = false;
         });
       }
@@ -126,15 +144,19 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
         return;
       }
 
-      final serverRoutines = (serverResult['data'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-      debugPrint('[Routines] 🌐 ✅ Server routines: ${serverRoutines.length} รายการ');
+      final serverRoutines =
+          (serverResult['data'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+      debugPrint(
+        '[Routines] 🌐 ✅ Server routines: ${serverRoutines.length} รายการ',
+      );
 
       // Merge: ถ้า server มีมากกว่า local ให้ใช้ server
       if (serverRoutines.length >= _routines.length && mounted) {
         final Map<int, bool> newCompletionMap = {};
         for (final r in serverRoutines) {
           final routineId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
-          newCompletionMap[routineId] = (r['todayCompleted'] as num?)?.toInt() == 1;
+          newCompletionMap[routineId] =
+              (r['todayCompleted'] as num?)?.toInt() == 1;
         }
         setState(() {
           _routines = serverRoutines;
@@ -164,6 +186,11 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
         userId: _user!.nUserId,
         title: newRoutine.title,
         time: newRoutine.notificationTime,
+        targetValue: newRoutine.targetValue,
+        unit: newRoutine.unit,
+        linkedWorkout: newRoutine.linkedWorkoutType ?? '',
+        color: newRoutine.color.value,
+        iconData: newRoutine.iconData.codePoint,
         isNotificationActive: newRoutine.isNotificationEnabled,
       );
       debugPrint('[Routines] ✅ เพิ่มกิจวัตร: "${newRoutine.title}" (ID=$id)');
@@ -183,13 +210,93 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     }
   }
 
+  Future<void> _pinAsMainGoal(Map<String, dynamic> routine) async {
+    final title = routine['sTitle']?.toString() ?? 'ไม่มีชื่อ';
+    final routineId = (routine['nRoutineId'] as num?)?.toInt() ?? 0;
+    final targetVal = (routine['targetValue'] as num?)?.toDouble() ?? 1.0;
+    final unitText = routine['unit']?.toString() ?? 'ครั้ง';
+
+    // คำนวณ progress เริ่มต้น
+    final lowerTitle = title.toLowerCase();
+    String matchedType = routine['sLinkedWorkout']?.toString() ?? '';
+    if (matchedType.isEmpty) {
+      if (lowerTitle.contains('วิ่ง')) matchedType = 'วิ่ง';
+      else if (lowerTitle.contains('เดิน')) matchedType = 'เดิน';
+      else if (lowerTitle.contains('จักรยาน') || lowerTitle.contains('ปั่น')) matchedType = 'ปั่นจักรยาน';
+      else if (lowerTitle.contains('ลู่วิ่ง')) matchedType = 'ลู่วิ่งในร่ม';
+    }
+
+    double currentVal = 0.0;
+    if (matchedType.isNotEmpty && _todayWorkoutStats.containsKey(matchedType)) {
+      final stats = _todayWorkoutStats[matchedType]!;
+      if (unitText.contains('กม') || unitText.contains('กิโล') || unitText.contains('km')) {
+        currentVal = stats['distance'] ?? 0.0;
+      } else if (unitText.contains('นาที') || unitText.contains('min') || unitText.contains('เวลา') || unitText.contains('ชม')) {
+        currentVal = stats['duration'] ?? 0.0;
+      }
+    } else {
+      final isDone = _todayCompletionMap[routineId] ?? false;
+      currentVal = isDone ? targetVal : 0.0;
+    }
+
+    final double progress = targetVal > 0 ? (currentVal / targetVal).clamp(0.0, 1.0) : 0.0;
+    final int percent = (progress * 100).toInt();
+    final String remainingText = 'ความคืบหน้า: ${currentVal == currentVal.toInt() ? currentVal.toInt() : currentVal.toStringAsFixed(1)} / ${targetVal == targetVal.toInt() ? targetVal.toInt() : targetVal.toStringAsFixed(1)} $unitText ($percent%)';
+
+    // อัปเดต State เพื่อแสดงกล่องเป้าหมายหลัก
+    setState(() {
+      _userGoal = {
+        'nRoutineId': routineId,
+        'sTitle': title,
+        'nProgress': progress,
+        'sRemainingText': remainingText,
+      };
+    });
+
+    _showSnackBar('ปักหมุด "$title" เป็นเป้าหมายหลักแล้ว');
+
+    // 🔥 บันทึกลง Database
+    if (_user != null) {
+      try {
+        await AppDatabase.instance.saveUserGoal(
+          userId: _user!.nUserId,
+          nRoutineId: routineId,
+          title: title,
+          progress: progress,
+          remainingText: remainingText,
+        );
+      } catch (e) {
+        debugPrint('Error saving pin: $e');
+      }
+    }
+  }
+
+  Future<void> _unpinMainGoal() async {
+    setState(() {
+      _userGoal = null;
+    });
+
+    _showSnackBar('ยกเลิกการปักหมุดเป้าหมายหลักแล้ว');
+
+    // 🔥 ลบออกจาก Database
+    if (_user != null) {
+      try {
+        await AppDatabase.instance.clearUserGoal(_user!.nUserId);
+      } catch (e) {
+        debugPrint('Error clearing pin: $e');
+      }
+    }
+  }
+
   Future<void> _deleteRoutine(int routineId, String title) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('ยืนยันการลบ'),
-        content: Text('ต้องการลบกิจวัตร "$title" หรือไม่?\nข้อมูลที่เช็คไว้จะถูกลบทั้งหมด'),
+        content: Text(
+          'ต้องการลบกิจวัตร "$title" หรือไม่?\nข้อมูลที่เช็คไว้จะถูกลบทั้งหมด',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -209,6 +316,19 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
       debugPrint('[Routines] 🗑️ ลบกิจวัตร: "$title" (ID=$routineId)');
       _showSnackBar('ลบ "$title" เรียบร้อย');
 
+      // หากเป็นตัวที่ปักหมุดไว้ ให้เคลียร์ออกจาก Goal ด้วย
+      if (_userGoal != null) {
+        final pinnedId = (_userGoal!['nRoutineId'] as num?)?.toInt() ?? 0;
+        if (pinnedId == routineId || _userGoal!['sTitle'] == title) {
+          setState(() {
+            _userGoal = null;
+          });
+          if (_user != null) {
+            await AppDatabase.instance.clearUserGoal(_user!.nUserId);
+          }
+        }
+      }
+
       // ลบ Server (background)
       HealthApiService.deleteRoutineRemote(routineId).then((ok) {
         debugPrint('[Routines] 🌐 Server delete: ${ok ? "✅" : "❌"}');
@@ -221,72 +341,64 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
   Future<void> _editRoutine(Map<String, dynamic> routine) async {
     final routineId = (routine['nRoutineId'] as num?)?.toInt() ?? 0;
     final currentTitle = routine['sTitle']?.toString() ?? '';
-    final currentTime = routine['sTime']?.toString() ?? '';
 
-    final titleController = TextEditingController(text: currentTitle);
-    final timeController = TextEditingController(text: currentTime);
-
-    final result = await showDialog<bool>(
+    // เรียกหน้า AddRoutineDialog พร้อมส่งข้อมูลเก่าไป (initialRoutine)
+    final RoutineItem? updatedRoutine = await showModalBottomSheet<RoutineItem>(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(Icons.edit, color: darkGreen),
-            const SizedBox(width: 8),
-            const Text('แก้ไขกิจวัตร'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: titleController,
-              decoration: InputDecoration(
-                labelText: 'ชื่อกิจวัตร',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: timeController,
-              decoration: InputDecoration(
-                labelText: 'เวลาแจ้งเตือน',
-                hintText: 'เช่น 08:00 น.',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('ยกเลิก'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: darkGreen,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: const Text('บันทึก', style: TextStyle(color: Colors.white)),
-          ),
-        ],
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
+      builder: (context) => AddRoutineDialog(initialRoutine: routine),
     );
 
-    if (result == true) {
-      final newTitle = titleController.text.trim();
-      final newTime = timeController.text.trim();
+    if (updatedRoutine != null) {
+      final newTitle = updatedRoutine.title;
+      final newTime = updatedRoutine.notificationTime;
 
-      // อัปเดต Local
+      // อัปเดต Local Database
       await AppDatabase.instance.updateRoutine(
         routineId: routineId,
         title: newTitle,
         time: newTime,
+        targetValue: updatedRoutine.targetValue,
+        unit: updatedRoutine.unit,
+        linkedWorkout: updatedRoutine.linkedWorkoutType ?? '',
+        color: updatedRoutine.color.value,
+        iconData: updatedRoutine.iconData.codePoint,
+        isNotificationActive: updatedRoutine.isNotificationEnabled,
       );
       debugPrint('[Routines] ✏️ แก้ไขกิจวัตร: "$currentTitle" → "$newTitle"');
       _showSnackBar('แก้ไขกิจวัตรสำเร็จ');
+
+      // 🔥 เช็คและอัปเดตกล่องเป้าหมายหลักแบบ Real-time
+      if (_userGoal != null) {
+        final pinnedId = (_userGoal!['nRoutineId'] as num?)?.toInt() ?? 0;
+        // เช็คว่า ID ตรงกัน หรือชื่อเก่าตรงกันหรือไม่
+        if (pinnedId == routineId || _userGoal!['sTitle'] == currentTitle) {
+          final targetVal = updatedRoutine.targetValue;
+          final unitText = updatedRoutine.unit;
+          final isDone = _todayCompletionMap[routineId] ?? false;
+          final progress = isDone ? 1.0 : 0.0;
+          final remainingText =
+              'ความคืบหน้า: ${isDone ? targetVal : 0} / $targetVal $unitText';
+
+          setState(() {
+            _userGoal!['sTitle'] = newTitle;
+            _userGoal!['sRemainingText'] = remainingText;
+          });
+
+          if (_user != null) {
+            await AppDatabase.instance.saveUserGoal(
+              userId: _user!.nUserId,
+              nRoutineId: routineId,
+              title: newTitle,
+              progress: progress,
+              remainingText: remainingText,
+            );
+          }
+        }
+      }
 
       // อัปเดต Server (background)
       HealthApiService.updateRoutineRemote(
@@ -299,9 +411,6 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
 
       await _loadData();
     }
-
-    titleController.dispose();
-    timeController.dispose();
   }
 
   Future<void> _toggleRoutineCompletion(int routineId) async {
@@ -318,12 +427,51 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
       });
     }
 
+    // ถ้าตัวที่ toggle คือเป้าหมายหลัก ให้คำนวณ progress ใหม่และอัปเดต Goal ใน DB ด้วย
+    if (_userGoal != null && _user != null) {
+      final pinnedId = (_userGoal!['nRoutineId'] as num?)?.toInt() ?? 0;
+      if (pinnedId == routineId) {
+        final r = _routines.firstWhere(
+          (item) => ((item['nRoutineId'] as num?)?.toInt() ?? 0) == routineId,
+          orElse: () => {},
+        );
+        if (r.isNotEmpty) {
+          final targetVal = (r['targetValue'] as num?)?.toDouble() ?? 1.0;
+          final unitText = r['unit']?.toString() ?? 'ครั้ง';
+          final currentVal = isCompleted ? targetVal : 0.0;
+          final progress = isCompleted ? 1.0 : 0.0;
+          final percent = (progress * 100).toInt();
+          final remainingText =
+              'ความคืบหน้า: ${currentVal == currentVal.toInt() ? currentVal.toInt() : currentVal.toStringAsFixed(1)} / ${targetVal == targetVal.toInt() ? targetVal.toInt() : targetVal.toStringAsFixed(1)} $unitText ($percent%)';
+
+          setState(() {
+            _userGoal = {
+              'nRoutineId': routineId,
+              'sTitle': r['sTitle']?.toString() ?? _userGoal!['sTitle'],
+              'nProgress': progress,
+              'sRemainingText': remainingText,
+            };
+          });
+
+          AppDatabase.instance.saveUserGoal(
+            userId: _user!.nUserId,
+            nRoutineId: routineId,
+            title: r['sTitle']?.toString() ?? _userGoal!['sTitle'],
+            progress: progress,
+            remainingText: remainingText,
+          );
+        }
+      }
+    }
+
     // Toggle Server (background)
     HealthApiService.toggleRoutineLogRemote(
       routineId: routineId,
       date: _todayStr,
     ).then((serverResult) {
-      debugPrint('[Routines] 🌐 Server toggle: routineId=$routineId → $serverResult');
+      debugPrint(
+        '[Routines] 🌐 Server toggle: routineId=$routineId → $serverResult',
+      );
     });
   }
 
@@ -350,6 +498,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
   Widget _buildThreeDotsMenu({
     required VoidCallback onEdit,
     required VoidCallback onDelete,
+    required VoidCallback onPinAsMainGoal,
   }) {
     return PopupMenuButton<String>(
       icon: const Icon(Icons.more_vert, color: Colors.grey),
@@ -357,8 +506,20 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
       onSelected: (value) {
         if (value == 'edit') onEdit();
         if (value == 'delete') onDelete();
+        if (value == 'pin') onPinAsMainGoal(); // เพิ่มเงื่อนไขนี้
       },
       itemBuilder: (context) => [
+        // เพิ่มเมนูปักหมุดไว้บนสุด
+        const PopupMenuItem(
+          value: 'pin',
+          child: Row(
+            children: [
+              Icon(Icons.push_pin, color: Colors.orange, size: 20),
+              SizedBox(width: 8),
+              Text('ปักหมุดเป้าหมายหลัก'),
+            ],
+          ),
+        ),
         const PopupMenuItem(
           value: 'edit',
           child: Row(
@@ -406,8 +567,10 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     Icons.favorite,
   ];
 
-  Color _getRoutineColor(int index) => _routineColors[index % _routineColors.length];
-  IconData _getRoutineIcon(int index) => _routineIcons[index % _routineIcons.length];
+  Color _getRoutineColor(int index) =>
+      _routineColors[index % _routineColors.length];
+  IconData _getRoutineIcon(int index) =>
+      _routineIcons[index % _routineIcons.length];
 
   // ---------- Time block classification ----------
   String _getTimeBlock(String? time) {
@@ -423,7 +586,8 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     // ถ้าไม่มีเวลา ดูจาก keyword
     if (time.contains('เช้า') || time.contains('Morning')) return 'morning';
     if (time.contains('บ่าย') || time.contains('Afternoon')) return 'afternoon';
-    if (time.contains('เย็น') || time.contains('คืน') || time.contains('Night')) return 'night';
+    if (time.contains('เย็น') || time.contains('คืน') || time.contains('Night'))
+      return 'night';
     return 'other';
   }
 
@@ -439,7 +603,10 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
             children: [
               CircularProgressIndicator(color: primaryGreen),
               const SizedBox(height: 16),
-              Text('กำลังโหลดกิจวัตร...', style: TextStyle(color: Colors.grey.shade600)),
+              Text(
+                'กำลังโหลดกิจวัตร...',
+                style: TextStyle(color: Colors.grey.shade600),
+              ),
             ],
           ),
         ),
@@ -484,55 +651,66 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
               children: [
                 const SizedBox(height: 16),
 
-                // Main Goal Card
+                // 📌 นำฟังก์ชัน _buildMainGoalCard
                 _buildMainGoalCard(),
-                const SizedBox(height: 24),
 
                 // Daily Routines Header
                 _buildDailyRoutinesHeader(),
                 const SizedBox(height: 16),
-
                 // Empty state
-                if (_routines.isEmpty)
-                  _buildEmptyState(),
+                if (_routines.isEmpty) _buildEmptyState(),
 
                 // ☀️ ช่วงเช้า
                 if (morningRoutines.isNotEmpty) ...[
-                  _buildTimeBlockHeader('☀️ ช่วงเช้า (Morning)', '06:00 - 11:00'),
-                  ...morningRoutines.map((r) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _buildRoutineCardFromDb(r, _routines.indexOf(r)),
-                  )),
+                  _buildTimeBlockHeader(
+                    '☀️ ช่วงเช้า (Morning)',
+                    '06:00 - 11:00',
+                  ),
+                  ...morningRoutines.map(
+                    (r) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _buildRoutineCardFromDb(r, _routines.indexOf(r)),
+                    ),
+                  ),
                   const SizedBox(height: 8),
                 ],
 
                 // 🏃 ระหว่างวัน
                 if (afternoonRoutines.isNotEmpty) ...[
-                  _buildTimeBlockHeader('🏃 ระหว่างวัน (Afternoon)', '12:00 - 18:00'),
-                  ...afternoonRoutines.map((r) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _buildRoutineCardFromDb(r, _routines.indexOf(r)),
-                  )),
+                  _buildTimeBlockHeader(
+                    '🏃 ระหว่างวัน (Afternoon)',
+                    '12:00 - 18:00',
+                  ),
+                  ...afternoonRoutines.map(
+                    (r) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _buildRoutineCardFromDb(r, _routines.indexOf(r)),
+                    ),
+                  ),
                   const SizedBox(height: 8),
                 ],
 
                 // 🌙 ก่อนนอน
                 if (nightRoutines.isNotEmpty) ...[
                   _buildTimeBlockHeader('🌙 ก่อนนอน (Night)', '21:00 - 23:00'),
-                  ...nightRoutines.map((r) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _buildRoutineCardFromDb(r, _routines.indexOf(r)),
-                  )),
+                  ...nightRoutines.map(
+                    (r) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _buildRoutineCardFromDb(r, _routines.indexOf(r)),
+                    ),
+                  ),
                   const SizedBox(height: 8),
                 ],
 
                 // ⭐ อื่นๆ
                 if (otherRoutines.isNotEmpty) ...[
                   _buildTimeBlockHeader('⭐ กิจวัตรอื่นๆ', 'ตลอดทั้งวัน'),
-                  ...otherRoutines.map((r) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _buildRoutineCardFromDb(r, _routines.indexOf(r)),
-                  )),
+                  ...otherRoutines.map(
+                    (r) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _buildRoutineCardFromDb(r, _routines.indexOf(r)),
+                    ),
+                  ),
                 ],
 
                 const SizedBox(height: 100),
@@ -558,12 +736,29 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('กิจวัตรของฉัน', style: TextStyle(color: darkGreen, fontWeight: FontWeight.bold, fontSize: 18)),
-          const Text('(My Routines)', style: TextStyle(color: Colors.grey, fontSize: 12)),
+          Text(
+            'กิจวัตรของฉัน',
+            style: TextStyle(
+              color: darkGreen,
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
+          ),
+          const Text(
+            '(My Routines)',
+            style: TextStyle(color: Colors.grey, fontSize: 12),
+          ),
         ],
       ),
       actions: [
-        IconButton(icon: const Icon(Icons.notifications_active, color: Colors.blueGrey, size: 20), onPressed: () {}),
+        IconButton(
+          icon: const Icon(
+            Icons.notifications_active,
+            color: Colors.blueGrey,
+            size: 20,
+          ),
+          onPressed: () {},
+        ),
         Padding(
           padding: const EdgeInsets.only(right: 16.0),
           child: CircleAvatar(
@@ -571,7 +766,11 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
             backgroundColor: primaryGreen,
             child: Text(
               userName.isNotEmpty ? userName[0].toUpperCase() : '?',
-              style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ),
@@ -591,11 +790,19 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
       ),
       child: Column(
         children: [
-          Icon(Icons.playlist_add_check_rounded, size: 64, color: Colors.grey.shade300),
+          Icon(
+            Icons.playlist_add_check_rounded,
+            size: 64,
+            color: Colors.grey.shade300,
+          ),
           const SizedBox(height: 16),
           Text(
             'ยังไม่มีกิจวัตร',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey.shade600),
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey.shade600,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
@@ -608,26 +815,26 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     );
   }
 
-  // --- Main Goal Card (from DB) ---
+  // --- Main Goal Card ---
   Widget _buildMainGoalCard() {
     final goalTitle = _userGoal?['sTitle']?.toString() ?? '';
-    final goalProgress = (_userGoal?['nProgress'] as num?)?.toDouble() ?? 0.0;
-    final goalRemaining = _userGoal?['sRemainingText']?.toString() ?? '';
 
-    // Fallback to workout stats if no goal
-    final String title;
-    final String subtitle;
-    if (goalTitle.isNotEmpty) {
-      title = goalTitle;
-      subtitle = goalRemaining.isNotEmpty
-          ? goalRemaining
-          : 'ทำสำเร็จแล้ว ${(goalProgress * 100).toInt()}%';
-    } else {
-      title = 'วิ่งเก็บระยะทางสะสม';
-      subtitle = 'สะสมแล้ว ${_totalDistanceKm.toStringAsFixed(1)} กม. | $_workoutCount ครั้ง | ${_totalCaloriesBurned.toStringAsFixed(0)} kcal';
+    // เช็คว่าถ้าไม่มีเป้าหมายถูกปักหมุด ให้ "ซ่อน" กล่องนี้ไปเลย
+    if (goalTitle.isEmpty) {
+      return const SizedBox.shrink();
     }
 
+    // ข้อมูลสำหรับแสดงผลเมื่อมีการปักหมุด
+    final goalProgress = (_userGoal?['nProgress'] as num?)?.toDouble() ?? 0.0;
+    final goalRemaining = _userGoal?['sRemainingText']?.toString() ?? '';
+    final String subtitle = goalRemaining.isNotEmpty
+        ? goalRemaining
+        : 'ทำสำเร็จแล้ว ${(goalProgress * 100).toInt()}%';
+
     return Container(
+      margin: const EdgeInsets.only(
+        bottom: 24,
+      ), // เพิ่มระยะห่างด้านล่างแทน SizedBox ในหน้าหลัก
       decoration: BoxDecoration(
         color: cardGreenBg,
         borderRadius: BorderRadius.circular(20),
@@ -637,17 +844,64 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(left: 16, top: 12, right: 16),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(color: darkGreen, borderRadius: BorderRadius.circular(12)),
-              child: const Text('🚩 กิจวัตรจากเป้าหมายหลัก', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+            padding: const EdgeInsets.only(left: 16, top: 12, right: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: darkGreen,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Text(
+                    '🚩 กิจวัตรจากเป้าหมายหลัก',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                // ปุ่มจุด 3 จุด สำหรับยกเลิกการปักหมุด
+                PopupMenuButton<String>(
+                  icon: const Icon(
+                    Icons.more_vert,
+                    color: Colors.grey,
+                    size: 20,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  onSelected: (value) {
+                    if (value == 'unpin') _unpinMainGoal();
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'unpin',
+                      child: Row(
+                        children: [
+                          Icon(Icons.close, color: Colors.grey, size: 20),
+                          SizedBox(width: 8),
+                          Text('ยกเลิกเป้าหมายหลัก'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
           Container(
             margin: const EdgeInsets.all(12),
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Column(
               children: [
                 Row(
@@ -655,17 +909,33 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
                   children: [
                     Container(
                       padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(color: darkGreen.withValues(alpha: 0.12), shape: BoxShape.circle),
-                      child: Icon(Icons.directions_run, color: darkGreen),
+                      decoration: BoxDecoration(
+                        color: darkGreen.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      // ไอคอนของการ์ดเป้าหมายหลัก
+                      child: Icon(Icons.flag, color: darkGreen),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text(
+                            goalTitle,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
                           const SizedBox(height: 4),
-                          Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                          Text(
+                            subtitle,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -675,7 +945,10 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
                 // เช็กลิสต์สรุปวันนี้
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: primaryGreen.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12),
@@ -686,13 +959,21 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
                       const SizedBox(width: 8),
                       Text(
                         'วันนี้ทำสำเร็จ $_completedCount / ${_routines.length} กิจวัตร',
-                        style: TextStyle(fontSize: 13, color: darkGreen, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: darkGreen,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const Spacer(),
                       if (_routines.isNotEmpty)
                         Text(
                           '${(_completedCount / _routines.length * 100).toInt()}%',
-                          style: TextStyle(fontSize: 13, color: darkGreen, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: darkGreen,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                     ],
                   ),
@@ -708,14 +989,23 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
   Widget _buildDailyRoutinesHeader() {
     // นับจำนวนช่วงเวลาที่มีกิจวัตร
     int timeBlockCount = 0;
-    final times = _routines.map((r) => _getTimeBlock(r['sTime']?.toString() ?? '')).toSet();
+    final times = _routines
+        .map((r) => _getTimeBlock(r['sTime']?.toString() ?? ''))
+        .toSet();
     timeBlockCount = times.length;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        const Text('กิจวัตรประจำวัน (Daily\nRoutines)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, height: 1.2)),
+        const Text(
+          'กิจวัตรประจำวัน (Daily\nRoutines)',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            height: 1.2,
+          ),
+        ),
         Text(
           _routines.isEmpty ? 'ยังไม่มี' : '$timeBlockCount ช่วง\nเวลา',
           textAlign: TextAlign.right,
@@ -731,47 +1021,206 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF1C2819))),
-          Text(timeRange, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          Text(
+            title,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              color: Color(0xFF1C2819),
+            ),
+          ),
+          Text(
+            timeRange,
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+          ),
         ],
       ),
     );
   }
 
-  // --- Routine Card จาก Database ---
+  // ฟังก์ชันดึงสีให้เข้ากับกิจวัตร
+  Color _getDynamicColor(Map<String, dynamic> routine, int index) {
+    // หาก Database มีการเก็บค่าสีไว้
+    if (routine['color'] != null)
+      return Color((routine['color'] as num).toInt());
+
+    final title = routine['sTitle']?.toString().toLowerCase() ?? '';
+    if (title.contains('น้ำ') ||
+        title.contains('drink') ||
+        title.contains('water'))
+      return const Color(0xFF0288D1);
+    if (title.contains('วิ่ง') ||
+        title.contains('เดิน') ||
+        title.contains('work'))
+      return const Color(0xFF4CAF50);
+    if (title.contains('สมาธิ') ||
+        title.contains('นอน') ||
+        title.contains('sleep'))
+      return const Color(0xFF7E57C2);
+    if (title.contains('อาหาร') ||
+        title.contains('กิน') ||
+        title.contains('eat'))
+      return const Color(0xFFFF9800);
+    if (title.contains('ยา') ||
+        title.contains('pill') ||
+        title.contains('health'))
+      return const Color(0xFFE91E63);
+
+    return _getRoutineColor(index); // ค่าเริ่มต้นตามลำดับ
+  }
+
+  // ฟังก์ชันดึงไอคอนให้เข้ากับกิจวัตร
+  IconData _getDynamicIcon(Map<String, dynamic> routine, int index) {
+    // หาก Database มีการเก็บรหัสไอคอนไว้
+    if (routine['iconData'] != null)
+      return IconData(
+        (routine['iconData'] as num).toInt(),
+        fontFamily: 'MaterialIcons',
+      );
+
+    final title = routine['sTitle']?.toString().toLowerCase() ?? '';
+    if (title.contains('น้ำ') ||
+        title.contains('drink') ||
+        title.contains('water'))
+      return Icons.water_drop_rounded;
+    if (title.contains('วิ่ง') ||
+        title.contains('เดิน') ||
+        title.contains('work'))
+      return Icons.directions_walk_rounded;
+    if (title.contains('สมาธิ') ||
+        title.contains('นอน') ||
+        title.contains('sleep'))
+      return Icons.self_improvement_rounded;
+    if (title.contains('อาหาร') ||
+        title.contains('กิน') ||
+        title.contains('eat'))
+      return Icons.restaurant_rounded;
+    if (title.contains('ยา') ||
+        title.contains('pill') ||
+        title.contains('health'))
+      return Icons.medical_services_rounded;
+
+    return _getRoutineIcon(index); // ค่าเริ่มต้นตามลำดับ
+  }
+
+  // --- Routine Card จาก Database (เชื่อมข้อมูลจริง) ---
   Widget _buildRoutineCardFromDb(Map<String, dynamic> routine, int index) {
     final routineId = (routine['nRoutineId'] as num?)?.toInt() ?? 0;
     final title = routine['sTitle']?.toString() ?? 'ไม่มีชื่อ';
-    final time = routine['sTime']?.toString() ?? '';
-    final isNotifActive = (routine['isNotificationActive'] as num?)?.toInt() == 1;
-    final isCompleted = _todayCompletionMap[routineId] ?? false;
-    final color = _getRoutineColor(index);
-    final icon = _getRoutineIcon(index);
+
+    // ดึงข้อมูลสีและไอคอน
+    final color = _getDynamicColor(routine, index);
+    final icon = _getDynamicIcon(routine, index);
+
+    // --- ดึงข้อมูลเป้าหมายและหน่วย ---
+    final targetVal = (routine['targetValue'] as num?)?.toDouble() ?? 1.0;
+    final unitText = routine['unit']?.toString() ?? 'ครั้ง';
+    final lowerTitle = title.toLowerCase();
+    
+    // --- โลจิกใหม่: ดึงค่าจากช่องที่เลือกลิงก์ไว้โดยตรง ---
+    double? workoutCurrentVal;
+    
+    // 1. ดึงประเภทออกกำลังกายที่ผู้ใช้เลือกเชื่อมโยงไว้จาก Database
+    String matchedType = routine['sLinkedWorkout']?.toString() ?? '';
+    
+    // 2. ถ้าไม่ได้เลือกไว้ (เป็นค่าว่าง) ให้ใช้วิธีค้นหาจากคีย์เวิร์ดในชื่อเป็นระบบสำรอง
+    if (matchedType.isEmpty) {
+      if (lowerTitle.contains('วิ่ง')) matchedType = 'วิ่ง';
+      else if (lowerTitle.contains('เดิน')) matchedType = 'เดิน';
+      else if (lowerTitle.contains('จักรยาน') || lowerTitle.contains('ปั่น')) matchedType = 'ปั่นจักรยาน';
+      else if (lowerTitle.contains('ลู่วิ่ง')) matchedType = 'ลู่วิ่งในร่ม';
+    }
+    
+    // 3. นำประเภทที่ได้ไปดึงข้อมูลสถิติของวันนี้มาแสดง
+    if (matchedType.isNotEmpty && _todayWorkoutStats.containsKey(matchedType)) {
+      final stats = _todayWorkoutStats[matchedType]!;
+      if (unitText.contains('กม') || unitText.contains('กิโล') || unitText.contains('km')) {
+        workoutCurrentVal = stats['distance'];
+      } else if (unitText.contains('นาที') || unitText.contains('min') || unitText.contains('เวลา') || unitText.contains('ชม')) {
+        workoutCurrentVal = stats['duration'];
+      }
+    }
+
+    // 3. กำหนดค่าปัจจุบัน 
+    // (ถ้ามีข้อมูลออกกำลังกาย ให้ใช้ข้อมูลนั้นอัตโนมัติ ถ้าไม่มีค่อยใช้ค่าจากการติ๊กมือ)
+    final isManuallyCompleted = _todayCompletionMap[routineId] ?? false;
+    final currentVal = workoutCurrentVal ?? ((routine['currentValue'] as num?)?.toDouble() ?? (isManuallyCompleted ? targetVal : 0.0));
+    
+    // 4. เช็คสถานะว่าถึงเป้าหมายหรือยัง
+    final bool isActuallyCompleted = currentVal >= targetVal;
+
+    // --- กำหนดข้อความและปุ่มตามหมวดหมู่ (เพื่อให้ตรงดีไซน์ภาพ) ---
+    String actionBtnText = 'ทำรายการ';
+    IconData? actionBtnIcon;
+    bool isPrimaryAction = false;
+    String subtitleText = 'เป้าหมายประจำวัน: $targetVal $unitText';
+
+    if (lowerTitle.contains('น้ำ') || lowerTitle.contains('drink')) {
+      subtitleText = 'เป้าหมายเข้าถึงบ่าย: $targetVal $unitText';
+      actionBtnText = '+250 ml';
+      actionBtnIcon = Icons.add;
+      isPrimaryAction = true;
+    } else if (lowerTitle.contains('เดิน') ||
+        lowerTitle.contains('ก้าว') ||
+        lowerTitle.contains('วิ่ง')) {
+      subtitleText = 'เป้าหมายการขยับร่างกาย: $targetVal $unitText';
+      actionBtnText = 'ซิงค์ข้อมูล';
+      actionBtnIcon = Icons.sync;
+      isPrimaryAction = false;
+    } else if (lowerTitle.contains('นอน') || lowerTitle.contains('sleep')) {
+      subtitleText = 'พักผ่อนอย่างมีคุณภาพ: เป้าหมาย $targetVal $unitText';
+      actionBtnText = 'ตั้งเวลา';
+      actionBtnIcon = Icons.alarm;
+      isPrimaryAction = false;
+    } else {
+      actionBtnText = isActuallyCompleted ? 'เสร็จแล้ว' : 'บันทึก';
+      actionBtnIcon = isActuallyCompleted ? Icons.check : Icons.edit;
+      isPrimaryAction = !isActuallyCompleted;
+    }
+
+    // คำนวณเปอร์เซ็นต์
+    final double progressRatio = targetVal > 0
+        ? (currentVal / targetVal).clamp(0.0, 1.0)
+        : 0.0;
+    final int percent = (progressRatio * 100).toInt();
+
+    // ฟังก์ชันช่วยจัดรูปแบบตัวเลข (ซ่อน .0 ถ้าเป็นจำนวนเต็ม)
+    String formatValue(double val) =>
+        val == val.toInt() ? val.toInt().toString() : val.toStringAsFixed(1);
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isCompleted ? color.withValues(alpha: 0.05) : Colors.white,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: isCompleted ? Border.all(color: color.withValues(alpha: 0.3)) : null,
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4))],
+        border: Border.all(color: Colors.grey.shade200, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // --- ส่วนบน (Icon, Text, Action Button) ---
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ไอคอน
+              // 1. ไอคอน
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
+                  color: color.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, color: color, size: 24),
               ),
-              const SizedBox(width: 12),
-              // ชื่อ + เวลา
+              const SizedBox(width: 14),
+
+              // 2. ชื่อกิจวัตร และ ป้ายเปอร์เซ็นต์
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -781,71 +1230,133 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
                         Expanded(
                           child: Text(
                             title,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              decoration: isCompleted ? TextDecoration.lineThrough : null,
-                              color: isCompleted ? Colors.grey : Colors.black87,
+                              fontSize: 15,
+                              color: Color(0xFF1E293B),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '$percent%',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: color,
                             ),
                           ),
                         ),
-                        if (isCompleted)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.green.shade100,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text('✅ เสร็จแล้ว', style: TextStyle(color: Colors.green.shade800, fontSize: 10, fontWeight: FontWeight.bold)),
-                          ),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        if (time.isNotEmpty) ...[
-                          Icon(Icons.access_time, size: 14, color: Colors.grey.shade500),
-                          const SizedBox(width: 4),
-                          Text(time, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                          const SizedBox(width: 12),
-                        ],
-                        if (isNotifActive)
-                          Icon(Icons.notifications_active, size: 14, color: Colors.amber.shade700)
-                        else
-                          Icon(Icons.notifications_off, size: 14, color: Colors.grey.shade400),
-                      ],
+                    Text(
+                      subtitleText,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
-              // Actions
+
+              // 3. ปุ่ม Action และ เมนู 3 จุด
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Check/Uncheck Button
                   InkWell(
-                    onTap: () => _toggleRoutineCompletion(routineId),
-                    borderRadius: BorderRadius.circular(20),
+                    onTap: () {
+                      // กดปุ่มนี้แล้วไปเรียกฟังก์ชันติ๊กเสร็จสิ้นที่มีอยู่เดิมในระบบ
+                      _toggleRoutineCompletion(routineId);
+                    },
+                    borderRadius: BorderRadius.circular(8),
                     child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: isCompleted ? color.withValues(alpha: 0.15) : Colors.grey.shade100,
-                        shape: BoxShape.circle,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
                       ),
-                      child: Icon(
-                        isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
-                        color: isCompleted ? color : Colors.grey,
-                        size: 24,
+                      decoration: BoxDecoration(
+                        color: isPrimaryAction
+                            ? color
+                            : color.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          if (actionBtnIcon != null) ...[
+                            Icon(
+                              actionBtnIcon,
+                              size: 14,
+                              color: isPrimaryAction ? Colors.white : color,
+                            ),
+                            const SizedBox(width: 4),
+                          ],
+                          Text(
+                            actionBtnText,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: isPrimaryAction ? Colors.white : color,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
+                  const SizedBox(width: 4),
                   _buildThreeDotsMenu(
                     onEdit: () => _editRoutine(routine),
                     onDelete: () => _deleteRoutine(routineId, title),
+                    onPinAsMainGoal: () => _pinAsMainGoal(routine),
                   ),
                 ],
               ),
             ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // --- ส่วนล่าง (Progress Bar) ---
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'ความคืบหน้า',
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+              ),
+              Text(
+                '${formatValue(currentVal)} / ${formatValue(targetVal)} $unitText ($percent%)',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: progressRatio,
+              minHeight: 8,
+              backgroundColor: color.withValues(alpha: 0.15),
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+            ),
           ),
         ],
       ),

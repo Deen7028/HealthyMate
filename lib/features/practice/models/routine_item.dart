@@ -27,6 +27,7 @@ class RoutineItem {
   bool isNotificationEnabled;
   String notificationTime;
   List<String> repeatDays;
+  String? linkedWorkoutType; // 🔥 เพิ่มบรรทัดนี้
 
   RoutineItem({
     required this.id,
@@ -40,6 +41,7 @@ class RoutineItem {
     this.isNotificationEnabled = true,
     required this.notificationTime,
     required this.repeatDays,
+    this.linkedWorkoutType, // 🔥 เพิ่มบรรทัดนี้
   });
 
   bool get isCompleted => currentValue >= targetValue;
@@ -58,6 +60,7 @@ class RoutineItem {
     bool? isNotificationEnabled,
     String? notificationTime,
     List<String>? repeatDays,
+    String? linkedWorkoutType,
   }) {
     return RoutineItem(
       id: id ?? this.id,
@@ -71,6 +74,7 @@ class RoutineItem {
       isNotificationEnabled: isNotificationEnabled ?? this.isNotificationEnabled,
       notificationTime: notificationTime ?? this.notificationTime,
       repeatDays: repeatDays ?? List.from(this.repeatDays),
+      linkedWorkoutType: linkedWorkoutType ?? this.linkedWorkoutType,
     );
   }
 }

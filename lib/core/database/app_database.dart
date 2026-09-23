@@ -65,7 +65,7 @@ class AppDatabase {
 
     return await openDatabase(
       path,
-      version: 8,
+      version: 9,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -161,6 +161,26 @@ class AppDatabase {
         debugPrint('Migration note v8 (Offline-first sync flags): $e');
       }
     }
+    if (oldVersion < 9) {
+      try {
+        await db.execute('ALTER TABLE $tableRoutines ADD COLUMN targetValue REAL DEFAULT 1.0');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE $tableRoutines ADD COLUMN unit TEXT DEFAULT "ครั้ง"');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE $tableRoutines ADD COLUMN sLinkedWorkout TEXT DEFAULT ""');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE $tableRoutines ADD COLUMN color INTEGER');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE $tableRoutines ADD COLUMN iconData INTEGER');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE TbGoals ADD COLUMN nRoutineId INTEGER DEFAULT 0');
+      } catch (_) {}
+    }
   }
 
   /// สร้าง Table Schema ทั้งหมดตาม 6620310001_HealthMateDB.sql
@@ -189,6 +209,7 @@ class AppDatabase {
       CREATE TABLE IF NOT EXISTS TbGoals (
         nGoalId INTEGER PRIMARY KEY AUTOINCREMENT,
         nUserId INTEGER NOT NULL,
+        nRoutineId INTEGER DEFAULT 0,
         sTitle TEXT NOT NULL,
         nProgress REAL DEFAULT 0.0,
         sRemainingText TEXT,
@@ -276,6 +297,11 @@ class AppDatabase {
         nUserId INTEGER NOT NULL,
         sTitle TEXT NOT NULL,
         sTime TEXT,
+        targetValue REAL DEFAULT 1.0,
+        unit TEXT DEFAULT "ครั้ง",
+        sLinkedWorkout TEXT DEFAULT "",
+        color INTEGER,
+        iconData INTEGER,
         isNotificationActive INTEGER DEFAULT 1,
         dtCreatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (nUserId) REFERENCES $tableUsers (nUserId) ON DELETE CASCADE
@@ -868,6 +894,7 @@ class AppDatabase {
 
   Future<void> saveUserGoal({
     required int userId,
+    int nRoutineId = 0,
     required String title,
     required double progress,
     required String remainingText,
@@ -879,6 +906,7 @@ class AppDatabase {
       await db.update(
         'TbGoals',
         {
+          'nRoutineId': nRoutineId,
           'sTitle': title,
           'nProgress': progress,
           'sRemainingText': remainingText,
@@ -890,12 +918,19 @@ class AppDatabase {
     } else {
       await db.insert('TbGoals', {
         'nUserId': userId,
+        'nRoutineId': nRoutineId,
         'sTitle': title,
         'nProgress': progress,
         'sRemainingText': remainingText,
         'dtUpdatedAt': DateTime.now().toIso8601String(),
       });
     }
+  }
+
+  Future<void> clearUserGoal(int userId) async {
+    final db = await database;
+    if (db == null) return;
+    await db.delete('TbGoals', where: 'nUserId = ?', whereArgs: [userId]);
   }
 
   // ==========================================
@@ -1319,6 +1354,11 @@ class AppDatabase {
     required int userId,
     required String title,
     String time = '',
+    double targetValue = 1.0,
+    String unit = 'ครั้ง',
+    String linkedWorkout = '',
+    int? color,
+    int? iconData,
     bool isNotificationActive = true,
   }) async {
     if (kIsWeb) return 0;
@@ -1329,6 +1369,11 @@ class AppDatabase {
         'nUserId': userId,
         'sTitle': title,
         'sTime': time,
+        'targetValue': targetValue,
+        'unit': unit,
+        'sLinkedWorkout': linkedWorkout,
+        if (color != null) 'color': color,
+        if (iconData != null) 'iconData': iconData,
         'isNotificationActive': isNotificationActive ? 1 : 0,
         'dtCreatedAt': DateTime.now().toIso8601String(),
       });
@@ -1343,19 +1388,31 @@ class AppDatabase {
     required int routineId,
     required String title,
     String time = '',
+    double? targetValue,
+    String? unit,
+    String? linkedWorkout,
+    int? color,
+    int? iconData,
     bool isNotificationActive = true,
   }) async {
     if (kIsWeb) return;
     final db = await database;
     if (db == null) return;
     try {
+      final updateData = <String, dynamic>{
+        'sTitle': title,
+        'sTime': time,
+        'isNotificationActive': isNotificationActive ? 1 : 0,
+      };
+      if (targetValue != null) updateData['targetValue'] = targetValue;
+      if (unit != null) updateData['unit'] = unit;
+      if (linkedWorkout != null) updateData['sLinkedWorkout'] = linkedWorkout;
+      if (color != null) updateData['color'] = color;
+      if (iconData != null) updateData['iconData'] = iconData;
+
       await db.update(
         tableRoutines,
-        {
-          'sTitle': title,
-          'sTime': time,
-          'isNotificationActive': isNotificationActive ? 1 : 0,
-        },
+        updateData,
         where: 'nRoutineId = ?',
         whereArgs: [routineId],
       );

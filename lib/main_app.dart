@@ -39,6 +39,7 @@ class _MainAppShellState extends State<MainAppShell> {
         children: [
           // 0: Dashboard (หน้าหลัก)
           DashboardPageUpdated(
+            isActive: _currentIndex == 0,
             onNavigateToCalculator: () => _onTabTapped(2),
             onNavigateToPractice: () => _onTabTapped(3),
             onNavigateToWorkout: () => _onTabTapped(1),
@@ -50,7 +51,9 @@ class _MainAppShellState extends State<MainAppShell> {
           // 2: Health Calculator (สุขภาพ)
           HealthCalculatorScreen(state: _healthState),
           // 3: Routine (กิจวัตร)
-          const MyRoutinesPage(),
+          MyRoutinesPage(
+            isActive: _currentIndex == 3,
+          ),
           // 4: Profile (โปรไฟล์)
           const ProfileScreen(),
         ],
