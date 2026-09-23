@@ -111,6 +111,14 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  Future<void> setLoginSession(String email) async {
+    final cleanEmail = email.trim().toLowerCase();
+    _isLoggedIn = true;
+    _currentUserEmail = cleanEmail;
+    await AppDatabase.instance.setLoginStatus(true, email: cleanEmail);
+    notifyListeners();
+  }
+
   Future<void> logout() async {
     _isLoggedIn = false;
     _currentUserEmail = '';

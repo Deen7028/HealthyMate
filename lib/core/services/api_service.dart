@@ -551,4 +551,29 @@ class HealthApiService {
       return {'status': 'error', 'message': 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้: $e'};
     }
   }
+
+  static Future<Map<String, dynamic>> loginWithGoogle(Map<String, dynamic> googleUserData) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/google_login.php'),
+            headers: defaultHeaders,
+            body: jsonEncode(googleUserData),
+          )
+          .timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body is Map<String, dynamic>) {
+          return body;
+        }
+      }
+      return {
+        'status': 'error',
+        'message': 'ตอบกลับจากเซิร์ฟเวอร์ไม่ถูกต้อง (HTTP ${response.statusCode})',
+      };
+    } catch (e) {
+      return {'status': 'error', 'message': 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้: $e'};
+    }
+  }
 }

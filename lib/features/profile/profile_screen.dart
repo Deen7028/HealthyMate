@@ -2,14 +2,17 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:healthymate/core/database/app_database.dart';
+import 'package:healthymate/core/services/api_service.dart';
 import 'package:healthymate/core/services/auth_service.dart';
+import 'package:healthymate/core/services/sync_service.dart';
 import 'package:healthymate/core/services/theme_service.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
 
-// Components & Dialogs
+// Components, Dialogs & Shared
 import 'package:healthymate/features/profile/widgets/profile_top_bar.dart';
 import 'package:healthymate/features/profile/widgets/profile_header_card.dart';
 import 'package:healthymate/features/profile/widgets/quick_stats_card.dart';
@@ -22,6 +25,7 @@ import 'package:healthymate/features/profile/dialogs/connected_devices_bottom_sh
 import 'package:healthymate/features/profile/dialogs/personal_info_bottom_sheet.dart';
 import 'package:healthymate/features/profile/dialogs/logout_confirm_dialog.dart';
 import 'package:healthymate/features/food_recognition/dialogs/gemini_api_key_dialog.dart';
+import 'package:healthymate/shared/dialogs/edit_goal_dialog.dart';
 
 /// หน้าโปรไฟล์และการตั้งค่า HealthyMate
 class ProfileScreen extends StatefulWidget {
@@ -31,7 +35,7 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserver {
   bool _isLocationEnabled = true;
   bool _isLoading = true;
   TbUser? _currentUser;
@@ -51,8 +55,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadUserData();
     _checkLocationService();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkLocationService();
+    }
   }
 
   Future<void> _checkLocationService() async {
@@ -140,7 +158,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  /// เลือกรูปและคัดลอกไฟล์รูปเก็บไว้ใน App Documents Directory ถาวร
+  /// เลือกรูปและคัดลอกไฟล์รูปเก็บไว้ใน App Documents Directory ถาวร พร้อมระบบอัปโหลดซิงค์ขึ้น Cloud
   Future<void> _pickAndSaveProfileImage() async {
     final themePrimary = Theme.of(context).colorScheme.primary;
 
@@ -262,7 +280,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  /// บันทึกรูปลง Documents Directory เพื่อความถาวร พร้อม timestamp ป้องกัน Image Cache Bug
+  /// บันทึกรูปลง Documents Directory ถาวร พร้อมลบรูปโปรไฟล์เดิมป้องกัน Storage Leak
   Future<void> _saveImageLocally(String tempPath) async {
     try {
       final docDir = await getApplicationDocumentsDirectory();
@@ -271,11 +289,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final permanentPath = '${docDir.path}/profile_avatar_${userId}_$timestamp.$fileExtension';
 
-      // คัดลอกไฟล์จาก cache ไปยัง Documents ถาวร
+      // 1. ลบรูปโปรไฟล์เดิมทิ้งก่อนเพื่อป้องกัน Storage Leak
+      final oldPath = _currentUser?.sProfileImagePath ?? '';
+      if (oldPath.isNotEmpty && !oldPath.startsWith('http')) {
+        final oldFile = File(oldPath);
+        if (await oldFile.exists()) {
+          await oldFile.delete();
+        }
+      }
+
+      // 2. คัดลอกไฟล์จาก cache ไปยัง Documents ถาวร
       final tempFile = File(tempPath);
       await tempFile.copy(permanentPath);
 
-      // ลบไฟล์ชั่วคราว (temp file) ทิ้งเพื่อล้างแคช ไม่ให้พื้นที่จัดเก็บของแอปบวมขึ้นเรื่อยๆ
+      // 3. ลบ temp file ชั่วคราว
       if (await tempFile.exists()) {
         await tempFile.delete();
       }
@@ -289,27 +316,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _updateProfileImagePath(String path) async {
     if (_currentUser == null) return;
+    final primaryColor = Theme.of(context).colorScheme.primary;
     final updated = _currentUser!.copyWith(sProfileImagePath: path);
 
+    // 1. อัปเดต SQLite ภายในเครื่อง
     await AppDatabase.instance.updateUser(updated);
-    setState(() {
-      _currentUser = updated;
-    });
+    if (mounted) {
+      setState(() {
+        _currentUser = updated;
+      });
+    }
+
+    // 2. ซิงค์ขึ้น Remote PHP Server
+    String finalPathForRemote = path;
+    if (path.isNotEmpty && !path.startsWith('http')) {
+      final remoteUrl = await HealthApiService.uploadImage(path, type: 'profile');
+      if (remoteUrl != null && remoteUrl.isNotEmpty) {
+        finalPathForRemote = remoteUrl;
+      }
+    }
+
+    final remotePayload = updated.copyWith(sProfileImagePath: finalPathForRemote);
+    final isSynced = await HealthApiService.updateUserProfile(remotePayload);
+
+    if (!isSynced) {
+      await SyncService.instance.updatePendingCount();
+    }
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(path.isEmpty ? 'ลบรูปโปรไฟล์แล้ว' : 'บันทึกรูปโปรไฟล์ถาวรเรียบร้อยแล้ว'),
-          backgroundColor: Theme.of(context).colorScheme.primary,
+          content: Text(path.isEmpty ? 'ลบรูปโปรไฟล์เรียบร้อยแล้ว' : 'บันทึกและซิงค์รูปโปรไฟล์เรียบร้อยแล้ว ☁️'),
+          backgroundColor: primaryColor,
           behavior: SnackBarBehavior.floating,
         ),
       );
     }
   }
 
+  /// คืนค่า ImageProvider รองรับทั้งไฟล์ท้องถิ่น และ URL รูปถ่ายจาก Google Sign-In
   ImageProvider? _getAvatarImageProvider() {
     final path = _currentUser?.sProfileImagePath ?? '';
     if (path.isNotEmpty) {
+      if (path.startsWith('http://') || path.startsWith('https://')) {
+        return NetworkImage(path);
+      }
       final file = File(path);
       if (file.existsSync()) {
         return FileImage(file);
@@ -331,22 +382,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         await Geolocator.openLocationSettings();
       }
     }
-
-    final enabled = await Geolocator.isLocationServiceEnabled();
-    if (mounted) {
-      setState(() {
-        _isLocationEnabled = enabled;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(enabled
-              ? 'บริการตำแหน่งเปิดใช้งานแล้ว 📍'
-              : 'บริการตำแหน่งยังไม่เปิดใช้งาน'),
-          backgroundColor: Theme.of(context).colorScheme.primary,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
+    await _checkLocationService();
   }
 
   void _showUnitPicker() {
@@ -374,6 +410,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showEditProfileDialog() {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final messenger = ScaffoldMessenger.of(context);
     showDialog(
       context: context,
       builder: (context) => EditProfileDialog(
@@ -395,10 +433,66 @@ class _ProfileScreenState extends State<ProfileScreen> {
               nWeight: weight,
               sGender: gender,
             );
+
+            // 1. บันทึกลง SQLite
             await AppDatabase.instance.updateUser(updated);
+            if (mounted) {
+              setState(() {
+                _currentUser = updated;
+              });
+            }
+
+            final isSynced = await HealthApiService.updateUserProfile(updated);
+            if (!isSynced) {
+              await SyncService.instance.updatePendingCount();
+            }
+
+            if (mounted) {
+              messenger.showSnackBar(
+                SnackBar(
+                  content: Text(isSynced
+                      ? 'อัปเดตและซิงค์ข้อมูลโปรไฟล์เรียบร้อยแล้ว ☁️'
+                      : 'บันทึกข้อมูลในเครื่องเรียบร้อยแล้ว (จะซิงค์เมื่อมีเน็ต)'),
+                  backgroundColor: primaryColor,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+          }
+        },
+      ),
+    );
+  }
+
+  void _showEditGoalDialog() {
+    final userId = _currentUser?.nUserId ?? 1;
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => EditGoalDialog(
+        initialTitle: sMainGoalTitle,
+        initialProgress: nGoalProgress,
+        initialRemainingText: sGoalRemainingText,
+        onSave: (title, progress, remainingText) async {
+          await AppDatabase.instance.saveUserGoal(
+            userId: userId,
+            title: title,
+            progress: progress,
+            remainingText: remainingText,
+          );
+          if (mounted) {
             setState(() {
-              _currentUser = updated;
+              sMainGoalTitle = title;
+              nGoalProgress = progress;
+              sGoalRemainingText = remainingText;
             });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('อัปเดตเป้าหมายหลักเรียบร้อยแล้ว🎯'),
+                backgroundColor: primaryColor,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
           }
         },
       ),
@@ -492,8 +586,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
 
     if (confirmed == true && mounted) {
-      Navigator.of(context).popUntil((route) => route.isFirst);
-      await AuthService.instance.logout();
+      try {
+        await GoogleSignIn.instance.signOut();
+      } catch (e) {
+        debugPrint('GoogleSignIn signOut error during logout: $e');
+      }
+      if (mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+        await AuthService.instance.logout();
+      }
     }
   }
 
@@ -585,6 +686,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 goalRemainingText: sGoalRemainingText,
                 onAvatarTap: _pickAndSaveProfileImage,
                 onEditProfileTap: _showEditProfileDialog,
+                onEditGoalTap: _showEditGoalDialog,
               ),
 
               const SizedBox(height: 16),
