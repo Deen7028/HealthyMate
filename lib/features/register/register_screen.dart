@@ -119,19 +119,43 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     try {
-      // 1. ตรวจสอบว่ามีอีเมลนี้ในฐานข้อมูล TbUsers หรือยัง
-      final isExist = await AppDatabase.instance.isEmailExists(sEmail);
-      if (isExist) {
+      // 1. ตรวจสอบว่ามีอีเมลนี้ในฐานข้อมูล TbUsers ในเครื่องหรือบน Server หรือยัง
+      final isLocalExist = await AppDatabase.instance.isEmailExists(sEmail);
+      if (isLocalExist) {
         if (!mounted) return;
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Row(
+            content: Row(
               children: [
-                Icon(Icons.error_outline_rounded, color: Colors.white),
-                SizedBox(width: 10),
+                const Icon(Icons.error_outline_rounded, color: Colors.white),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text('อีเมลนี้ถูกใช้งานแล้ว กรุณาใช้อีเมลอื่นหรือเข้าสู่ระบบ'),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+        return;
+      }
+
+      // ตรวจสอบกับ Remote Server เผื่อกรณีลบแอปแล้วติดตั้งใหม่ (Server Duplication Check)
+      final remoteCheck = await HealthApiService.loginRemote(email: sEmail, password: '');
+      if (remoteCheck['status'] == 'success' || remoteCheck['status'] == 'invalid_password') {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline_rounded, color: Colors.white),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text('อีเมลนี้ถูกลงทะเบียนไว้บนระบบเซิร์ฟเวอร์แล้ว กรุณาเข้าสู่ระบบ'),
                 ),
               ],
             ),

@@ -275,6 +275,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final tempFile = File(tempPath);
       await tempFile.copy(permanentPath);
 
+      // ลบไฟล์ชั่วคราว (temp file) ทิ้งเพื่อล้างแคช ไม่ให้พื้นที่จัดเก็บของแอปบวมขึ้นเรื่อยๆ
+      if (await tempFile.exists()) {
+        await tempFile.delete();
+      }
+
       await _updateProfileImagePath(permanentPath);
     } catch (e) {
       debugPrint('Error saving image permanently: $e');

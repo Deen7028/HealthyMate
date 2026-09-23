@@ -162,9 +162,10 @@ class WorkoutTrackingState extends ChangeNotifier {
         );
 
         // กรองสัญญาณ GPS แกว่ง (GPS Jitter / Noise):
-        // ถ้าขยับน้อยกว่า 2.5 เมตร หรือค่าความแม่นยำแย่เกินไป ให้ข้ามไป ไม่นับเป็นระยะทาง
+        // ถ้าขยับน้อยกว่า 2.5 เมตร หรือค่าความแม่นยำแย่เกินไป หรือความเร็วสูงผิดปกติ (>25 m/s หรือ 90 km/h) ให้ข้ามไป
         final accuracy = position.accuracy;
-        if (distanceInMeters >= 2.5 && distanceInMeters < 150 && accuracy < 35) {
+        final speedMs = position.speed;
+        if (distanceInMeters >= 2.5 && distanceInMeters < 150 && accuracy < 35 && speedMs < 25.0) {
           final addedKm = distanceInMeters / 1000.0;
           _distanceKm += addedKm;
 

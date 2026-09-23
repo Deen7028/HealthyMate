@@ -94,12 +94,12 @@ try {
         $mail = new $mailClass(true);
         try {
             $mail->isSMTP();
-            $mail->Host       = 'smtp.gmail.com';
+            $mail->Host       = getenv('SMTP_HOST') ?: 'smtp.gmail.com';
             $mail->SMTPAuth   = true;
-            $mail->Username   = 'kamaruding7028@gmail.com';
-            $mail->Password   = 'mhpg aeqh plii ptas';
+            $mail->Username   = getenv('SMTP_USER') ?: 'kamaruding7028@gmail.com';
+            $mail->Password   = getenv('SMTP_PASS') ?: 'mhpg aeqh plii ptas';
             $mail->SMTPSecure = 'tls';
-            $mail->Port       = 587;
+            $mail->Port       = (int)(getenv('SMTP_PORT') ?: 587);
             $mail->CharSet    = 'UTF-8';
 
             $mail->setFrom('noreply.healthymate@gmail.com', 'HealthyMate');
@@ -136,13 +136,15 @@ try {
     } else {
         echo json_encode([
             "status" => "error",
-            "message" => "ไม่สามารถส่งอีเมลได้: " . $errorMessage
+            "message" => "ไม่สามารถส่งอีเมลได้ กรุณาลองใหม่อีกครั้ง"
         ], JSON_UNESCAPED_UNICODE);
     }
 
 } catch (PDOException $e) {
-    echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    error_log("send_email_otp.php Error: " . $e->getMessage());
+    echo json_encode(["status" => "error", "message" => "เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูลระบบ"], JSON_UNESCAPED_UNICODE);
 } catch (\Throwable $e) {
-    echo json_encode(["status" => "error", "message" => "เกิดข้อผิดพลาด: " . $e->getMessage()]);
+    error_log("send_email_otp.php Throwable: " . $e->getMessage());
+    echo json_encode(["status" => "error", "message" => "เกิดข้อผิดพลาดในระบบ"], JSON_UNESCAPED_UNICODE);
 }
 ?>

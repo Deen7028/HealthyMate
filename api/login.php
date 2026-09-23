@@ -56,9 +56,12 @@ try {
         exit();
     }
 
-    // 2. ตรวจสอบความถูกต้องของรหัสผ่าน
+    // 2. ตรวจสอบความถูกต้องของรหัสผ่าน (รองรับทั้ง BCRYPT password_verify, Salted Hash และ Legacy SHA-256)
     $storedHash = $user['sPasswordHash'];
-    $isValidPassword = ($storedHash === $passwordHash) || (!empty($password) && $storedHash === $password);
+    $isValidPassword = password_verify($password, $storedHash)
+        || ($storedHash === $passwordHash)
+        || (!empty($password) && $storedHash === hash('sha256', $password))
+        || (!empty($password) && $storedHash === $password);
 
     if (!$isValidPassword) {
         echo json_encode([
@@ -76,9 +79,10 @@ try {
     ], JSON_UNESCAPED_UNICODE);
 
 } catch (PDOException $e) {
+    error_log("login.php PDOError: " . $e->getMessage());
     echo json_encode([
         "status" => "error",
-        "message" => "Database error: " . $e->getMessage()
-    ]);
+        "message" => "เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูลระบบ"
+    ], JSON_UNESCAPED_UNICODE);
 }
 ?>
