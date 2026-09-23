@@ -24,12 +24,26 @@ dependencies:
   connectivity_plus: ^7.3.1
   internet_connection_checker_plus: ^3.1.2
   intl: ^0.19.0
+  flutter_svg: ^2.3.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+
 
 flutter:
   uses-material-design: true
+  assets:
+    - HM.svg
+    - assets/logo.png
+
+flutter_launcher_icons:
+  android: "launch_background"
+  ios: true
+  image_path: "assets/logo.png"
+  web:
+    generate: true
+    image_path: "assets/logo.png"
 
