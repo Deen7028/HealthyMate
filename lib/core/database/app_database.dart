@@ -12,8 +12,18 @@ class AppDatabase {
   static final AppDatabase instance = AppDatabase._internal();
   AppDatabase._internal();
 
-  /// เข้ารหัสรหัสผ่านด้วย SHA-256
-  static String hashPassword(String password) {
+  /// เข้ารหัสรหัสผ่านด้วย SHA-256 ร่วมกับ Local Salt เพื่อป้องกัน Rainbow Table Attack
+  static String hashPassword(String password, {String? salt}) {
+    final String combinedKey = (salt != null && salt.isNotEmpty)
+        ? 'HM_Salt_${salt.trim().toLowerCase()}_$password'
+        : 'HM_Salt_Default_$password';
+    final bytes = utf8.encode(combinedKey);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
+  }
+
+  /// เข้ารหัสแบบเลกาซี SHA-256 (สำหรับตรวจสอบรหัสผ่านเก่าแบบ Backward Compatible)
+  static String hashPasswordLegacy(String password) {
     final bytes = utf8.encode(password);
     final digest = sha256.convert(bytes);
     return digest.toString();
@@ -427,7 +437,7 @@ class AppDatabase {
     final cleanEmail = email.trim();
     final cleanFirstName = firstName.trim();
     final cleanLastName = lastName.trim();
-    final hashedPassword = hashPassword(password);
+    final hashedPassword = hashPassword(password, salt: cleanEmail);
 
     if (kIsWeb) {
       final id = _webUsers.length + 1;
@@ -814,10 +824,12 @@ class AppDatabase {
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
-  /// ตรวจสอบการเข้าสู่ระบบ
+  /// ตรวจสอบการเข้าสู่ระบบ (รองรับทั้ง Salted Hash ใหม่ และ Legacy SHA-256 เดิม)
   Future<bool> authenticateUser(String email, String password) async {
     final cleanEmail = email.trim().toLowerCase();
-    final inputHash = hashPassword(password);
+    final saltedHash = hashPassword(password, salt: cleanEmail);
+    final legacyHash = hashPasswordLegacy(password);
+
     if (kIsWeb) {
       if (_webUsers.isEmpty) return false;
       final user = _webUsers.firstWhere(
@@ -826,7 +838,7 @@ class AppDatabase {
       );
       if (user.isNotEmpty && user['sPasswordHash'] != null) {
         final stored = user['sPasswordHash'].toString();
-        return stored == inputHash || stored == password;
+        return stored == saltedHash || stored == legacyHash || stored == password;
       }
       return false;
     }
@@ -842,7 +854,7 @@ class AppDatabase {
     if (maps.isNotEmpty) {
       final storedHash = maps.first['sPasswordHash']?.toString();
       if (storedHash != null && storedHash.isNotEmpty) {
-        return storedHash == inputHash || storedHash == password;
+        return storedHash == saltedHash || storedHash == legacyHash || storedHash == password;
       }
     }
     return false;

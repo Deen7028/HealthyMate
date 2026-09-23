@@ -1,18 +1,19 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:healthymate/core/config/app_config.dart';
 import 'package:healthymate/features/health_calculator/models/health_record_model.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
 
 class HealthApiService {
-  // Base URL ของเซิร์ฟเวอร์ PHP API
-  static String baseUrl = "https://172.18.111.30/6620310001/html/HealthyMate/api";
+  // Base URL ของเซิร์ฟเวอร์ PHP API ดึงจาก .env (AppConfig)
+  static String get baseUrl => AppConfig.baseUrl;
 
   /// Headers พื้นฐานสำหรับ Virtual Host Apache ของ ม.อ. และระบบความปลอดภัยป้องกันการเข้าถึงตรง
   static Map<String, String> get defaultHeaders => {
-    'Host': 'std.mcs.psu.ac.th',
+    'Host': AppConfig.hostHeader,
     'Content-Type': 'application/json; charset=utf-8',
-    'X-App-Key': 'HealthyMate_Secure_App_2026',
+    'X-App-Key': AppConfig.appKey,
   };
 
   /// 0. ยืนยันตัวตนกับ Remote Server (`login.php`) เมื่อติดตั้งใหม่หรือไม่มีข้อมูลในเครื่อง
@@ -281,8 +282,8 @@ class HealthApiService {
       final uri = Uri.parse('$baseUrl/upload_image.php');
       final request = http.MultipartRequest('POST', uri)
         ..headers.addAll({
-          'Host': 'std.mcs.psu.ac.th',
-          'X-App-Key': 'HealthyMate_Secure_App_2026',
+          'Host': AppConfig.hostHeader,
+          'X-App-Key': AppConfig.appKey,
         })
         ..fields['type'] = type
         ..files.add(await http.MultipartFile.fromPath('image', localFilePath));

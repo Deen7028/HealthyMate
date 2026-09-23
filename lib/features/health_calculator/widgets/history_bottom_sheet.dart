@@ -74,40 +74,43 @@ class HistoryBottomSheet extends StatelessWidget {
           Expanded(
             child: historyList.isEmpty
                 ? _buildEmptyState()
-                : ListView(
+                : ListView.builder(
                     padding: const EdgeInsets.all(20),
-                    children: [
-                      // Weight Trend Card
-                      _buildTrendGraphCard(),
-
-                      const SizedBox(height: 20),
-
-                      // History List Header
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'รายการบันทึกสุขภาพล่าสุด',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: AppTheme.textPrimary,
-                            ),
+                    itemCount: historyList.length + 2,
+                    itemBuilder: (context, index) {
+                      if (index == 0) {
+                        return _buildTrendGraphCard();
+                      } else if (index == 1) {
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 20, bottom: 12),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'รายการบันทึกสุขภาพล่าสุด',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.textPrimary,
+                                ),
+                              ),
+                              Text(
+                                'ทั้งหมด ${historyList.length} รายการ',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: AppTheme.textSecondary,
+                                ),
+                              ),
+                            ],
                           ),
-                          Text(
-                            'ทั้งหมด ${historyList.length} รายการ',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: AppTheme.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-
-                      // List of records
-                      ...historyList.map((record) => _buildHistoryItem(context, record)),
-                    ],
+                        );
+                      }
+                      final record = historyList[index - 2];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: _buildHistoryItem(context, record),
+                      );
+                    },
                   ),
           ),
         ],
