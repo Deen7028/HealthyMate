@@ -486,7 +486,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       builder: (context) => const LogoutConfirmDialog(),
     );
 
-    if (confirmed == true) {
+    if (confirmed == true && mounted) {
+      Navigator.of(context).popUntil((route) => route.isFirst);
       await AuthService.instance.logout();
     }
   }

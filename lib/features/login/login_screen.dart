@@ -4,7 +4,6 @@ import 'package:healthymate/core/services/sync_service.dart';
 import 'package:healthymate/core/theme/app_theme.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
 import 'package:healthymate/features/register/register_screen.dart';
-import 'package:healthymate/main_app.dart';
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback? onClose;
@@ -160,10 +159,6 @@ class _LoginScreenState extends State<LoginScreen> {
         widget.onLoginSuccess!();
       } else if (Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
-      } else {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const MainAppShell()),
-        );
       }
     } catch (e, stack) {
       debugPrint('LoginScreen: Exception during _handleLogin: $e\n$stack');

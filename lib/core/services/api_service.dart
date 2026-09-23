@@ -57,12 +57,24 @@ class HealthApiService {
   /// ส่งคำขอ OTP ไปยังอีเมล
   static Future<Map<String, dynamic>> sendEmailOtp(String sEmail) async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/send_email_otp.php'),
-        headers: {'Content-Type': 'application/json', 'X-App-Key': 'HealthyMate_Secure_App_2026'},
-        body: jsonEncode({'sEmail': sEmail}),
-      );
-      return jsonDecode(response.body);
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/send_email_otp.php'),
+            headers: defaultHeaders,
+            body: jsonEncode({'sEmail': sEmail}),
+          )
+          .timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body is Map<String, dynamic>) {
+          return body;
+        }
+      }
+      return {
+        'status': 'error',
+        'message': 'ตอบกลับจากเซิร์ฟเวอร์ไม่ถูกต้อง (HTTP ${response.statusCode})',
+      };
     } catch (e) {
       return {'status': 'error', 'message': 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้: $e'};
     }
@@ -71,12 +83,24 @@ class HealthApiService {
   /// ยืนยันรหัส OTP
   static Future<Map<String, dynamic>> verifyEmailOtp(String sEmail, String sOtpCode) async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/verify_email_otp.php'),
-        headers: {'Content-Type': 'application/json', 'X-App-Key': 'HealthyMate_Secure_App_2026'},
-        body: jsonEncode({'sEmail': sEmail, 'sOtpCode': sOtpCode}),
-      );
-      return jsonDecode(response.body);
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/verify_email_otp.php'),
+            headers: defaultHeaders,
+            body: jsonEncode({'sEmail': sEmail, 'sOtpCode': sOtpCode}),
+          )
+          .timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body is Map<String, dynamic>) {
+          return body;
+        }
+      }
+      return {
+        'status': 'error',
+        'message': 'ตอบกลับจากเซิร์ฟเวอร์ไม่ถูกต้อง (HTTP ${response.statusCode})',
+      };
     } catch (e) {
       return {'status': 'error', 'message': 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้: $e'};
     }
