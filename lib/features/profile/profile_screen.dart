@@ -465,7 +465,9 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
   }
 
   void _showEditGoalDialog() {
-    final userId = _currentUser?.nUserId ?? 1;
+    final user = _currentUser;
+    if (user == null) return;
+    final userId = user.nUserId;
     final primaryColor = Theme.of(context).colorScheme.primary;
     showDialog(
       context: context,

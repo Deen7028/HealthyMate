@@ -978,8 +978,9 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
 
   IconData _getRoutineIcon(Map<String, dynamic> routine, int index) {
     if (routine['iconData'] != null) {
+      final codePoint = (routine['iconData'] as num).toInt();
       return IconData(
-        (routine['iconData'] as num).toInt(),
+        codePoint,
         fontFamily: 'MaterialIcons',
       );
     }

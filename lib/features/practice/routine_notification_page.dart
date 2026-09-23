@@ -151,12 +151,13 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
       );
 
       // Merge: เมื่อ Server ตอบกลับสถานะสำเร็จ ให้อัปเดต UI และสถานะเช็คของวันนี้ (รวมถึงกรณีการลบรายการ)
-      if (serverResult['status'] == 'success' && mounted) {
-        final Map<int, bool> newCompletionMap = {};
+      if (serverResult['status'] == 'success' && serverRoutines.isNotEmpty && mounted) {
+        final Map<int, bool> newCompletionMap = Map.from(_todayCompletionMap);
         for (final r in serverRoutines) {
           final routineId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
-          newCompletionMap[routineId] =
-              (r['todayCompleted'] as num?)?.toInt() == 1;
+          if (r.containsKey('todayCompleted') && r['todayCompleted'] != null) {
+            newCompletionMap[routineId] = (r['todayCompleted'] as num?)?.toInt() == 1;
+          }
         }
         setState(() {
           _routines = serverRoutines;
@@ -189,7 +190,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
         targetValue: newRoutine.targetValue,
         unit: newRoutine.unit,
         linkedWorkout: newRoutine.linkedWorkoutType ?? '',
-        color: newRoutine.color.value,
+        color: newRoutine.color.toARGB32(),
         iconData: newRoutine.iconData.codePoint,
         isNotificationActive: newRoutine.isNotificationEnabled,
       );
@@ -220,10 +221,15 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     final lowerTitle = title.toLowerCase();
     String matchedType = routine['sLinkedWorkout']?.toString() ?? '';
     if (matchedType.isEmpty) {
-      if (lowerTitle.contains('วิ่ง')) matchedType = 'วิ่ง';
-      else if (lowerTitle.contains('เดิน')) matchedType = 'เดิน';
-      else if (lowerTitle.contains('จักรยาน') || lowerTitle.contains('ปั่น')) matchedType = 'ปั่นจักรยาน';
-      else if (lowerTitle.contains('ลู่วิ่ง')) matchedType = 'ลู่วิ่งในร่ม';
+      if (lowerTitle.contains('วิ่ง')) {
+        matchedType = 'วิ่ง';
+      } else if (lowerTitle.contains('เดิน')) {
+        matchedType = 'เดิน';
+      } else if (lowerTitle.contains('จักรยาน') || lowerTitle.contains('ปั่น')) {
+        matchedType = 'ปั่นจักรยาน';
+      } else if (lowerTitle.contains('ลู่วิ่ง')) {
+        matchedType = 'ลู่วิ่งในร่ม';
+      }
     }
 
     double currentVal = 0.0;
@@ -364,7 +370,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
         targetValue: updatedRoutine.targetValue,
         unit: updatedRoutine.unit,
         linkedWorkout: updatedRoutine.linkedWorkoutType ?? '',
-        color: updatedRoutine.color.value,
+        color: updatedRoutine.color.toARGB32(),
         iconData: updatedRoutine.iconData.codePoint,
         isNotificationActive: updatedRoutine.isNotificationEnabled,
       );
@@ -1072,11 +1078,13 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
   // ฟังก์ชันดึงไอคอนให้เข้ากับกิจวัตร
   IconData _getDynamicIcon(Map<String, dynamic> routine, int index) {
     // หาก Database มีการเก็บรหัสไอคอนไว้
-    if (routine['iconData'] != null)
+    if (routine['iconData'] != null) {
+      final codePoint = (routine['iconData'] as num).toInt();
       return IconData(
-        (routine['iconData'] as num).toInt(),
+        codePoint,
         fontFamily: 'MaterialIcons',
       );
+    }
 
     final title = routine['sTitle']?.toString().toLowerCase() ?? '';
     if (title.contains('น้ำ') ||
@@ -1297,14 +1305,12 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
                       ),
                       child: Row(
                         children: [
-                          if (actionBtnIcon != null) ...[
-                            Icon(
-                              actionBtnIcon,
-                              size: 14,
-                              color: isPrimaryAction ? Colors.white : color,
-                            ),
-                            const SizedBox(width: 4),
-                          ],
+                          Icon(
+                            actionBtnIcon,
+                            size: 14,
+                            color: isPrimaryAction ? Colors.white : color,
+                          ),
+                          const SizedBox(width: 4),
                           Text(
                             actionBtnText,
                             style: TextStyle(
