@@ -1832,6 +1832,7 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildFallbackHealthGoals() {
     final weight = _latestRecord?.nWeight ?? _user?.nWeight ?? 0.0;
     final height = _latestRecord?.nHeight ?? _user?.nHeight ?? 0.0;
