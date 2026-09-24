@@ -123,7 +123,8 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
 
       // 5. ดึงข้อมูล Routines และ Completion สำหรับวันนี้
       final routines = await db.getRoutines(userId: userId);
-      final todayStr = '${_now.year}-${_now.month.toString().padLeft(2, '0')}-${_now.day.toString().padLeft(2, '0')}';
+      final todayStr =
+          '${_now.year}-${_now.month.toString().padLeft(2, '0')}-${_now.day.toString().padLeft(2, '0')}';
       final Map<int, bool> completionMap = {};
       for (final r in routines) {
         final rId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
@@ -978,11 +979,8 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
 
   IconData _getRoutineIcon(Map<String, dynamic> routine, int index) {
     if (routine['iconData'] != null) {
-      final codePoint = (routine['iconData'] as num).toInt();
-      return IconData(
-        codePoint,
-        fontFamily: 'MaterialIcons',
-      );
+      final int codePoint = (routine['iconData'] as num).toInt();
+      return IconData(codePoint, fontFamily: 'MaterialIcons');
     }
     final title = routine['sTitle']?.toString().toLowerCase() ?? '';
     if (title.contains('น้ำ') ||
@@ -1044,10 +1042,12 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
     final Color goalColor;
     final IconData goalIcon;
     bool isCompleted = false;
+    bool isWorkoutGoal = false;
 
     if (pinnedRoutine != null) {
       final title = pinnedRoutine['sTitle']?.toString() ?? 'เป้าหมายหลัก';
-      final targetVal = (pinnedRoutine['targetValue'] as num?)?.toDouble() ?? 1.0;
+      final targetVal =
+          (pinnedRoutine['targetValue'] as num?)?.toDouble() ?? 1.0;
       final unitText = pinnedRoutine['unit']?.toString() ?? 'ครั้ง';
       goalColor = _getRoutineColor(pinnedRoutine, 0);
       goalIcon = _getRoutineIcon(pinnedRoutine, 0);
@@ -1055,25 +1055,44 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
       final lowerTitle = title.toLowerCase();
       String matchedType = pinnedRoutine['sLinkedWorkout']?.toString() ?? '';
       if (matchedType.isEmpty) {
-        if (lowerTitle.contains('วิ่ง')) matchedType = 'วิ่ง';
-        else if (lowerTitle.contains('เดิน')) matchedType = 'เดิน';
-        else if (lowerTitle.contains('จักรยาน') || lowerTitle.contains('ปั่น')) matchedType = 'ปั่นจักรยาน';
-        else if (lowerTitle.contains('ลู่วิ่ง')) matchedType = 'ลู่วิ่งในร่ม';
+        if (lowerTitle.contains('วิ่ง'))
+          matchedType = 'วิ่ง';
+        else if (lowerTitle.contains('เดิน'))
+          matchedType = 'เดิน';
+        else if (lowerTitle.contains('จักรยาน') || lowerTitle.contains('ปั่น'))
+          matchedType = 'ปั่นจักรยาน';
+        else if (lowerTitle.contains('ลู่วิ่ง'))
+          matchedType = 'ลู่วิ่งในร่ม';
       }
 
       double? workoutVal;
-      if (matchedType.isNotEmpty && _todayWorkoutStats.containsKey(matchedType)) {
+
+      if (matchedType.isNotEmpty) {
+        isWorkoutGoal = true;
+      }
+
+      if (matchedType.isNotEmpty &&
+          _todayWorkoutStats.containsKey(matchedType)) {
         final stats = _todayWorkoutStats[matchedType]!;
-        if (unitText.contains('กม') || unitText.contains('กิโล') || unitText.contains('km')) {
+        if (unitText.contains('กม') ||
+            unitText.contains('กิโล') ||
+            unitText.contains('km')) {
           workoutVal = stats['distance'];
-        } else if (unitText.contains('นาที') || unitText.contains('min') || unitText.contains('เวลา') || unitText.contains('ชม')) {
+        } else if (unitText.contains('นาที') ||
+            unitText.contains('min') ||
+            unitText.contains('เวลา') ||
+            unitText.contains('ชม')) {
           workoutVal = stats['duration'];
         }
       }
 
       final routineId = (pinnedRoutine['nRoutineId'] as num?)?.toInt() ?? 0;
       final isDone = _todayCompletionMap[routineId] ?? false;
-      final currentVal = workoutVal ?? (isDone ? targetVal : ((pinnedRoutine['currentValue'] as num?)?.toDouble() ?? 0.0));
+      final currentVal =
+          workoutVal ??
+          (isDone
+              ? targetVal
+              : ((pinnedRoutine['currentValue'] as num?)?.toDouble() ?? 0.0));
 
       progress = targetVal > 0 ? (currentVal / targetVal).clamp(0.0, 1.0) : 0.0;
       final percent = (progress * 100).toInt();
@@ -1098,7 +1117,8 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
       goalColor = primaryGreen;
       goalIcon = Icons.push_pin_outlined;
       displayTitle = 'ยังไม่ได้ปักหมุดเป้าหมายหลัก';
-      displayDetail = 'เลือกปักหมุดกิจวัตรสำคัญจากหน้ากิจวัตรเพื่อติดตามความคืบหน้า';
+      displayDetail =
+          'เลือกปักหมุดกิจวัตรสำคัญจากหน้ากิจวัตรเพื่อติดตามความคืบหน้า';
     }
 
     // คำนวณวันที่เหลือจนจบเดือน
@@ -1133,7 +1153,9 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
               Row(
                 children: [
                   Icon(
-                    hasPinnedGoal ? Icons.flag_rounded : Icons.push_pin_outlined,
+                    hasPinnedGoal
+                        ? Icons.flag_rounded
+                        : Icons.push_pin_outlined,
                     color: hasPinnedGoal ? Colors.orange : Colors.grey,
                     size: 20,
                   ),
@@ -1150,7 +1172,10 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
               ),
               if (hasPinnedGoal)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: goalColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
@@ -1173,7 +1198,10 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                 )
               else
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(12),
@@ -1250,7 +1278,10 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
             if (isCompleted) ...[
               const SizedBox(height: 10),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.green.shade50,
                   borderRadius: BorderRadius.circular(20),
@@ -1259,11 +1290,19 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.check_circle_rounded, color: Colors.green, size: 16),
+                    const Icon(
+                      Icons.check_circle_rounded,
+                      color: Colors.green,
+                      size: 16,
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       'ยินดีด้วย! คุณทำเป้าหมายหลักวันนี้สำเร็จแล้ว',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.green.shade800),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green.shade800,
+                      ),
                     ),
                   ],
                 ),
@@ -1285,12 +1324,20 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                       color: primaryGreen.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.push_pin_rounded, color: primaryGreen, size: 32),
+                    child: Icon(
+                      Icons.push_pin_rounded,
+                      color: primaryGreen,
+                      size: 32,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   const Text(
                     'ยังไม่ได้เลือกเป้าหมายหลัก',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E293B)),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: Color(0xFF1E293B),
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -1306,8 +1353,13 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryGreen,
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
                     ),
                   ),
                 ],
@@ -1315,87 +1367,58 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
             ),
           ],
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 15),
 
-          // --- สถิติจากข้อมูล Workout ---
-          Row(
-            children: [
-              Expanded(
-                child: _buildGoalStatItem(
-                  icon: Icons.straighten,
-                  label: 'ระยะทาง',
-                  value: '${_totalDistanceKm.toStringAsFixed(2)} km',
-                  color: primaryGreen,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildGoalStatItem(
-                  icon: Icons.local_fire_department,
-                  label: 'แคลอรี่',
-                  value: '${_totalCaloriesBurned.toStringAsFixed(0)} kcal',
-                  color: Colors.redAccent,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: _buildGoalStatItem(
-                  icon: Icons.fitness_center,
-                  label: 'ออกกำลังกาย',
-                  value: '$_workoutCount ครั้ง',
-                  color: Colors.blueAccent,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildGoalStatItem(
-                  icon: Icons.timer,
-                  label: 'เวลารวม',
-                  value: _totalWorkoutDurationSec >= 3600
-                      ? '${_totalWorkoutDurationSec ~/ 3600} ชม. ${(_totalWorkoutDurationSec % 3600) ~/ 60} น.'
-                      : '${(_totalWorkoutDurationSec % 3600) ~/ 60} นาที',
-                  color: Colors.orange,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Tip Box
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.orange.shade50,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.orange.shade100),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          if (isWorkoutGoal) ...[
+            const SizedBox(height: 15),
+            // --- สถิติจากข้อมูล Workout ---
+            Row(
               children: [
-                const Icon(
-                  Icons.lightbulb_outline,
-                  color: Colors.orange,
-                  size: 20,
+                Expanded(
+                  child: _buildGoalStatItem(
+                    icon: Icons.straighten,
+                    label: 'ระยะทาง',
+                    value: '${_totalDistanceKm.toStringAsFixed(2)} km',
+                    color: primaryGreen,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
-                    _workoutCount > 0
-                        ? 'สถิติของคุณ: ออกกำลังกายแล้ว $_workoutCount ครั้ง เผาผลาญไป ${_totalCaloriesBurned.toStringAsFixed(0)} kcal รวมระยะทาง ${_totalDistanceKm.toStringAsFixed(1)} กม. ยอดเยี่ยมมาก! 💪'
-                        : 'คำแนะนำวันนี้: เริ่มต้นทำกิจวัตรและออกกำลังกายเพื่อสะสมความสำเร็จ 🏃',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.orange.shade900,
-                    ),
+                  child: _buildGoalStatItem(
+                    icon: Icons.local_fire_department,
+                    label: 'แคลอรี่',
+                    value: '${_totalCaloriesBurned.toStringAsFixed(0)} kcal',
+                    color: Colors.redAccent,
                   ),
                 ),
               ],
             ),
-          ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildGoalStatItem(
+                    icon: Icons.fitness_center,
+                    label: 'ออกกำลังกาย',
+                    value: '$_workoutCount ครั้ง',
+                    color: Colors.blueAccent,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildGoalStatItem(
+                    icon: Icons.timer,
+                    label: 'เวลารวม',
+                    value: _totalWorkoutDurationSec >= 3600
+                        ? '${_totalWorkoutDurationSec ~/ 3600} ชม. ${(_totalWorkoutDurationSec % 3600) ~/ 60} น.'
+                        : '${(_totalWorkoutDurationSec % 3600) ~/ 60} นาที',
+                    color: Colors.orange,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
         ],
       ),
     );
@@ -1403,6 +1426,32 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
 
   // --- Widget ปุ่ม Action (Start Workout) ---
   Widget _buildActionButtons() {
+    final pinnedTitle = _userGoal?['sTitle']?.toString() ?? '';
+    String buttonText = 'เริ่มวิ่งมินิมาราธอน (30 นาที)';
+    IconData buttonIcon = Icons.bolt;
+
+    if (pinnedTitle.isNotEmpty) {
+      final lower = pinnedTitle.toLowerCase();
+      if (lower.contains('จักรยาน') || lower.contains('ปั่น')) {
+        buttonText = 'เริ่ม$pinnedTitle';
+        buttonIcon = Icons.directions_bike;
+      } else if (lower.contains('สมาธิ') || lower.contains('ฝึกสติ')) {
+        buttonText = 'จับเวลา$pinnedTitle';
+        buttonIcon = Icons.self_improvement;
+      } else if (lower.contains('น้ำ') || lower.contains('ดื่ม')) {
+        buttonText = 'บันทึก$pinnedTitle';
+        buttonIcon = Icons.water_drop;
+      } else if (lower.contains('วิ่ง') ||
+          lower.contains('เดิน') ||
+          lower.contains('ออกกำลัง')) {
+        buttonText = 'เริ่ม$pinnedTitle';
+        buttonIcon = Icons.directions_run;
+      } else {
+        buttonText = 'เริ่ม$pinnedTitle';
+        buttonIcon = Icons.play_arrow_rounded;
+      }
+    }
+
     return Column(
       children: [
         SizedBox(
@@ -1416,14 +1465,14 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                 borderRadius: BorderRadius.circular(16),
               ),
             ),
-            child: const Row(
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.bolt, color: Colors.yellow),
-                SizedBox(width: 8),
+                Icon(buttonIcon, color: Colors.yellow),
+                const SizedBox(width: 8),
                 Text(
-                  'เริ่มวิ่งมินิมาราธอน (30 นาที)',
-                  style: TextStyle(
+                  buttonText,
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
@@ -1478,7 +1527,10 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
       final rId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
       final rTitle = r['sTitle']?.toString() ?? '';
       if (pinnedRoutineId > 0 && rId == pinnedRoutineId) return false;
-      if (pinnedRoutineId == 0 && pinnedTitle.isNotEmpty && rTitle == pinnedTitle) return false;
+      if (pinnedRoutineId == 0 &&
+          pinnedTitle.isNotEmpty &&
+          rTitle == pinnedTitle)
+        return false;
       return true;
     }).toList();
 
@@ -1503,13 +1555,19 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.format_list_bulleted_rounded, color: Colors.blueGrey),
+                  const Icon(
+                    Icons.format_list_bulleted_rounded,
+                    color: Colors.blueGrey,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     otherRoutines.isNotEmpty
                         ? 'เป้าหมายอื่นๆ (${otherRoutines.length})'
                         : 'เป้าหมายอื่นๆ',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                 ],
               ),
@@ -1535,41 +1593,66 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                 final routine = otherRoutines[index];
                 final rId = (routine['nRoutineId'] as num?)?.toInt() ?? 0;
                 final title = routine['sTitle']?.toString() ?? 'ไม่มีชื่อ';
-                final targetVal = (routine['targetValue'] as num?)?.toDouble() ?? 1.0;
+                final targetVal =
+                    (routine['targetValue'] as num?)?.toDouble() ?? 1.0;
                 final unitText = routine['unit']?.toString() ?? 'ครั้ง';
                 final color = _getRoutineColor(routine, index);
                 final icon = _getRoutineIcon(routine, index);
 
                 final lowerTitle = title.toLowerCase();
-                String matchedType = routine['sLinkedWorkout']?.toString() ?? '';
+                String matchedType =
+                    routine['sLinkedWorkout']?.toString() ?? '';
                 if (matchedType.isEmpty) {
-                  if (lowerTitle.contains('วิ่ง')) matchedType = 'วิ่ง';
-                  else if (lowerTitle.contains('เดิน')) matchedType = 'เดิน';
-                  else if (lowerTitle.contains('จักรยาน') || lowerTitle.contains('ปั่น')) matchedType = 'ปั่นจักรยาน';
-                  else if (lowerTitle.contains('ลู่วิ่ง')) matchedType = 'ลู่วิ่งในร่ม';
+                  if (lowerTitle.contains('วิ่ง'))
+                    matchedType = 'วิ่ง';
+                  else if (lowerTitle.contains('เดิน'))
+                    matchedType = 'เดิน';
+                  else if (lowerTitle.contains('จักรยาน') ||
+                      lowerTitle.contains('ปั่น'))
+                    matchedType = 'ปั่นจักรยาน';
+                  else if (lowerTitle.contains('ลู่วิ่ง'))
+                    matchedType = 'ลู่วิ่งในร่ม';
                 }
 
                 double? workoutVal;
-                if (matchedType.isNotEmpty && _todayWorkoutStats.containsKey(matchedType)) {
+                if (matchedType.isNotEmpty &&
+                    _todayWorkoutStats.containsKey(matchedType)) {
                   final stats = _todayWorkoutStats[matchedType]!;
-                  if (unitText.contains('กม') || unitText.contains('กิโล') || unitText.contains('km')) {
+                  if (unitText.contains('กม') ||
+                      unitText.contains('กิโล') ||
+                      unitText.contains('km')) {
                     workoutVal = stats['distance'];
-                  } else if (unitText.contains('นาที') || unitText.contains('min') || unitText.contains('เวลา') || unitText.contains('ชม')) {
+                  } else if (unitText.contains('นาที') ||
+                      unitText.contains('min') ||
+                      unitText.contains('เวลา') ||
+                      unitText.contains('ชม')) {
                     workoutVal = stats['duration'];
                   }
                 }
 
                 final isDone = _todayCompletionMap[rId] ?? false;
-                final currentVal = workoutVal ?? (isDone ? targetVal : ((routine['currentValue'] as num?)?.toDouble() ?? 0.0));
-                final progress = targetVal > 0 ? (currentVal / targetVal).clamp(0.0, 1.0) : 0.0;
-                final percent = (progress * 100).toInt();
+                final currentVal =
+                    workoutVal ??
+                    (isDone
+                        ? targetVal
+                        : ((routine['currentValue'] as num?)?.toDouble() ??
+                              0.0));
+                final progress = targetVal > 0
+                    ? (currentVal / targetVal).clamp(0.0, 1.0)
+                    : 0.0;
 
                 return Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: lightBg,
+                    color: isDone
+                        ? Colors.green.shade50.withValues(alpha: 0.5)
+                        : lightBg,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Colors.grey.shade200),
+                    border: Border.all(
+                      color: isDone
+                          ? Colors.green.shade200
+                          : Colors.grey.shade200,
+                    ),
                   ),
                   child: Column(
                     children: [
@@ -1578,10 +1661,16 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: color.withValues(alpha: 0.15),
+                              color: isDone
+                                  ? Colors.green.withValues(alpha: 0.2)
+                                  : color.withValues(alpha: 0.15),
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(icon, color: color, size: 18),
+                            child: Icon(
+                              isDone ? Icons.check_circle : icon,
+                              color: isDone ? Colors.green.shade700 : color,
+                              size: 18,
+                            ),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
@@ -1590,10 +1679,15 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                               children: [
                                 Text(
                                   title,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 14,
-                                    color: Color(0xFF1E293B),
+                                    color: isDone
+                                        ? Colors.grey.shade600
+                                        : const Color(0xFF1E293B),
+                                    decoration: isDone
+                                        ? TextDecoration.lineThrough
+                                        : null,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -1609,18 +1703,95 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                               ],
                             ),
                           ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: color.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              '$percent%',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: color,
+                          const SizedBox(width: 6),
+                          // Quick Check-off Button
+                          InkWell(
+                            onTap: () async {
+                              final messenger = ScaffoldMessenger.of(context);
+                              final updatedState = await AppDatabase.instance
+                                  .toggleRoutineLog(
+                                    routineId: rId,
+                                    dateStr:
+                                        '${_now.year}-${_now.month.toString().padLeft(2, '0')}-${_now.day.toString().padLeft(2, '0')}',
+                                  );
+                              if (!mounted) return;
+                              setState(() {
+                                _todayCompletionMap[rId] = updatedState;
+                              });
+                              messenger.hideCurrentSnackBar();
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Row(
+                                    children: [
+                                      Icon(
+                                        updatedState
+                                            ? Icons.check_circle
+                                            : Icons.refresh,
+                                        color: Colors.white,
+                                        size: 18,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          updatedState
+                                              ? 'เช็คทำรายการ "$title" เรียบร้อยแล้ว! 🎉'
+                                              : 'ยกเลิกการเช็ค "$title" แล้ว',
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  backgroundColor: updatedState
+                                      ? darkGreen
+                                      : Colors.grey.shade800,
+                                  duration: const Duration(seconds: 2),
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(20),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isDone
+                                    ? Colors.green.shade100
+                                    : color.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: isDone
+                                      ? Colors.green.shade300
+                                      : color.withValues(alpha: 0.3),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    isDone
+                                        ? Icons.check_circle_rounded
+                                        : Icons.check_circle_outline_rounded,
+                                    size: 14,
+                                    color: isDone
+                                        ? Colors.green.shade800
+                                        : color,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    isDone ? 'สำเร็จแล้ว' : 'ทำรายการ',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDone
+                                          ? Colors.green.shade800
+                                          : color,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -1633,7 +1804,9 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                           value: progress,
                           minHeight: 6,
                           backgroundColor: Colors.grey.shade200,
-                          valueColor: AlwaysStoppedAnimation<Color>(color),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            isDone ? Colors.green : color,
+                          ),
                         ),
                       ),
                     ],
@@ -1642,8 +1815,16 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
               },
             ),
           ] else ...[
-            // กรณีไม่มีกิจวัตรอื่นๆ ให้แสดงค่าคำนวณพื้นฐาน (แคลอรี่, เวลาออกกำลังกาย, ระยะทาง)
-            _buildFallbackHealthGoals(),
+            // กรณีไม่มีกิจวัตรอื่นๆ ให้เปลี่ยนจาก _buildFallbackHealthGoals() เป็นข้อความว่างๆ
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32.0),
+              child: Center(
+                child: Text(
+                  'ยังไม่ได้เพิ่มเป้าหมายอื่นๆ',
+                  style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+                ),
+              ),
+            ),
           ],
         ],
       ),
@@ -1678,7 +1859,10 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
 
     final workoutMinutes = (_totalWorkoutDurationSec / 60).round();
     const workoutTargetMinutes = 150;
-    final workoutPercent = (workoutMinutes / workoutTargetMinutes).clamp(0.0, 1.0);
+    final workoutPercent = (workoutMinutes / workoutTargetMinutes).clamp(
+      0.0,
+      1.0,
+    );
 
     const distanceTarget = 50.0;
     final distancePercent = (_totalDistanceKm / distanceTarget).clamp(0.0, 1.0);

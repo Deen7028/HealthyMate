@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/api_service.dart';
@@ -7,7 +8,13 @@ import 'widgets/add_routine_dialog.dart';
 
 class MyRoutinesPage extends StatefulWidget {
   final bool isActive;
-  const MyRoutinesPage({super.key, this.isActive = true});
+  final Function(String? workoutCategory)? onNavigateToWorkout;
+
+  const MyRoutinesPage({
+    super.key,
+    this.isActive = true,
+    this.onNavigateToWorkout,
+  });
 
   @override
   State<MyRoutinesPage> createState() => _MyRoutinesPageState();
@@ -29,6 +36,8 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
   Map<String, dynamic>? _userGoal;
   // เก็บสถิติออกกำลังกายของวันนี้แยกตามประเภท (เช่น 'วิ่ง', 'เดิน')
   Map<String, Map<String, double>> _todayWorkoutStats = {};
+  // routineId -> currentValue (for today step progress)
+  Map<int, double> _todayProgressValues = {};
 
   @override
   void didUpdateWidget(covariant MyRoutinesPage oldWidget) {
@@ -74,15 +83,19 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
       final routines = await db.getRoutines(userId: userId);
       debugPrint('[Routines] 📋 กิจวัตร: ${routines.length} รายการ');
 
-      // 3. ดึง completion สำหรับวันนี้
+      // 3. ดึง completion สำหรับวันนี้และคำนวณค่าสะสม
       final Map<int, bool> completionMap = {};
+      final Map<int, double> progressValues = {};
       for (final r in routines) {
         final routineId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
+        final targetVal = (r['targetValue'] as num?)?.toDouble() ?? 1.0;
         final log = await db.getRoutineLogForDate(
           routineId: routineId,
           dateStr: _todayStr,
         );
-        completionMap[routineId] = (log?['isCompleted'] as num?)?.toInt() == 1;
+        final isDone = (log?['isCompleted'] as num?)?.toInt() == 1;
+        completionMap[routineId] = isDone;
+        progressValues[routineId] = isDone ? targetVal : 0.0;
       }
       final completedCount = completionMap.values.where((v) => v).length;
 
@@ -117,6 +130,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
           _user = user;
           _routines = routines;
           _todayCompletionMap = completionMap;
+          _todayProgressValues = progressValues;
           _completedCount = completedCount;
           _userGoal = _userGoal ?? goal;
           _todayWorkoutStats = todayStats; // 🔥 นำค่าของวันนี้มาเก็บไว้ใน State
@@ -481,6 +495,105 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     });
   }
 
+  RoutineButtonType _getRoutineButtonType(Map<String, dynamic> routine, bool isWorkoutRoutine) {
+    if (isWorkoutRoutine) return RoutineButtonType.workout;
+
+    final unit = (routine['unit']?.toString() ?? '').toLowerCase();
+    final title = (routine['sTitle']?.toString() ?? '').toLowerCase();
+    final targetVal = (routine['targetValue'] as num?)?.toDouble() ?? 1.0;
+
+    // 1. Interactive Timer: unit = นาที, min, ชม, hr หรือ title มีคำว่า สมาธิ, หายใจ
+    if (unit.contains('นาที') ||
+        unit.contains('min') ||
+        unit.contains('ชม') ||
+        unit.contains('hr') ||
+        title.contains('สมาธิ') ||
+        title.contains('หายใจ') ||
+        title.contains('โฟกัส')) {
+      return RoutineButtonType.timer;
+    }
+
+    // 2. Quick Step-Add: unit = มล, ml, ลิตร, l, มื้อ, แก้ว, จาน, ครั้ง (และ targetVal > 1)
+    if ((unit.contains('มล') ||
+            unit.contains('ml') ||
+            unit.contains('ลิตร') ||
+            unit.contains('มื้อ') ||
+            unit.contains('แก้ว') ||
+            unit.contains('จาน') ||
+            unit.contains('หน้า') ||
+            unit.contains('ครั้ง')) &&
+        targetVal > 1.0) {
+      return RoutineButtonType.stepAdd;
+    }
+
+    // 3. Single-Check Toggle
+    return RoutineButtonType.singleCheck;
+  }
+
+  double _calculateStepAmount(double targetVal, String unit) {
+    final u = unit.toLowerCase();
+    if (u.contains('มล') || u.contains('ml')) {
+      if (targetVal >= 2000) return 250;
+      if (targetVal >= 1000) return 200;
+      if (targetVal >= 500) return 100;
+      return 50;
+    }
+    if (u.contains('ลิตร') || u.contains('l')) {
+      if (targetVal >= 2) return 0.25;
+      return 0.1;
+    }
+    if (u.contains('มื้อ') || u.contains('แก้ว') || u.contains('จาน') || u.contains('ครั้ง') || u.contains('หน้า')) {
+      return 1.0;
+    }
+    if (targetVal <= 5) return 1.0;
+    if (targetVal <= 20) return 2.0;
+    return (targetVal / 4).roundToDouble().clamp(1.0, targetVal);
+  }
+
+  Future<void> _incrementRoutineValue(int routineId, double stepVal, double targetVal) async {
+    final current = _todayProgressValues[routineId] ?? 0.0;
+    double nextVal = current + stepVal;
+    if (nextVal > targetVal) nextVal = targetVal;
+
+    setState(() {
+      _todayProgressValues[routineId] = nextVal;
+    });
+
+    if (nextVal >= targetVal) {
+      if (!(_todayCompletionMap[routineId] ?? false)) {
+        await _toggleRoutineCompletion(routineId);
+      }
+    }
+  }
+
+  void _showCountdownTimerDialog(BuildContext context, Map<String, dynamic> routine, int durationMinutes) {
+    final title = routine['sTitle']?.toString() ?? 'จับเวลาทำกิจกรรม';
+    final routineId = (routine['nRoutineId'] as num?)?.toInt() ?? 0;
+    final targetVal = (routine['targetValue'] as num?)?.toDouble() ?? durationMinutes.toDouble();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return _RoutineCountdownTimerModal(
+          title: title,
+          durationMinutes: durationMinutes,
+          onTimerCompleted: () async {
+            if (mounted) {
+              setState(() {
+                _todayProgressValues[routineId] = targetVal;
+              });
+              if (!(_todayCompletionMap[routineId] ?? false)) {
+                await _toggleRoutineCompletion(routineId);
+              }
+              _showSnackBar('🎉 ทำ "$title" ครบเวลาเรียบร้อยแล้ว!');
+            }
+          },
+        );
+      },
+    );
+  }
+
   void _showSnackBar(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -573,6 +686,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     Icons.favorite,
   ];
 
+  // ignore: unused_element
   Color _getRoutineColor(int index) =>
       _routineColors[index % _routineColors.length];
   IconData _getRoutineIcon(int index) =>
@@ -655,7 +769,9 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 16),
+                // 1.1 Top Overview Banner (สรุปภารกิจประจำวัน โทนสีเขียวป่า #2E5327)
+                _buildTopOverviewBanner(),
+                const SizedBox(height: 20),
 
                 // 📌 นำฟังก์ชัน _buildMainGoalCard
                 _buildMainGoalCard(),
@@ -1044,102 +1160,260 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     );
   }
 
-  // ฟังก์ชันดึงสีให้เข้ากับกิจวัตร
-  Color _getDynamicColor(Map<String, dynamic> routine, int index) {
-    // หาก Database มีการเก็บค่าสีไว้
-    if (routine['color'] != null)
-      return Color((routine['color'] as num).toInt());
+  // --- 1.1 Top Overview Banner (ส่วนสรุปความคืบหน้ารวม โทนสีเขียวป่า #2E5327) ---
+  Widget _buildTopOverviewBanner() {
+    final totalCount = _routines.length;
+    final overallPercent = totalCount > 0 ? ((_completedCount / totalCount) * 100).toInt() : 0;
+    final overallRatio = totalCount > 0 ? (_completedCount / totalCount).clamp(0.0, 1.0) : 0.0;
 
-    final title = routine['sTitle']?.toString().toLowerCase() ?? '';
-    if (title.contains('น้ำ') ||
-        title.contains('drink') ||
-        title.contains('water'))
-      return const Color(0xFF0288D1);
-    if (title.contains('วิ่ง') ||
-        title.contains('เดิน') ||
-        title.contains('work'))
-      return const Color(0xFF4CAF50);
-    if (title.contains('สมาธิ') ||
-        title.contains('นอน') ||
-        title.contains('sleep'))
-      return const Color(0xFF7E57C2);
-    if (title.contains('อาหาร') ||
-        title.contains('กิน') ||
-        title.contains('eat'))
-      return const Color(0xFFFF9800);
-    if (title.contains('ยา') ||
-        title.contains('pill') ||
-        title.contains('health'))
-      return const Color(0xFFE91E63);
-
-    return _getRoutineColor(index); // ค่าเริ่มต้นตามลำดับ
-  }
-
-  // ฟังก์ชันดึงไอคอนให้เข้ากับกิจวัตร
-  IconData _getDynamicIcon(Map<String, dynamic> routine, int index) {
-    // หาก Database มีการเก็บรหัสไอคอนไว้
-    if (routine['iconData'] != null) {
-      final codePoint = (routine['iconData'] as num).toInt();
-      return IconData(
-        codePoint,
-        fontFamily: 'MaterialIcons',
-      );
+    // คำนวณแคลอรีรวมจากการออกกำลังกายของวันนี้
+    double totalCalories = 0.0;
+    double totalDurationMin = 0.0;
+    _todayWorkoutStats.forEach((_, stats) {
+      totalDurationMin += (stats['duration'] ?? 0.0);
+    });
+    for (final r in _routines) {
+      final rId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
+      if (_todayCompletionMap[rId] == true) {
+        totalCalories += 150; // ประเมินแคลอรีเฉลี่ยต่อภารกิจที่ทำสำเร็จ
+      }
     }
 
-    final title = routine['sTitle']?.toString().toLowerCase() ?? '';
-    if (title.contains('น้ำ') ||
-        title.contains('drink') ||
-        title.contains('water'))
-      return Icons.water_drop_rounded;
-    if (title.contains('วิ่ง') ||
-        title.contains('เดิน') ||
-        title.contains('work'))
-      return Icons.directions_walk_rounded;
-    if (title.contains('สมาธิ') ||
-        title.contains('นอน') ||
-        title.contains('sleep'))
-      return Icons.self_improvement_rounded;
-    if (title.contains('อาหาร') ||
-        title.contains('กิน') ||
-        title.contains('eat'))
-      return Icons.restaurant_rounded;
-    if (title.contains('ยา') ||
-        title.contains('pill') ||
-        title.contains('health'))
-      return Icons.medical_services_rounded;
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF2E5327), // Forest Green #2E5327
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF2E5327).withValues(alpha: 0.25),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+        border: Border.all(
+          color: const Color(0xFF43703B),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.task_alt_rounded, color: Colors.white, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'สรุปภารกิจประจำวัน',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  'วันนี้ $_completedCount/$totalCount รายการ',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
 
-    return _getRoutineIcon(index); // ค่าเริ่มต้นตามลำดับ
+          const SizedBox(height: 16),
+
+          // ตัวเลขเปอร์เซ็นต์ใหญ่แบบ WorkoutTopStatsCard
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                '$overallPercent',
+                style: const TextStyle(
+                  fontSize: 44,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                  letterSpacing: -1,
+                ),
+              ),
+              const Text(
+                '%',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF90DB89),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _completedCount == totalCount && totalCount > 0
+                          ? 'สุดยอด! ทำครบทุกภารกิจแล้ว 🎉'
+                          : 'ความคืบหน้าภาพรวมวันนี้',
+                      style: const TextStyle(fontSize: 12, color: Color(0xFFA0ACA0), fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 6),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: LinearProgressIndicator(
+                        value: overallRatio,
+                        minHeight: 8,
+                        backgroundColor: Colors.white.withValues(alpha: 0.15),
+                        valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF90DB89)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+          const Divider(height: 1, color: Colors.white12),
+          const SizedBox(height: 14),
+
+          // สถิติย่อย 3 ช่อง สไตล์เดียวกับ WorkoutTopStatsCard
+          Row(
+            children: [
+              Expanded(
+                child: _buildBannerStatTile(
+                  label: 'เผาผลาญ',
+                  value: '${totalCalories.toInt()}',
+                  unit: 'kcal',
+                  icon: Icons.local_fire_department_rounded,
+                ),
+              ),
+              Container(height: 30, width: 1, color: Colors.white12),
+              Expanded(
+                child: _buildBannerStatTile(
+                  label: 'เวลารวม',
+                  value: '${totalDurationMin.toInt()}',
+                  unit: 'นาที',
+                  icon: Icons.timer_outlined,
+                ),
+              ),
+              Container(height: 30, width: 1, color: Colors.white12),
+              Expanded(
+                child: _buildBannerStatTile(
+                  label: 'สำเร็จแล้ว',
+                  value: '$_completedCount',
+                  unit: 'รายการ',
+                  icon: Icons.check_circle_outline_rounded,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
-  // --- Routine Card จาก Database (เชื่อมข้อมูลจริง) ---
+  Widget _buildBannerStatTile({
+    required String label,
+    required String value,
+    required String unit,
+    required IconData icon,
+  }) {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 13, color: const Color(0xFF90DB89)),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFFA0ACA0),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 2),
+        RichText(
+          text: TextSpan(
+            text: value,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+            ),
+            children: [
+              TextSpan(
+                text: ' $unit',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFFA0ACA0),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // --- Routine Card จาก Database (Unified Routine Cards แบบใหม่) ---
   Widget _buildRoutineCardFromDb(Map<String, dynamic> routine, int index) {
     final routineId = (routine['nRoutineId'] as num?)?.toInt() ?? 0;
     final title = routine['sTitle']?.toString() ?? 'ไม่มีชื่อ';
 
-    // ดึงข้อมูลสีและไอคอน
-    final color = _getDynamicColor(routine, index);
-    final icon = _getDynamicIcon(routine, index);
+    IconData icon = _getRoutineIcon(index);
+    if (routine['iconData'] != null) {
+      final int codePoint = (routine['iconData'] as num).toInt();
+      // ignore: non_const_argument_for_const_parameter
+      icon = IconData(codePoint, fontFamily: 'MaterialIcons');
+    }
 
-    // --- ดึงข้อมูลเป้าหมายและหน่วย ---
     final targetVal = (routine['targetValue'] as num?)?.toDouble() ?? 1.0;
     final unitText = routine['unit']?.toString() ?? 'ครั้ง';
     final lowerTitle = title.toLowerCase();
-    
-    // --- โลจิกใหม่: ดึงค่าจากช่องที่เลือกลิงก์ไว้โดยตรง ---
-    double? workoutCurrentVal;
-    
-    // 1. ดึงประเภทออกกำลังกายที่ผู้ใช้เลือกเชื่อมโยงไว้จาก Database
+
+    // ดึงประเภทการออกกำลังกายที่เชื่อมไว้
     String matchedType = routine['sLinkedWorkout']?.toString() ?? '';
-    
-    // 2. ถ้าไม่ได้เลือกไว้ (เป็นค่าว่าง) ให้ใช้วิธีค้นหาจากคีย์เวิร์ดในชื่อเป็นระบบสำรอง
     if (matchedType.isEmpty) {
       if (lowerTitle.contains('วิ่ง')) matchedType = 'วิ่ง';
       else if (lowerTitle.contains('เดิน')) matchedType = 'เดิน';
       else if (lowerTitle.contains('จักรยาน') || lowerTitle.contains('ปั่น')) matchedType = 'ปั่นจักรยาน';
       else if (lowerTitle.contains('ลู่วิ่ง')) matchedType = 'ลู่วิ่งในร่ม';
     }
-    
-    // 3. นำประเภทที่ได้ไปดึงข้อมูลสถิติของวันนี้มาแสดง
+
+    final bool isWorkoutRoutine = matchedType.isNotEmpty ||
+        lowerTitle.contains('วิ่ง') ||
+        lowerTitle.contains('เดิน') ||
+        lowerTitle.contains('จักรยาน') ||
+        lowerTitle.contains('ปั่น') ||
+        lowerTitle.contains('ลู่วิ่ง');
+
+    double? workoutCurrentVal;
     if (matchedType.isNotEmpty && _todayWorkoutStats.containsKey(matchedType)) {
       final stats = _todayWorkoutStats[matchedType]!;
       if (unitText.contains('กม') || unitText.contains('กิโล') || unitText.contains('km')) {
@@ -1149,86 +1423,191 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
       }
     }
 
-    // 3. กำหนดค่าปัจจุบัน 
-    // (ถ้ามีข้อมูลออกกำลังกาย ให้ใช้ข้อมูลนั้นอัตโนมัติ ถ้าไม่มีค่อยใช้ค่าจากการติ๊กมือ)
     final isManuallyCompleted = _todayCompletionMap[routineId] ?? false;
-    final currentVal = workoutCurrentVal ?? ((routine['currentValue'] as num?)?.toDouble() ?? (isManuallyCompleted ? targetVal : 0.0));
-    
-    // 4. เช็คสถานะว่าถึงเป้าหมายหรือยัง
-    final bool isActuallyCompleted = currentVal >= targetVal;
+    final double accumulatedVal = _todayProgressValues[routineId] ?? (isManuallyCompleted ? targetVal : 0.0);
+    final currentVal = workoutCurrentVal ?? accumulatedVal;
+    final bool isActuallyCompleted = currentVal >= targetVal || isManuallyCompleted;
 
-    // --- กำหนดข้อความและปุ่มตามหมวดหมู่ (เพื่อให้ตรงดีไซน์ภาพ) ---
-    String actionBtnText = 'ทำรายการ';
-    IconData? actionBtnIcon;
-    bool isPrimaryAction = false;
-    String subtitleText = 'เป้าหมายประจำวัน: $targetVal $unitText';
-
-    if (lowerTitle.contains('น้ำ') || lowerTitle.contains('drink')) {
-      subtitleText = 'เป้าหมายเข้าถึงบ่าย: $targetVal $unitText';
-      actionBtnText = '+250 ml';
-      actionBtnIcon = Icons.add;
-      isPrimaryAction = true;
-    } else if (lowerTitle.contains('เดิน') ||
-        lowerTitle.contains('ก้าว') ||
-        lowerTitle.contains('วิ่ง')) {
-      subtitleText = 'เป้าหมายการขยับร่างกาย: $targetVal $unitText';
-      actionBtnText = 'ซิงค์ข้อมูล';
-      actionBtnIcon = Icons.sync;
-      isPrimaryAction = false;
-    } else if (lowerTitle.contains('นอน') || lowerTitle.contains('sleep')) {
-      subtitleText = 'พักผ่อนอย่างมีคุณภาพ: เป้าหมาย $targetVal $unitText';
-      actionBtnText = 'ตั้งเวลา';
-      actionBtnIcon = Icons.alarm;
-      isPrimaryAction = false;
-    } else {
-      actionBtnText = isActuallyCompleted ? 'เสร็จแล้ว' : 'บันทึก';
-      actionBtnIcon = isActuallyCompleted ? Icons.check : Icons.edit;
-      isPrimaryAction = !isActuallyCompleted;
-    }
-
-    // คำนวณเปอร์เซ็นต์
-    final double progressRatio = targetVal > 0
-        ? (currentVal / targetVal).clamp(0.0, 1.0)
-        : 0.0;
+    final double progressRatio = targetVal > 0 ? (currentVal / targetVal).clamp(0.0, 1.0) : 0.0;
     final int percent = (progressRatio * 100).toInt();
 
-    // ฟังก์ชันช่วยจัดรูปแบบตัวเลข (ซ่อน .0 ถ้าเป็นจำนวนเต็ม)
     String formatValue(double val) =>
         val == val.toInt() ? val.toInt().toString() : val.toStringAsFixed(1);
+
+    final buttonType = _getRoutineButtonType(routine, isWorkoutRoutine);
+
+    Widget actionButton;
+    if (buttonType == RoutineButtonType.workout) {
+      actionButton = ElevatedButton.icon(
+        onPressed: () {
+          if (widget.onNavigateToWorkout != null) {
+            widget.onNavigateToWorkout!(matchedType);
+          }
+        },
+        icon: const Icon(Icons.play_arrow_rounded, size: 16, color: Colors.white),
+        label: const Text(
+          'เริ่มเลย',
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF2E5327), // Forest Green #2E5327
+          elevation: 1,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+    } else if (isActuallyCompleted) {
+      actionButton = InkWell(
+        onTap: () async {
+          setState(() {
+            _todayProgressValues[routineId] = 0.0;
+          });
+          await _toggleRoutineCompletion(routineId);
+        },
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF2E5327),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.check_rounded, size: 14, color: Colors.white),
+              const SizedBox(width: 4),
+              Text(
+                buttonType == RoutineButtonType.stepAdd ? '✓ ครบแล้ว' : '✓ เสร็จแล้ว',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    } else if (buttonType == RoutineButtonType.stepAdd) {
+      final stepAmount = _calculateStepAmount(targetVal, unitText);
+      final stepStr = formatValue(stepAmount);
+      actionButton = InkWell(
+        onTap: () => _incrementRoutineValue(routineId, stepAmount, targetVal),
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFFE8F3EB),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFCBE3D3)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.add_rounded, size: 14, color: Color(0xFF2E5327)),
+              const SizedBox(width: 3),
+              Text(
+                '+$stepStr $unitText',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2E5327),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    } else if (buttonType == RoutineButtonType.timer) {
+      final durationMin = targetVal > 0 ? targetVal.toInt() : 15;
+      actionButton = InkWell(
+        onTap: () => _showCountdownTimerDialog(context, routine, durationMin),
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFFE8F3EB),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFCBE3D3)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.timer_outlined, size: 14, color: Color(0xFF2E5327)),
+              const SizedBox(width: 4),
+              Text(
+                '⏱️ $durationMin นาที',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2E5327),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    } else {
+      actionButton = InkWell(
+        onTap: () => _toggleRoutineCompletion(routineId),
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF2E5327).withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.add_task_rounded, size: 14, color: Color(0xFF2E5327)),
+              SizedBox(width: 4),
+              Text(
+                'บันทึก',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2E5327),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200, width: 1),
+        borderRadius: BorderRadius.circular(20), // ขอบมน 20px
+        border: Border.all(color: const Color(0xFFE2E9E0), width: 1.2), // ขอบอ่อน #E2E9E0
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // --- ส่วนบน (Icon, Text, Action Button) ---
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. ไอคอน
+              // ไอคอนทรงกลมพื้นหลังสีเขียวอ่อน #E8F3EB
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.15),
+                  color: const Color(0xFFE8F3EB),
                   shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFFCBE3D3)),
                 ),
-                child: Icon(icon, color: color, size: 24),
+                child: Icon(icon, color: const Color(0xFF2E5327), size: 24),
               ),
               const SizedBox(width: 14),
 
-              // 2. ชื่อกิจวัตร และ ป้ายเปอร์เซ็นต์
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1240,90 +1619,86 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
                             title,
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                              color: Color(0xFF1E293B),
+                              fontSize: 15.5,
+                              color: Color(0xFF1E281F),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.15),
+                            color: const Color(0xFF2E5327).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
                             '$percent%',
-                            style: TextStyle(
-                              fontSize: 10,
+                            style: const TextStyle(
+                              fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: color,
+                              color: Color(0xFF2E5327),
                             ),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      subtitleText,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
 
-              // 3. ปุ่ม Action และ เมนู 3 จุด
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  InkWell(
-                    onTap: () {
-                      // กดปุ่มนี้แล้วไปเรียกฟังก์ชันติ๊กเสร็จสิ้นที่มีอยู่เดิมในระบบ
-                      _toggleRoutineCompletion(routineId);
-                    },
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isPrimaryAction
-                            ? color
-                            : color.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
+                    // Badge "⚡ Auto-GPS Sync" สำหรับ Active Workout Routines
+                    if (isWorkoutRoutine) ...[
+                      Row(
                         children: [
-                          Icon(
-                            actionBtnIcon,
-                            size: 14,
-                            color: isPrimaryAction ? Colors.white : color,
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.shade50,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: Colors.orange.shade200),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.bolt_rounded, size: 12, color: Colors.orange.shade800),
+                                const SizedBox(width: 2),
+                                Text(
+                                  'Auto-GPS Sync',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.orange.shade900,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          const SizedBox(width: 4),
-                          Text(
-                            actionBtnText,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: isPrimaryAction ? Colors.white : color,
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'เป้าหมาย: ${formatValue(targetVal)} $unitText',
+                              style: TextStyle(fontSize: 11.5, color: Colors.grey.shade600),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
+                    ] else ...[
+                      Text(
+                        'เป้าหมายประจำวัน: ${formatValue(targetVal)} $unitText',
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+
+              // ปุ่ม Action ด้านขวา (ปุ่มลัดเริ่มเลย สำหรับ Workout หรือ ปุ่ม dynamic ตามประเภท)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  actionButton,
+                  const SizedBox(width: 2),
                   _buildThreeDotsMenu(
                     onEdit: () => _editRoutine(routine),
                     onDelete: () => _deleteRoutine(routineId, title),
@@ -1334,9 +1709,9 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
             ],
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
-          // --- ส่วนล่าง (Progress Bar) ---
+          // Progress bar
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -1346,22 +1721,22 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
               ),
               Text(
                 '${formatValue(currentVal)} / ${formatValue(targetVal)} $unitText ($percent%)',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: color,
-                  fontWeight: FontWeight.w600,
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  color: Color(0xFF2E5327),
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: progressRatio,
-              minHeight: 8,
-              backgroundColor: color.withValues(alpha: 0.15),
-              valueColor: AlwaysStoppedAnimation<Color>(color),
+              minHeight: 7,
+              backgroundColor: const Color(0xFFE2E9E0),
+              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF2E5327)),
             ),
           ),
         ],
@@ -1369,3 +1744,215 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     );
   }
 }
+
+enum RoutineButtonType {
+  workout,
+  stepAdd,
+  timer,
+  singleCheck,
+}
+
+/// Mini Countdown Timer Dialog Widget
+class _RoutineCountdownTimerModal extends StatefulWidget {
+  final String title;
+  final int durationMinutes;
+  final VoidCallback onTimerCompleted;
+
+  const _RoutineCountdownTimerModal({
+    required this.title,
+    required this.durationMinutes,
+    required this.onTimerCompleted,
+  });
+
+  @override
+  State<_RoutineCountdownTimerModal> createState() => _RoutineCountdownTimerModalState();
+}
+
+class _RoutineCountdownTimerModalState extends State<_RoutineCountdownTimerModal> {
+  late int _secondsRemaining;
+  late int _totalSeconds;
+  Timer? _timer;
+  bool _isRunning = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _totalSeconds = widget.durationMinutes * 60;
+    if (_totalSeconds <= 0) _totalSeconds = 60;
+    _secondsRemaining = _totalSeconds;
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    setState(() => _isRunning = true);
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return;
+      if (_secondsRemaining > 1) {
+        setState(() {
+          _secondsRemaining--;
+        });
+      } else {
+        _timer?.cancel();
+        setState(() {
+          _secondsRemaining = 0;
+          _isRunning = false;
+        });
+        Navigator.of(context).pop();
+        widget.onTimerCompleted();
+      }
+    });
+  }
+
+  void _pauseTimer() {
+    _timer?.cancel();
+    setState(() => _isRunning = false);
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  String get _formattedTime {
+    final minutes = (_secondsRemaining ~/ 60).toString().padLeft(2, '0');
+    final seconds = (_secondsRemaining % 60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final double progress = _totalSeconds > 0 ? (1.0 - (_secondsRemaining / _totalSeconds)) : 1.0;
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      backgroundColor: Colors.white,
+      elevation: 8,
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFE8F3EB),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.timer_rounded, color: Color(0xFF2E5327), size: 24),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'จับเวลาโฟกัส',
+                        style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        widget.title,
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E281F)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.grey),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Circular Countdown Display
+            SizedBox(
+              width: 180,
+              height: 180,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  SizedBox(
+                    width: 180,
+                    height: 180,
+                    child: CircularProgressIndicator(
+                      value: progress,
+                      strokeWidth: 10,
+                      backgroundColor: const Color(0xFFE2E9E0),
+                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF2E5327)),
+                    ),
+                  ),
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        _formattedTime,
+                        style: const TextStyle(
+                          fontSize: 42,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF2E5327),
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _isRunning ? 'กำลังจับเวลา...' : 'พักชั่วคราว',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: _isRunning ? const Color(0xFF2E5327) : Colors.orange.shade800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 28),
+
+            // Action Buttons
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                // Play / Pause Button
+                ElevatedButton.icon(
+                  onPressed: _isRunning ? _pauseTimer : _startTimer,
+                  icon: Icon(_isRunning ? Icons.pause_rounded : Icons.play_arrow_rounded, color: Colors.white),
+                  label: Text(_isRunning ? 'พักชั่วคราว' : 'เริ่มต่อ', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2E5327),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+
+                // Finish early button
+                OutlinedButton.icon(
+                  onPressed: () {
+                    _timer?.cancel();
+                    Navigator.of(context).pop();
+                    widget.onTimerCompleted();
+                  },
+                  icon: const Icon(Icons.check_circle_outline, color: Color(0xFF2E5327)),
+                  label: const Text('เสร็จแล้ว', style: TextStyle(color: Color(0xFF2E5327), fontWeight: FontWeight.bold)),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    side: const BorderSide(color: Color(0xFF2E5327), width: 1.5),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
