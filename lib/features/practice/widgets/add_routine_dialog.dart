@@ -372,70 +372,174 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
     );
   }
 
-  // --- Step 1: เป้าหมายหลัก และหมวดหมู่ ---
+  // --- Step 1: Visual Category Picker (การ์ดหมวดหมู่ขนาดใหญ่ สไตล์ CategorySelectionView) ---
   Widget _buildStep1Goal(Color btnColor) {
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Step 1: กำหนดเป้าหมายกิจกรรม 🎯',
+            'Step 1: เลือกหมวดหมู่ & ชื่อกิจวัตร 🎯',
             style: TextStyle(
               fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1E281F),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // 2.1 Visual Category Picker (เลือกหมวดหมู่ด้วยการ์ดใหญ่)
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
+            childAspectRatio: 2.2,
+            children: RoutineCategory.values.map((cat) {
+              final isSelected = cat == _selectedCategory;
+              return InkWell(
+                onTap: () => _onCategoryChanged(cat),
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? const Color(0xFF2E5327)
+                        : const Color(0xFFF4F7F4),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isSelected ? const Color(0xFF2E5327) : const Color(0xFFE2E9E0),
+                      width: 1.5,
+                    ),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: const Color(0xFF2E5327).withValues(alpha: 0.2),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? Colors.white.withValues(alpha: 0.2)
+                              : const Color(0xFFE8F3EB),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          cat.icon,
+                          size: 20,
+                          color: isSelected ? Colors.white : const Color(0xFF2E5327),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          cat.label,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: isSelected ? Colors.white : const Color(0xFF1E281F),
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _titleController,
+            onChanged: (val) {
+              // 2.2 Smart Workout Auto-Link (ตรวจจับ Keyword อัตโนมัติขณะพิมพ์)
+              final detected = _detectLinkedWorkout(val, _selectedCategory);
+              if (detected != _selectedLinkedWorkout) {
+                setState(() {
+                  _selectedLinkedWorkout = detected;
+                });
+              }
+            },
+            decoration: InputDecoration(
+              labelText: 'ชื่อกิจวัตร / นิสัย *',
+              hintText: 'เช่น วิ่งสเปรดเช้า, ปั่นจักรยานรอบสวน, ดื่มน้ำ 2000 มล.',
+              prefixIcon: const Icon(Icons.edit_note_rounded, color: Color(0xFF2E5327)),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: Color(0xFFE2E9E0)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: Color(0xFF2E5327), width: 1.8),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- Step 2: Smart Workout Auto-Link & Target Commitment ---
+  Widget _buildStep2DurationAndSync(Color btnColor) {
+    final autoDetected = _detectLinkedWorkout(_titleController.text.trim(), _selectedCategory);
+    final isAutoLinked = _selectedLinkedWorkout != null && _selectedLinkedWorkout!.isNotEmpty;
+
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Step 2: เป้าหมาย & เชื่อมโยง GPS ออกกำลังกาย 🔗',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1E281F),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // 2.3 Target & Goal Commitment (การกำหนดเป้าหมายที่ยืดหยุ่น)
+          const Text(
+            'กำหนดเป้าหมายเชิงปริมาณ',
+            style: TextStyle(
+              fontSize: 13.5,
               fontWeight: FontWeight.bold,
               color: Color(0xFF334155),
             ),
           ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _titleController,
-            decoration: InputDecoration(
-              labelText: 'ชื่อกิจวัตร / นิสัย *',
-              hintText: 'เช่น ดื่มน้ำ 1 แก้วใหญ่, วิ่งจ๊อกกิ้ง 30 นาที',
-              prefixIcon: Icon(Icons.edit_note_rounded, color: btnColor),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'เลือกหมวดหมู่กิจกรรม',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF475569),
-            ),
-          ),
           const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: RoutineCategory.values.map((cat) {
-              final isSelected = cat == _selectedCategory;
-              return ChoiceChip(
-                label: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      cat.icon,
-                      size: 16,
-                      color: isSelected ? Colors.white : cat.defaultColor,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(cat.label),
-                  ],
-                ),
-                selected: isSelected,
-                selectedColor: btnColor,
-                labelStyle: TextStyle(
-                  color: isSelected ? Colors.white : const Color(0xFF334155),
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                ),
-                onSelected: (_) => _onCategoryChanged(cat),
-              );
-            }).toList(),
+
+          // Quick Selector สำหรับเลือกหน่วย (สไตล์เดียวกับตัวเลือกแผนที่ Standard, Satellite, Hybrid)
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFE2E9E0)),
+            ),
+            child: Row(
+              children: [
+                _buildQuickUnitButton('กม.', 'ระยะทาง'),
+                _buildQuickUnitButton('นาที', 'เวลา'),
+                _buildQuickUnitButton('ครั้ง', 'จำนวน'),
+                _buildQuickUnitButton('มล.', 'โภชนาการ'),
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
+
           Row(
             children: [
               Expanded(
@@ -445,8 +549,8 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
                     labelText: 'เป้าหมายต่อวัน *',
-                    hintText: 'เช่น 2000, 30',
-                    prefixIcon: const Icon(Icons.flag_rounded),
+                    hintText: 'เช่น 5, 30, 2000',
+                    prefixIcon: const Icon(Icons.flag_rounded, color: Color(0xFF2E5327)),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -459,8 +563,7 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
                 child: TextFormField(
                   controller: _unitController,
                   decoration: InputDecoration(
-                    labelText: 'หน่วย *',
-                    hintText: 'มล. / นาที',
+                    labelText: 'หน่วยวัด',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -468,119 +571,128 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
                 ),
               ),
             ],
+          ),
+
+          const SizedBox(height: 18),
+
+          // 2.2 Smart Workout Auto-Link (ระบบตรวจจับกีฬาอัตโนมัติ)
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: isAutoLinked ? const Color(0xFFE8F3EB) : const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isAutoLinked ? const Color(0xFF2E5327) : const Color(0xFFCBD5E1),
+                width: 1.2,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.link_rounded,
+                            color: isAutoLinked ? const Color(0xFF2E5327) : Colors.grey,
+                            size: 22,
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              '🔗 เชื่อมโยงข้อมูล GPS ออกกำลังกายอัตโนมัติ',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: isAutoLinked ? const Color(0xFF2E5327) : const Color(0xFF334155),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: isAutoLinked,
+                      onChanged: (val) {
+                        setState(() {
+                          _selectedLinkedWorkout = val ? (autoDetected ?? 'วิ่ง') : null;
+                        });
+                      },
+                      activeThumbColor: const Color(0xFF2E5327),
+                    ),
+                  ],
+                ),
+                if (isAutoLinked) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFCBE3D3)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.bolt_rounded, size: 16, color: Colors.orange),
+                        const SizedBox(width: 6),
+                        Text(
+                          'ตรวจจับกีฬา: "${_selectedLinkedWorkout ?? autoDetected}" Auto-GPS Sync',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2E5327),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  // --- Step 2: ระยะเวลาของเป้าหมาย & การเชื่อมโยงข้อมูลออกกำลังกาย ---
-  Widget _buildStep2DurationAndSync(Color btnColor) {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Step 2: ความต่อเนื่อง และการซิงค์ข้อมูล 🔄',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF334155),
-            ),
+  Widget _buildQuickUnitButton(String unit, String label) {
+    final isSelected = _unitController.text.trim() == unit;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _unitController.text = unit;
+          });
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFF2E5327) : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
           ),
-          const SizedBox(height: 14),
-          const Text(
-            'ระยะเวลาการทำสัญญาพฤติกรรม (Goal Commitment)',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF475569),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
+          child: Column(
             children: [
-              Expanded(
-                flex: 2,
-                child: TextFormField(
-                  controller: _durationController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: 'จำนวนเวลา',
-                    prefixIcon: const Icon(Icons.date_range_rounded),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
+              Text(
+                unit,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: isSelected ? Colors.white : const Color(0xFF334155),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 1,
-                child: DropdownButtonFormField<String>(
-                  initialValue: _durationUnit,
-                  decoration: InputDecoration(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 16,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  items: ['วัน', 'เดือน', 'ปี'].map((String unit) {
-                    return DropdownMenuItem<String>(
-                      value: unit,
-                      child: Text(unit),
-                    );
-                  }).toList(),
-                  onChanged: (String? val) {
-                    if (val != null) setState(() => _durationUnit = val);
-                  },
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: isSelected ? Colors.white70 : Colors.grey.shade600,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFCBD5E1)),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.auto_awesome_rounded, color: Color(0xFF0EA5E9), size: 24),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'ระบบตรวจจับการออกกำลังกายอัตโนมัติ ⚡',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF0F172A),
-                        ),
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        'เมื่อระบุคำว่า วิ่ง, เดิน, ปั่นจักรยาน หรือลู่วิ่ง ระบบจะซิงค์สถิติกับกิจกรรมสุขภาพให้อัตโนมัติโดยไม่จำเป็นต้องเลือกซิงค์ด้วยตนเอง',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF475569),
-                          height: 1.3,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

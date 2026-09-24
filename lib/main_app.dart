@@ -55,6 +55,7 @@ class _MainAppShellState extends State<MainAppShell> {
           // 3: Routine (กิจวัตร)
           MyRoutinesPage(
             isActive: _currentIndex == 3,
+            onNavigateToWorkout: (category) => _onTabTapped(1),
           ),
           // 4: Profile (โปรไฟล์)
           const ProfileScreen(),
