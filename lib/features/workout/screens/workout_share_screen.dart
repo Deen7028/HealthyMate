@@ -144,11 +144,10 @@ class _WorkoutShareScreenState extends State<WorkoutShareScreen> {
       final file = await _generateImageFile();
       if (file == null) return;
 
-      await SharePlus.instance.share(
-        ShareParams(
-          files: [XFile(file.path)],
-          text: 'การออกกำลังกายวันนี้กับ HealthyMate 🍏',
-        ),
+      // ignore: deprecated_member_use
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'การออกกำลังกายวันนี้กับ HealthyMate 🍏',
       );
     } catch (e) {
       debugPrint('Share error: $e');

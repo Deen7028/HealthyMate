@@ -1,13 +1,15 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/auth_service.dart';
+import 'package:healthymate/core/services/location_background_service.dart';
 import 'package:healthymate/core/services/sync_service.dart';
+import 'package:healthymate/core/services/tts_service.dart';
 import '../models/workout_models.dart';
-
 
 class WorkoutTrackingState extends ChangeNotifier {
   WorkoutState _status = WorkoutState.selectingCategory;
@@ -18,6 +20,7 @@ class WorkoutTrackingState extends ChangeNotifier {
 
   Timer? _timer;
   StreamSubscription<Position>? _positionStreamSub;
+  StreamSubscription<dynamic>? _bgLocationSub;
   Position? _lastPosition;
   final List<LatLng> _routePoints = [];
   int _secondsElapsed = 0;
@@ -28,8 +31,14 @@ class WorkoutTrackingState extends ChangeNotifier {
   int _userId = 1;
   bool _isDisposed = false;
 
+  // Auto-pause & TTS variables
+  int _zeroSpeedSeconds = 0;
+  bool _isAutoPaused = false;
+  int _lastAnnouncedKm = 0;
+
   WorkoutTrackingState() {
     _loadUserData();
+    _listenBackgroundLocation();
   }
 
   // Getters
@@ -45,12 +54,15 @@ class WorkoutTrackingState extends ChangeNotifier {
   List<LatLng> get routePoints => List.unmodifiable(_routePoints);
   bool get isRunning => _status == WorkoutState.running;
   bool get isPaused => _status == WorkoutState.paused;
+  bool get isAutoPaused => _isAutoPaused;
 
   @override
   void dispose() {
     _isDisposed = true;
     _timer?.cancel();
     _positionStreamSub?.cancel();
+    _bgLocationSub?.cancel();
+    LocationBackgroundService.instance.stopTracking();
     super.dispose();
   }
 
@@ -74,12 +86,35 @@ class WorkoutTrackingState extends ChangeNotifier {
     }
   }
 
+  void _listenBackgroundLocation() {
+    final service = FlutterBackgroundService();
+    _bgLocationSub = service.on('updateLocation').listen((event) {
+      if (event == null || _status != WorkoutState.running) return;
+      final lat = (event['latitude'] as num?)?.toDouble();
+      final lng = (event['longitude'] as num?)?.toDouble();
+      final speed = (event['speed'] as num?)?.toDouble() ?? 0.0;
+      final accuracy = (event['accuracy'] as num?)?.toDouble() ?? 10.0;
+
+      if (lat != null && lng != null) {
+        _handleNewLocation(
+          latitude: lat,
+          longitude: lng,
+          speedMs: speed,
+          accuracy: accuracy,
+        );
+      }
+    });
+  }
+
   void selectCategory(WorkoutCategory category) {
     _selectedCategory = category;
     _status = WorkoutState.initial;
     _secondsElapsed = 0;
     _distanceKm = 0.0;
     _caloriesBurned = 0.0;
+    _zeroSpeedSeconds = 0;
+    _isAutoPaused = false;
+    _lastAnnouncedKm = 0;
     _routePoints.clear();
     _lastPosition = null;
     _safeNotifyListeners();
@@ -87,10 +122,14 @@ class WorkoutTrackingState extends ChangeNotifier {
 
   void returnToCategorySelection() {
     _timer?.cancel();
+    LocationBackgroundService.instance.stopTracking();
     _status = WorkoutState.selectingCategory;
     _secondsElapsed = 0;
     _distanceKm = 0.0;
     _caloriesBurned = 0.0;
+    _zeroSpeedSeconds = 0;
+    _isAutoPaused = false;
+    _lastAnnouncedKm = 0;
     _routePoints.clear();
     _lastPosition = null;
     _safeNotifyListeners();
@@ -116,22 +155,35 @@ class WorkoutTrackingState extends ChangeNotifier {
       return;
     }
     _status = WorkoutState.running;
+    _isAutoPaused = false;
+    _zeroSpeedSeconds = 0;
     _safeNotifyListeners();
 
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      _secondsElapsed++;
-      _safeNotifyListeners();
+      if (_status == WorkoutState.running && !_isAutoPaused) {
+        _secondsElapsed++;
+        _checkAutoPauseCondition();
+        _safeNotifyListeners();
+      }
     });
 
-    // 2. ฟังพิกัด GPS จริง เพื่อคำนวณระยะทางและแคลอรีเฉพาะเมื่อมีการเคลื่อนที่จริงๆ
+    LocationBackgroundService.instance.startTracking();
     _startLocationUpdates();
+  }
+
+  void _checkAutoPauseCondition() {
+    // หากความเร็วเข้าใกล้ 0 ต่อเนื่องเกิน 12 วินาที เข้าสู่สถานะ Auto-Pause
+    if (_zeroSpeedSeconds >= 12 && !_isAutoPaused) {
+      _isAutoPaused = true;
+      TtsService.instance.speak('หยุดการบันทึกชั่วคราวอัตโนมัติ');
+      _safeNotifyListeners();
+    }
   }
 
   void _startLocationUpdates() {
     _positionStreamSub?.cancel();
 
-    // รับตำแหน่งปัจจุบันเริ่มต้นเป็นจุดอ้างอิง
     Geolocator.getCurrentPosition(
       locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
     ).then((pos) {
@@ -144,52 +196,109 @@ class WorkoutTrackingState extends ChangeNotifier {
 
     const locationSettings = LocationSettings(
       accuracy: LocationAccuracy.high,
-      distanceFilter: 3, // อัปเดตเมื่อขยับเกิน 3 เมตร ป้องกัน GPS drift ตอนยืนนิ่ง
+      distanceFilter: 3,
     );
 
     _positionStreamSub = Geolocator.getPositionStream(
       locationSettings: locationSettings,
     ).listen((Position position) {
       if (_status != WorkoutState.running) return;
+      _handleNewLocation(
+        latitude: position.latitude,
+        longitude: position.longitude,
+        speedMs: position.speed,
+        accuracy: position.accuracy,
+      );
+    });
+  }
 
-      if (_lastPosition != null) {
-        // คำนวณระยะห่างระหว่างพิกัดเดิมกับพิกัดใหม่ (หน่วยเป็นเมตร)
-        final distanceInMeters = Geolocator.distanceBetween(
-          _lastPosition!.latitude,
-          _lastPosition!.longitude,
-          position.latitude,
-          position.longitude,
+  void _handleNewLocation({
+    required double latitude,
+    required double longitude,
+    required double speedMs,
+    required double accuracy,
+  }) {
+    // 1. ตรวจสอบความเร็วสำหรับ Auto-Pause (ความเร็วน้อยกว่า 0.3 m/s หรือ 1 km/h ถือว่าหยุดนิ่ง)
+    if (speedMs < 0.3) {
+      _zeroSpeedSeconds++;
+    } else {
+      _zeroSpeedSeconds = 0;
+      if (_isAutoPaused) {
+        _isAutoPaused = false;
+        TtsService.instance.speak('เริ่มบันทึกกิจกรรมต่ออัตโนมัติ');
+      }
+    }
+
+    if (_isAutoPaused) return;
+
+    if (_lastPosition != null) {
+      final distanceInMeters = Geolocator.distanceBetween(
+        _lastPosition!.latitude,
+        _lastPosition!.longitude,
+        latitude,
+        longitude,
+      );
+
+      if (distanceInMeters >= 2.5 && distanceInMeters < 150 && accuracy < 35 && speedMs < 25.0) {
+        final addedKm = distanceInMeters / 1000.0;
+        _distanceKm += addedKm;
+
+        final calorieFactorPerKm = _selectedCategory.id == 'walking'
+            ? 0.75
+            : (_selectedCategory.id == 'cycling' ? 0.35 : 1.03);
+        _caloriesBurned += addedKm * _userWeightKg * calorieFactorPerKm;
+
+        _lastPosition = Position(
+          longitude: longitude,
+          latitude: latitude,
+          timestamp: DateTime.now(),
+          accuracy: accuracy,
+          altitude: 0.0,
+          altitudeAccuracy: 0.0,
+          heading: 0.0,
+          headingAccuracy: 0.0,
+          speed: speedMs,
+          speedAccuracy: 0.0,
         );
 
-        // กรองสัญญาณ GPS แกว่ง (GPS Jitter / Noise):
-        // ถ้าขยับน้อยกว่า 2.5 เมตร หรือค่าความแม่นยำแย่เกินไป หรือความเร็วสูงผิดปกติ (>25 m/s หรือ 90 km/h) ให้ข้ามไป
-        final accuracy = position.accuracy;
-        final speedMs = position.speed;
-        if (distanceInMeters >= 2.5 && distanceInMeters < 150 && accuracy < 35 && speedMs < 25.0) {
-          final addedKm = distanceInMeters / 1000.0;
-          _distanceKm += addedKm;
+        _routePoints.add(LatLng(latitude, longitude));
 
-          // คำนวณแคลอรีจากการเคลื่อนที่จริง:
-          // แคลอรีตามระยะทาง: Calorie = ระยะทาง (km) * น้ำหนัก (kg) * ค่าแฟกเตอร์ของแต่ละกิจกรรม
-          final calorieFactorPerKm = _selectedCategory.id == 'walking'
-              ? 0.75
-              : (_selectedCategory.id == 'cycling' ? 0.35 : 1.03); // running
-          _caloriesBurned += addedKm * _userWeightKg * calorieFactorPerKm;
-
-          _lastPosition = position;
-          _routePoints.add(LatLng(position.latitude, position.longitude));
-          _safeNotifyListeners();
+        // 2. Voice Feedback: ทุกๆ 1 กิโลเมตร ให้ ขานบอกระยะทาง เวลา และ Pace
+        final currentKmFloor = _distanceKm.floor();
+        if (currentKmFloor > _lastAnnouncedKm && currentKmFloor >= 1) {
+          _lastAnnouncedKm = currentKmFloor;
+          final paceMinutesPerKm = _distanceKm > 0 ? (_secondsElapsed / 60.0) / _distanceKm : 0.0;
+          final paceStr = paceMinutesPerKm.toStringAsFixed(2);
+          TtsService.instance.announceWorkoutProgress(
+            distanceKm: _distanceKm,
+            secondsElapsed: _secondsElapsed,
+            paceText: paceStr,
+          );
         }
-      } else {
-        _lastPosition = position;
-        _routePoints.add(LatLng(position.latitude, position.longitude));
+
+        _safeNotifyListeners();
       }
-    });
+    } else {
+      _lastPosition = Position(
+        longitude: longitude,
+        latitude: latitude,
+        timestamp: DateTime.now(),
+        accuracy: accuracy,
+        altitude: 0.0,
+        altitudeAccuracy: 0.0,
+        heading: 0.0,
+        headingAccuracy: 0.0,
+        speed: speedMs,
+        speedAccuracy: 0.0,
+      );
+      _routePoints.add(LatLng(latitude, longitude));
+    }
   }
 
   void pauseWorkout() {
     _timer?.cancel();
     _positionStreamSub?.cancel();
+    LocationBackgroundService.instance.stopTracking();
     _status = WorkoutState.paused;
     _safeNotifyListeners();
   }
@@ -202,6 +311,7 @@ class WorkoutTrackingState extends ChangeNotifier {
   Future<bool> saveWorkout() async {
     _timer?.cancel();
     _positionStreamSub?.cancel();
+    LocationBackgroundService.instance.stopTracking();
 
     final savedDuration = _secondsElapsed;
     final savedDistance = double.parse(_distanceKm.toStringAsFixed(2));
@@ -233,6 +343,7 @@ class WorkoutTrackingState extends ChangeNotifier {
   void discardWorkout() {
     _timer?.cancel();
     _positionStreamSub?.cancel();
+    LocationBackgroundService.instance.stopTracking();
     _lastPosition = null;
     _routePoints.clear();
     returnToCategorySelection();
@@ -245,3 +356,4 @@ class WorkoutTrackingState extends ChangeNotifier {
     return '$hours:$minutes:$seconds';
   }
 }
+

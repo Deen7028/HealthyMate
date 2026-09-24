@@ -570,6 +570,32 @@ class AppDatabase {
     return user;
   }
 
+  /// ลบบัญชีผู้ใช้และข้อมูลทั้งหมดจาก SQLite ภายในเครื่อง (Cascade Local Account Deletion)
+  Future<void> deleteUserAccount(int userId) async {
+    if (kIsWeb) {
+      _webUsers.removeWhere((u) => u['nUserId'] == userId);
+      _webHealthRecords.removeWhere((r) => r['nUserId'] == userId);
+      return;
+    }
+
+    final db = await database;
+    if (db == null) return;
+
+    await db.transaction((txn) async {
+      await txn.rawDelete('DELETE FROM $tableRoutineLogs WHERE nRoutineId IN (SELECT nRoutineId FROM $tableRoutines WHERE nUserId = ?)', [userId]);
+      await txn.delete(tableRoutines, where: 'nUserId = ?', whereArgs: [userId]);
+      await txn.delete(tableHealthRecords, where: 'nUserId = ?', whereArgs: [userId]);
+      await txn.delete(tableNutritionLogs, where: 'nUserId = ?', whereArgs: [userId]);
+      await txn.delete(tableWorkouts, where: 'nUserId = ?', whereArgs: [userId]);
+      await txn.delete(tableHealthIntegrations, where: 'nUserId = ?', whereArgs: [userId]);
+      await txn.delete(tableUserBadges, where: 'nUserId = ?', whereArgs: [userId]);
+      await txn.delete('TbGoals', where: 'nUserId = ?', whereArgs: [userId]);
+      await txn.delete('TbUserPreferences', where: 'nUserId = ?', whereArgs: [userId]);
+      await txn.delete(tableUsers, where: 'nUserId = ?', whereArgs: [userId]);
+      await txn.delete(tableSession);
+    });
+  }
+
 
   // ==========================================
   // TbHealthRecords CRUD Operations
@@ -1384,8 +1410,8 @@ class AppDatabase {
         'targetValue': targetValue,
         'unit': unit,
         'sLinkedWorkout': linkedWorkout,
-        if (color != null) 'color': color,
-        if (iconData != null) 'iconData': iconData,
+        'color': ?color,
+        'iconData': ?iconData,
         'isNotificationActive': isNotificationActive ? 1 : 0,
         'dtCreatedAt': DateTime.now().toIso8601String(),
       });

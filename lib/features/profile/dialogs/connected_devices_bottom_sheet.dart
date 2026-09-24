@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:healthymate/core/services/health_kit_connect_service.dart';
 
 class ConnectedDevicesBottomSheet extends StatefulWidget {
   final List<Map<String, dynamic>> connectedDevices;
@@ -256,6 +257,37 @@ class _ConnectedDevicesBottomSheetState
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                onPressed: () async {
+                  final result = await HealthKitConnectService.instance.fetchTodayHealthData(1);
+                  if (context.mounted) {
+                    final steps = result['steps'];
+                    final hr = (result['heartRate'] as num?)?.toStringAsFixed(0);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('ซิงค์ HealthKit / Health Connect สำเร็จ: ก้าวเดิน $steps ก้าว, HR $hr bpm'),
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                    Navigator.pop(context);
+                  }
+                },
+                icon: const Icon(Icons.favorite_rounded, color: Colors.white),
+                label: const Text('ซิงค์ข้อมูลก้าวเดินและหัวใจ (HealthKit / Health Connect)'),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
               child: OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Theme.of(context).colorScheme.primary,
@@ -267,7 +299,7 @@ class _ConnectedDevicesBottomSheetState
                 ),
                 onPressed: _showAddDeviceDialog,
                 icon: const Icon(Icons.add_rounded),
-                label: const Text('ค้นหาและเพิ่มอุปกรณ์ใหม่'),
+                label: const Text('เพิ่มชื่ออุปกรณ์แบบระบุเอง'),
               ),
             ),
           ],

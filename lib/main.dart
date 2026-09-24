@@ -5,8 +5,10 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:healthymate/core/config/app_config.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/auth_service.dart';
+import 'package:healthymate/core/services/location_background_service.dart';
 import 'package:healthymate/core/services/sync_service.dart';
 import 'package:healthymate/core/services/theme_service.dart';
+import 'package:healthymate/core/services/tts_service.dart';
 import 'package:healthymate/core/theme/app_theme.dart';
 import 'package:healthymate/features/login/login_screen.dart';
 import 'package:healthymate/main_app.dart';
@@ -35,6 +37,8 @@ void main() async {
   await AuthService.instance.init();
   await ThemeService.instance.init();
   await SyncService.instance.init();
+  await LocationBackgroundService.instance.initialize();
+  await TtsService.instance.init();
   await GoogleSignIn.instance.initialize(
     serverClientId:
         '653331824744-1gcsv7spstab9sf5tlrs3e3qf21364su.apps.googleusercontent.com',

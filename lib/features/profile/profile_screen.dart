@@ -8,8 +8,10 @@ import 'package:path_provider/path_provider.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/api_service.dart';
 import 'package:healthymate/core/services/auth_service.dart';
+import 'package:healthymate/core/services/data_export_service.dart';
 import 'package:healthymate/core/services/sync_service.dart';
 import 'package:healthymate/core/services/theme_service.dart';
+import 'package:healthymate/core/theme/app_theme.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
 
 // Components, Dialogs & Shared
@@ -581,6 +583,88 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
     );
   }
 
+  Future<void> _handleExportCsv() async {
+    final userId = _currentUser?.nUserId ?? 1;
+    final path = await DataExportService.instance.exportDataToCsv(userId);
+    if (path != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('ส่งออกไฟล์ CSV สำเร็จเรียบร้อยแล้ว'),
+          backgroundColor: AppTheme.primaryGreen,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleExportPdf() async {
+    final userId = _currentUser?.nUserId ?? 1;
+    final path = await DataExportService.instance.exportDataToPdf(userId);
+    if (path != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('ส่งออกรายงานสรุป PDF สำเร็จเรียบร้อยแล้ว'),
+          backgroundColor: AppTheme.primaryGreen,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleDeleteAccount() async {
+    final user = _currentUser;
+    if (user == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
+            SizedBox(width: 8),
+            Text('ลบบัญชีและข้อมูลทั้งหมด', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red, fontSize: 18)),
+          ],
+        ),
+        content: const Text(
+          'คำเตือน: การลบบัญชีจะเป็นการทำลายประวัติสุขภาพ สถิติการออกกำลังกาย และข้อมูลทั้งหมดถาวรตามกฎหมาย PDPA/GDPR โดยไม่สามารถกู้คืนได้ คุณแน่ใจหรือไม่?',
+          style: TextStyle(fontSize: 14, color: Color(0xFF5A6559), height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('ยกเลิก', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('ลบบัญชีถาวร', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      setState(() => _isLoading = true);
+
+      // 1. เรียก API ทำลายข้อมูลบน Database Server
+      await HealthApiService.deleteAccount(userId: user.nUserId, email: user.sEmail);
+
+      // 2. ทำลายข้อมูล SQLite ในเครื่อง
+      await AppDatabase.instance.deleteUserAccount(user.nUserId);
+
+      // 3. เคลียร์ Google Session & App Session
+      try {
+        await GoogleSignIn.instance.signOut();
+      } catch (_) {}
+
+      if (mounted) {
+        await AuthService.instance.logout();
+      }
+    }
+  }
+
   Future<void> _handleLogout() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -737,6 +821,9 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
                 activeDeviceCount: activeDeviceCount,
                 onPersonalInfoTap: _showPersonalInfoBottomSheet,
                 onConnectedDevicesTap: _showConnectedDevicesBottomSheet,
+                onExportCsvTap: _handleExportCsv,
+                onExportPdfTap: _handleExportPdf,
+                onDeleteAccountTap: _handleDeleteAccount,
                 onLogoutTap: _handleLogout,
               ),
 

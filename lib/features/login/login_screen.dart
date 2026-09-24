@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/api_service.dart';
 import 'package:healthymate/core/services/auth_service.dart';
+import 'package:healthymate/core/services/biometric_apple_auth_service.dart';
 import 'package:healthymate/core/services/sync_service.dart';
 import 'package:healthymate/core/theme/app_theme.dart';
 import 'package:healthymate/features/auth/screens/forgot_password_screen.dart';
@@ -252,6 +253,36 @@ class _LoginScreenState extends State<LoginScreen> {
     _failedAttempts++;
     if (_failedAttempts >= 5) {
       _lockoutUntil = DateTime.now().add(const Duration(seconds: 30));
+    }
+  }
+
+  Future<void> _handleBiometricSignIn() async {
+    final available = await BiometricAuthService.instance.isBiometricAvailable();
+    if (!mounted) return;
+    if (!available) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('อุปกรณ์นี้ไม่รองรับหรือยังไม่ได้เปิดใช้งาน Biometric (FaceID/TouchID)'),
+          backgroundColor: Color(0xFF4A5568),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    final authenticated = await BiometricAuthService.instance.authenticate(
+      reason: 'ยืนยันตัวตนด้วย FaceID / TouchID เพื่อเข้าสู่ระบบ HealthyMate',
+    );
+    if (authenticated) {
+      final email = AuthService.instance.currentUserEmail;
+      if (email.isNotEmpty) {
+        await AuthService.instance.setLoginSession(email);
+        if (!mounted) return;
+        if (widget.onLoginSuccess != null) {
+          widget.onLoginSuccess!();
+        }
+      } else {
+        _showError('กรุณาล็อกอินด้วยอีเมลครั้งแรกเพื่อเปิดใช้งาน Biometric');
+      }
     }
   }
 
@@ -644,9 +675,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                             borderRadius: BorderRadius.circular(16),
                                           ),
                                         ),
-                                        child: Row(
+                                        child: const Row(
                                           mainAxisAlignment: MainAxisAlignment.center,
-                                          children: const [
+                                          children: [
                                             Icon(
                                               Icons.account_circle_outlined,
                                               color: AppTheme.textPrimary,
@@ -665,40 +696,22 @@ class _LoginScreenState extends State<LoginScreen> {
                                         ),
                                       ),
                                     ),
-
-                                    const SizedBox(width: 16),
-
-                                    // Apple Button
-                                    Expanded(
-                                      child: OutlinedButton(
-                                        onPressed: () => _handleSocialLogin('Apple'),
-                                        style: OutlinedButton.styleFrom(
-                                          padding: const EdgeInsets.symmetric(vertical: 14),
-                                          backgroundColor: AppTheme.subtleSurface,
-                                          side: const BorderSide(color: AppTheme.borderLight, width: 1.2),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(16),
-                                          ),
+                                    const SizedBox(width: 12),
+                                    IconButton(
+                                      onPressed: _handleBiometricSignIn,
+                                      tooltip: 'เข้าสู่ระบบด้วย Biometric (FaceID / Fingerprint)',
+                                      style: IconButton.styleFrom(
+                                        padding: const EdgeInsets.all(14),
+                                        backgroundColor: AppTheme.subtleSurface,
+                                        side: const BorderSide(color: AppTheme.borderLight, width: 1.2),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(16),
                                         ),
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: const [
-                                            Icon(
-                                              Icons.file_download_outlined,
-                                              color: AppTheme.textPrimary,
-                                              size: 20,
-                                            ),
-                                            SizedBox(width: 8),
-                                            Text(
-                                              'Apple',
-                                              style: TextStyle(
-                                                fontSize: 15,
-                                                fontWeight: FontWeight.w700,
-                                                color: AppTheme.textPrimary,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
+                                      ),
+                                      icon: const Icon(
+                                        Icons.fingerprint_rounded,
+                                        color: AppTheme.primaryGreen,
+                                        size: 24,
                                       ),
                                     ),
                                   ],

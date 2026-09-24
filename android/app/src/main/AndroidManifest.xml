@@ -2,6 +2,11 @@
     <!-- Permissions for GPS & Workout Tracking -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- Permissions for Camera & Photo Gallery -->
@@ -47,6 +52,12 @@
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyD28TcpyjZhUkMfkgbuzRDo1iIfnh0eM5A" />
+
+        <!-- Flutter Background Service -->
+        <service
+            android:name="id.flutter.flutter_background_service.BackgroundService"
+            android:foregroundServiceType="location"
+            android:exported="true" />
     </application>
 
     <!-- Required to query activities that can process text, see:

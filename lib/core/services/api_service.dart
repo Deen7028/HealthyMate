@@ -576,4 +576,31 @@ class HealthApiService {
       return {'status': 'error', 'message': 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้: $e'};
     }
   }
+
+  /// ลบบัญชีผู้ใช้และข้อมูลทั้งหมดจากระบบเซิร์ฟเวอร์ (PDPA/GDPR Account Deletion)
+  static Future<Map<String, dynamic>> deleteAccount({required int userId, required String email}) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/delete_account.php'),
+            headers: defaultHeaders,
+            body: jsonEncode({'nUserId': userId, 'sEmail': email}),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body is Map<String, dynamic>) {
+          return body;
+        }
+      }
+      return {
+        'status': 'error',
+        'message': 'ตอบกลับจากเซิร์ฟเวอร์ไม่ถูกต้อง (HTTP ${response.statusCode})',
+      };
+    } catch (e) {
+      return {'status': 'error', 'message': 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้: $e'};
+    }
+  }
 }
+

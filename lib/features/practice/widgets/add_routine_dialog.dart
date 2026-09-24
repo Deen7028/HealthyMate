@@ -219,7 +219,7 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
         isNotificationEnabled: _isNotificationEnabled,
         notificationTime: _notificationTimeController.text.trim(),
         repeatDays: ['จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.', 'อา.'],
-        linkedWorkoutType: autoLinkedWorkout,
+        linkedWorkoutType: _selectedLinkedWorkout ?? autoLinkedWorkout,
       );
 
       debugPrint(
