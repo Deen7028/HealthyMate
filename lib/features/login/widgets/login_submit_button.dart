@@ -1,0 +1,61 @@
+import 'package:flutter/material.dart';
+import 'package:healthymate/core/theme/app_theme.dart';
+
+class LoginSubmitButton extends StatelessWidget {
+  final bool isLoading;
+  final VoidCallback onSubmit;
+
+  const LoginSubmitButton({
+    super.key,
+    required this.isLoading,
+    required this.onSubmit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 54,
+      child: ElevatedButton(
+        onPressed: isLoading ? null : onSubmit,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppTheme.primaryGreen,
+          foregroundColor: Colors.white,
+          elevation: 2,
+          shadowColor: const Color(0x662E6339),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
+        ),
+        child: isLoading
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2.5,
+                ),
+              )
+            : const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'เข้าสู่ระบบ',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  Icon(
+                    Icons.arrow_forward_rounded,
+                    size: 20,
+                    color: Colors.white,
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+}

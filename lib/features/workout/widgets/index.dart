@@ -5,3 +5,7 @@ export 'workout_bottom_controls.dart';
 export 'workout_dialog_utils.dart';
 export 'workout_map_view.dart';
 export 'workout_top_stats_card.dart';
+export 'workout_history_empty_card.dart';
+export 'workout_history_item_card.dart';
+export 'workout_share_card.dart';
+export 'workout_share_actions.dart';

@@ -5,3 +5,6 @@ export 'routine_card_widget.dart';
 export 'routine_countdown_timer_modal.dart';
 export 'routine_main_goal_card.dart';
 export 'routine_top_overview_banner.dart';
+export 'routine_step_category.dart';
+export 'routine_step_goal.dart';
+export 'routine_step_style.dart';
