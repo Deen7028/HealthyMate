@@ -3,9 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/sync_service.dart';
 import 'package:healthymate/core/theme/app_theme.dart';
-import 'package:healthymate/features/food_recognition/dialogs/edit_food_item_dialog.dart';
-import 'package:healthymate/features/food_recognition/dialogs/gemini_api_key_dialog.dart';
 import 'package:healthymate/features/food_recognition/models/food_recognition_models.dart';
+import 'index.dart';
 
 class FoodRecognitionResultSheet extends StatefulWidget {
   final MealNutritionScanResult scanResult;
@@ -72,6 +71,20 @@ class _FoodRecognitionResultSheetState extends State<FoodRecognitionResultSheet>
     setState(() {
       _result.items.removeAt(index);
     });
+  }
+
+  Future<void> _openApiKeyDialog() async {
+    final user = await AppDatabase.instance.getUser();
+    final userId = user?.nUserId ?? 1;
+    final currentKey = await AppDatabase.instance.getGeminiApiKey(userId);
+    if (mounted) {
+      GeminiApiKeyDialog.show(
+        context,
+        userId: userId,
+        currentKey: currentKey,
+        onSaved: (_) {},
+      );
+    }
   }
 
   Future<void> _saveMealToDatabase() async {
@@ -200,19 +213,7 @@ class _FoodRecognitionResultSheetState extends State<FoodRecognitionResultSheet>
                 ),
                 IconButton(
                   tooltip: 'ตั้งค่า Gemini API Key',
-                  onPressed: () async {
-                    final user = await AppDatabase.instance.getUser();
-                    final userId = user?.nUserId ?? 1;
-                    final currentKey = await AppDatabase.instance.getGeminiApiKey(userId);
-                    if (context.mounted) {
-                      GeminiApiKeyDialog.show(
-                        context,
-                        userId: userId,
-                        currentKey: currentKey,
-                        onSaved: (_) {},
-                      );
-                    }
-                  },
+                  onPressed: _openApiKeyDialog,
                   icon: const Icon(Icons.vpn_key_outlined, color: Color(0xFF6F7A72), size: 20),
                 ),
                 IconButton(
@@ -305,7 +306,13 @@ class _FoodRecognitionResultSheetState extends State<FoodRecognitionResultSheet>
                   const SizedBox(height: 18),
 
                   // Macronutrients Summary Banner Card
-                  _buildNutritionSummaryCard(primaryColor),
+                  FoodNutritionSummaryCard(
+                    totalCalories: _result.totalCalories,
+                    totalProtein: _result.totalProtein,
+                    totalCarbs: _result.totalCarbs,
+                    totalFat: _result.totalFat,
+                    primaryColor: primaryColor,
+                  ),
 
                   const SizedBox(height: 22),
 
@@ -356,96 +363,22 @@ class _FoodRecognitionResultSheetState extends State<FoodRecognitionResultSheet>
 
                   // Items List
                   if (_result.items.isEmpty)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF9FAF9),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: const Color(0xFFE5EAE6)),
-                      ),
-                      child: Column(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.amber.shade50,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(Icons.info_outline_rounded, size: 28, color: Colors.amber.shade800),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            _result.hasApiKey
-                                ? 'ไม่สามารถจำแนกรายการของกินจากภาพนี้ได้'
-                                : 'ยังไม่ได้ตั้งค่า Google Gemini API Key',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF2D3830),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            !_result.hasApiKey
-                                ? 'กรุณากดปุ่ม "ตั้งค่า Gemini API Key" เพื่อให้ AI ช่วยสแกนและวิเคราะห์สารอาหารอัตโนมัติ หรือกด "เพิ่มเมนูอาหาร" เพื่อระบุด้วยตนเอง'
-                                : (_result.errorMessage != null && _result.errorMessage!.isNotEmpty)
-                                    ? '${_result.errorMessage}\nคุณสามารถกดปุ่ม "เพิ่มเมนูอาหาร" เพื่อระบุข้อมูลด้วยตนเอง'
-                                    : 'ภาพถ่ายอาจมีแสงสะท้อน มืดเกินไป หรือไม่ชัดเจน\nคุณสามารถกดปุ่ม "เพิ่มเมนูอาหาร" ด้านล่างเพื่อระบุรายการอาหารและโภชนาการได้ทันที',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: Color(0xFF7A867E), fontSize: 12, height: 1.4),
-                          ),
-                          const SizedBox(height: 14),
-                          Wrap(
-                            alignment: WrapAlignment.center,
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              ElevatedButton.icon(
-                                onPressed: _addNewItem,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: primaryColor,
-                                  foregroundColor: Colors.white,
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                ),
-                                icon: const Icon(Icons.add_rounded, size: 18),
-                                label: const Text('เพิ่มเมนูอาหาร', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                              ),
-                              OutlinedButton.icon(
-                                onPressed: () async {
-                                  final user = await AppDatabase.instance.getUser();
-                                  final userId = user?.nUserId ?? 1;
-                                  final currentKey = await AppDatabase.instance.getGeminiApiKey(userId);
-                                  if (context.mounted) {
-                                    GeminiApiKeyDialog.show(
-                                      context,
-                                      userId: userId,
-                                      currentKey: currentKey,
-                                      onSaved: (_) {},
-                                    );
-                                  }
-                                },
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: primaryColor,
-                                  side: BorderSide(color: primaryColor.withValues(alpha: 0.4)),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                ),
-                                icon: const Icon(Icons.vpn_key_rounded, size: 16),
-                                label: const Text('ตั้งค่า Gemini API Key', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                    EmptyFoodRecognitionCard(
+                      hasApiKey: _result.hasApiKey,
+                      errorMessage: _result.errorMessage,
+                      primaryColor: primaryColor,
+                      onAddNewItem: _addNewItem,
+                      onOpenApiKeyDialog: _openApiKeyDialog,
                     )
                   else
                     ..._result.items.asMap().entries.map((entry) {
                       final index = entry.key;
                       final item = entry.value;
-                      return _buildFoodItemCard(item, index, primaryColor);
+                      return DetectedFoodItemCard(
+                        item: item,
+                        onEdit: () => _editItem(index),
+                        onDelete: () => _removeItem(index),
+                      );
                     }),
                 ],
               ),
@@ -500,202 +433,6 @@ class _FoodRecognitionResultSheetState extends State<FoodRecognitionResultSheet>
                 ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNutritionSummaryCard(Color primaryColor) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF7FAF8),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE2EBE5), width: 1.2),
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'พลังงานรวมทั้งสิ้น',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF5A6559),
-                ),
-              ),
-              RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(
-                      text: '${_result.totalCalories}',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w900,
-                        color: primaryColor,
-                      ),
-                    ),
-                    const TextSpan(
-                      text: ' kcal',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF7A867E),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          const Divider(height: 1, color: Color(0xFFE2EBE5)),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildMacroItem(
-                label: 'โปรตีน (P)',
-                value: '${_result.totalProtein.toStringAsFixed(1)}g',
-                color: const Color(0xFF2E6339),
-                icon: Icons.egg_alt_outlined,
-              ),
-              Container(width: 1, height: 32, color: const Color(0xFFE2EBE5)),
-              _buildMacroItem(
-                label: 'คาร์โบไฮเดรต (C)',
-                value: '${_result.totalCarbs.toStringAsFixed(1)}g',
-                color: const Color(0xFFD48220),
-                icon: Icons.grain_rounded,
-              ),
-              Container(width: 1, height: 32, color: const Color(0xFFE2EBE5)),
-              _buildMacroItem(
-                label: 'ไขมัน (F)',
-                value: '${_result.totalFat.toStringAsFixed(1)}g',
-                color: const Color(0xFFC74848),
-                icon: Icons.water_drop_outlined,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMacroItem({
-    required String label,
-    required String value,
-    required Color color,
-    required IconData icon,
-  }) {
-    return Column(
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: color),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 11,
-                color: Color(0xFF6F7A72),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w800,
-            color: color,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFoodItemCard(DetectedFoodItem item, int index, Color primaryColor) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE6ECE8), width: 1.1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Food Icon
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF2F6F3),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.fastfood_rounded, color: Color(0xFF4B6353), size: 20),
-          ),
-          const SizedBox(width: 12),
-
-          // Title & Details
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.name,
-                  style: const TextStyle(
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1E2822),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${item.servingSize} • P:${item.protein.toStringAsFixed(1)}g  C:${item.carbs.toStringAsFixed(1)}g  F:${item.fat.toStringAsFixed(1)}g',
-                  style: const TextStyle(fontSize: 11.5, color: Color(0xFF7A867E)),
-                ),
-              ],
-            ),
-          ),
-
-          // Calories Badge
-          Text(
-            '${item.calories} kcal',
-            style: const TextStyle(
-              fontSize: 13.5,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFFD65838),
-            ),
-          ),
-
-          // Edit Button
-          IconButton(
-            onPressed: () => _editItem(index),
-            icon: const Icon(Icons.edit_outlined, size: 18, color: Color(0xFF6F7A72)),
-            visualDensity: VisualDensity.compact,
-            tooltip: 'ปรับแต่งปริมาณ/ส่วนผสม',
-          ),
-
-          // Delete Button
-          IconButton(
-            onPressed: () => _removeItem(index),
-            icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.redAccent),
-            visualDensity: VisualDensity.compact,
-            tooltip: 'ลบรายการนี้',
           ),
         ],
       ),

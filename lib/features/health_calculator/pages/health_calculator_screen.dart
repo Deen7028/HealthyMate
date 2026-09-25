@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/theme/app_theme.dart';
-import 'package:healthymate/features/health_calculator/state/health_calculator_state.dart';
+import 'package:healthymate/features/health_calculator/controllers/health_calculator_state.dart';
 import 'package:healthymate/features/health_calculator/widgets/index.dart';
 
 class HealthCalculatorScreen extends StatefulWidget {
@@ -344,7 +344,7 @@ class _HealthCalculatorScreenState extends State<HealthCalculatorScreen> {
                 const SizedBox(height: 18),
 
                 // Age Input with inline Error feedback
-                _buildInputField(
+                HealthCalculatorInputField(
                   label: 'อายุ',
                   controller: _ageController,
                   focusNode: _ageFocusNode,
@@ -361,7 +361,7 @@ class _HealthCalculatorScreenState extends State<HealthCalculatorScreen> {
                 const SizedBox(height: 18),
 
                 // Height Input with inline Error feedback
-                _buildInputField(
+                HealthCalculatorInputField(
                   label: 'ส่วนสูง',
                   controller: _heightController,
                   focusNode: _heightFocusNode,
@@ -378,7 +378,7 @@ class _HealthCalculatorScreenState extends State<HealthCalculatorScreen> {
                 const SizedBox(height: 18),
 
                 // Weight Input with inline Error feedback
-                _buildInputField(
+                HealthCalculatorInputField(
                   label: 'น้ำหนัก',
                   controller: _weightController,
                   focusNode: _weightFocusNode,
@@ -437,7 +437,7 @@ class _HealthCalculatorScreenState extends State<HealthCalculatorScreen> {
                 // Results Section (ครอบด้วย ListenableBuilder เฉพาะส่วนนี้เพื่อลด Over-Rebuilding UI)
                 ListenableBuilder(
                   listenable: widget.state,
-                  builder: (context, _) => _buildResultSection(widget.state),
+                  builder: (context, _) => HealthCalculatorResultSection(state: widget.state),
                 ),
 
                 const SizedBox(height: 20),
@@ -472,276 +472,6 @@ class _HealthCalculatorScreenState extends State<HealthCalculatorScreen> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildInputField({
-    required String label,
-    required TextEditingController controller,
-    required FocusNode focusNode,
-    required String suffixText,
-    required TextInputType keyboardType,
-    String? errorText,
-    ValueChanged<String>? onChanged,
-  }) {
-    final hasError = errorText != null;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-            color: AppTheme.textPrimary,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          height: 50,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: hasError ? Colors.redAccent : AppTheme.borderLight,
-              width: hasError ? 1.5 : 1.2,
-            ),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  keyboardType: keyboardType,
-                  onChanged: onChanged,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimary,
-                  ),
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: Text(
-                  suffixText,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    color: AppTheme.textSecondary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (hasError) ...[
-          const SizedBox(height: 6),
-          Padding(
-            padding: const EdgeInsets.only(left: 4),
-            child: Row(
-              children: [
-                const Icon(Icons.error_outline_rounded, size: 14, color: Colors.redAccent),
-                const SizedBox(width: 4),
-                Text(
-                  errorText,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.redAccent,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildResultSection(HealthCalculatorState state) {
-    final bmiCategory = state.bmiCategory;
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.borderLight, width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Result Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE8F3EB),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.analytics_outlined,
-                      size: 20,
-                      color: AppTheme.primaryGreen,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  const Text(
-                    'ผลลัพธ์การวิเคราะห์',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                      color: AppTheme.textPrimary,
-                    ),
-                  ),
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE8F3EB),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  bmiCategory.badgeText,
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.primaryGreen,
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-          const Divider(height: 1, color: AppTheme.borderLight),
-          const SizedBox(height: 16),
-
-          // BMI Display
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'ดัชนีมวลกาย (BMI)',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  RichText(
-                    text: TextSpan(
-                      text: state.bmi.toStringAsFixed(1),
-                      style: const TextStyle(
-                        fontSize: 34,
-                        fontWeight: FontWeight.w900,
-                        color: AppTheme.textPrimary,
-                        letterSpacing: -1,
-                      ),
-                      children: const [
-                        TextSpan(
-                          text: ' kg/m²',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: const [
-                  Text(
-                    'เกณฑ์สุขภาพดี',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.primaryGreen,
-                    ),
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    '18.5 - 22.9',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 14),
-
-          // BMI Indicator Bar
-          BMIIndicatorBar(bmi: state.bmi, category: bmiCategory),
-
-          const SizedBox(height: 20),
-
-          // BMR & TDEE 2 Cards
-          Row(
-            children: [
-              Expanded(
-                child: EnergyMetricCard(
-                  icon: Icons.hotel_outlined,
-                  title: 'BMR (ขณะพัก)',
-                  value: state.bmr.toInt().toString(),
-                  unit: 'kcal',
-                  description: 'พลังงานต่ำสุดที่ร่างกายต้องการ',
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: EnergyMetricCard(
-                  icon: Icons.local_fire_department_outlined,
-                  title: 'TDEE (ใช้จริง/วัน)',
-                  value: state.tdee.toInt().toString(),
-                  unit: 'kcal',
-                  description: 'พลังงานรวมที่เผาผลาญต่อวัน',
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // Calorie Targets Section
-          CalorieTargetSection(targets: state.targets),
-        ],
       ),
     );
   }

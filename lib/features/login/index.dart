@@ -1,1 +1,1 @@
-export 'package:healthymate/features/login/login_screen.dart';
+export 'pages/login_screen.dart';

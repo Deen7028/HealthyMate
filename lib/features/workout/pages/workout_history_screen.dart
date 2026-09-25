@@ -4,7 +4,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/sync_service.dart';
 import 'package:healthymate/core/theme/app_theme.dart';
-import 'package:healthymate/features/workout/screens/workout_share_screen.dart';
+import 'package:healthymate/features/workout/pages/workout_share_screen.dart';
 import 'package:healthymate/features/workout/widgets/history_route_painter.dart';
 
 /// หน้าแสดงประวัติการออกกำลังกายจากตาราง TbWorkouts

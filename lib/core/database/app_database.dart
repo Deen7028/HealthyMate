@@ -1592,7 +1592,7 @@ class AppDatabase {
           'nRoutineId': routineId,
           'isCompleted': isCompleted ? 1 : 0,
           'dtLogDate': dateStr,
-          if (progressValue != null) 'nProgressValue': progressValue,
+          ...?progressValue != null ? {'nProgressValue': progressValue} : null,
         });
       } else {
         final Map<String, dynamic> updateData = {

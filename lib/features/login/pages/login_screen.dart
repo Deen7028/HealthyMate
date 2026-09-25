@@ -5,9 +5,9 @@ import 'package:healthymate/core/services/auth_service.dart';
 import 'package:healthymate/core/services/biometric_apple_auth_service.dart';
 import 'package:healthymate/core/services/sync_service.dart';
 import 'package:healthymate/core/theme/app_theme.dart';
-import 'package:healthymate/features/auth/screens/forgot_password_screen.dart';
+import 'package:healthymate/features/auth/pages/forgot_password_screen.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
-import 'package:healthymate/features/register/register_screen.dart';
+import 'package:healthymate/features/register/pages/register_screen.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class LoginScreen extends StatefulWidget {

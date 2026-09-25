@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/features/workout/models/workout_models.dart';
-import 'package:healthymate/features/workout/screens/workout_history_screen.dart';
+import 'package:healthymate/features/workout/pages/workout_history_screen.dart';
 
 class CategorySelectionView extends StatelessWidget {
   final WorkoutCategory selectedCategory;

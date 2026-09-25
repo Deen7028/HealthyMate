@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:healthymate/features/dashboard/dashboard_page.dart';
-import 'package:healthymate/features/health_calculator/screens/health_calculator_screen.dart';
-import 'package:healthymate/features/health_calculator/state/health_calculator_state.dart';
-import 'package:healthymate/features/practice/routine_notification_page.dart';
-import 'package:healthymate/features/profile/profile_screen.dart';
-import 'package:healthymate/features/workout/workout_tracking_screen.dart';
-import 'package:healthymate/features/food_recognition/dialogs/food_source_bottom_sheet.dart';
+import 'package:healthymate/features/dashboard/pages/dashboard_page.dart';
+import 'package:healthymate/features/health_calculator/pages/health_calculator_screen.dart';
+import 'package:healthymate/features/health_calculator/controllers/health_calculator_state.dart';
+import 'package:healthymate/features/practice/pages/routine_notification_page.dart';
+import 'package:healthymate/features/profile/pages/profile_screen.dart';
+import 'package:healthymate/features/workout/pages/workout_tracking_screen.dart';
+import 'package:healthymate/features/food_recognition/widgets/food_source_bottom_sheet.dart';
 import 'package:healthymate/shared/widgets/vitality_bottom_nav_bar.dart';
 
 class MainAppShell extends StatefulWidget {

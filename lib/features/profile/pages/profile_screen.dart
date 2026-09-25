@@ -15,18 +15,8 @@ import 'package:healthymate/core/theme/app_theme.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
 
 // Components, Dialogs & Shared
-import 'package:healthymate/features/profile/widgets/profile_top_bar.dart';
-import 'package:healthymate/features/profile/widgets/profile_header_card.dart';
-import 'package:healthymate/features/profile/widgets/quick_stats_card.dart';
-import 'package:healthymate/features/profile/widgets/settings_card.dart';
-import 'package:healthymate/features/profile/widgets/account_card.dart';
-import 'package:healthymate/features/profile/widgets/profile_footer.dart';
-import 'package:healthymate/features/profile/dialogs/edit_profile_dialog.dart';
-import 'package:healthymate/features/profile/dialogs/unit_picker_bottom_sheet.dart';
-import 'package:healthymate/features/profile/dialogs/connected_devices_bottom_sheet.dart';
-import 'package:healthymate/features/profile/dialogs/personal_info_bottom_sheet.dart';
-import 'package:healthymate/features/profile/dialogs/logout_confirm_dialog.dart';
-import 'package:healthymate/features/food_recognition/dialogs/gemini_api_key_dialog.dart';
+import '../widgets/index.dart';
+import 'package:healthymate/features/food_recognition/widgets/gemini_api_key_dialog.dart';
 import 'package:healthymate/shared/dialogs/edit_goal_dialog.dart';
 
 /// หน้าโปรไฟล์และการตั้งค่า HealthyMate

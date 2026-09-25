@@ -10,7 +10,7 @@ import 'package:healthymate/core/services/sync_service.dart';
 import 'package:healthymate/core/services/theme_service.dart';
 import 'package:healthymate/core/services/tts_service.dart';
 import 'package:healthymate/core/theme/app_theme.dart';
-import 'package:healthymate/features/login/login_screen.dart';
+import 'package:healthymate/features/login/pages/login_screen.dart';
 import 'package:healthymate/main_app.dart';
 
 class MyHttpOverrides extends HttpOverrides {

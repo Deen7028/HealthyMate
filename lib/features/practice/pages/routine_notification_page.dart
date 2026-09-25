@@ -3,12 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/api_service.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
-import 'dialogs/routine_countdown_timer_modal.dart';
-import 'models/routine_item.dart';
-import 'widgets/add_routine_dialog.dart';
-import 'widgets/routine_card_widget.dart';
-import 'widgets/routine_top_overview_banner.dart';
-import 'widgets/routine_main_goal_card.dart';
+import '../models/routine_item.dart';
+import '../widgets/index.dart';
 
 class MyRoutinesPage extends StatefulWidget {
   final bool isActive;
@@ -813,8 +809,9 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     // ถ้าไม่มีเวลา ดูจาก keyword
     if (time.contains('เช้า') || time.contains('Morning')) return 'morning';
     if (time.contains('บ่าย') || time.contains('Afternoon')) return 'afternoon';
-    if (time.contains('เย็น') || time.contains('คืน') || time.contains('Night'))
+    if (time.contains('เย็น') || time.contains('คืน') || time.contains('Night')) {
       return 'night';
+    }
     return 'other';
   }
 
@@ -1118,54 +1115,6 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     );
   }
 
-  Widget _buildBannerStatTile({
-    required String label,
-    required String value,
-    required String unit,
-    required IconData icon,
-  }) {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 13, color: const Color(0xFF90DB89)),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFFA0ACA0),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 2),
-        RichText(
-          text: TextSpan(
-            text: value,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
-              color: Colors.white,
-            ),
-            children: [
-              TextSpan(
-                text: ' $unit',
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFFA0ACA0),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
   // --- Routine Card จาก Database (Unified Routine Cards แบบใหม่) ---
   Widget _buildRoutineCardFromDb(Map<String, dynamic> routine, int index) {
     final routineId = (routine['nRoutineId'] as num?)?.toInt() ?? 0;
@@ -1185,14 +1134,15 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     // ดึงประเภทการออกกำลังกายที่เชื่อมไว้
     String matchedType = routine['sLinkedWorkout']?.toString() ?? '';
     if (matchedType.isEmpty) {
-      if (lowerTitle.contains('วิ่ง'))
+      if (lowerTitle.contains('วิ่ง')) {
         matchedType = 'วิ่ง';
-      else if (lowerTitle.contains('เดิน'))
+      } else if (lowerTitle.contains('เดิน')) {
         matchedType = 'เดิน';
-      else if (lowerTitle.contains('จักรยาน') || lowerTitle.contains('ปั่น'))
+      } else if (lowerTitle.contains('จักรยาน') || lowerTitle.contains('ปั่น')) {
         matchedType = 'ปั่นจักรยาน';
-      else if (lowerTitle.contains('ลู่วิ่ง'))
+      } else if (lowerTitle.contains('ลู่วิ่ง')) {
         matchedType = 'ลู่วิ่งในร่ม';
+      }
     }
 
     final bool isWorkoutRoutine =

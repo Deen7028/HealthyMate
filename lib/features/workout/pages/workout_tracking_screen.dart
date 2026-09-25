@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:healthymate/features/workout/models/workout_models.dart';
-import 'package:healthymate/features/workout/state/workout_tracking_state.dart';
+import 'package:healthymate/features/workout/controllers/workout_tracking_state.dart';
 import 'package:healthymate/features/workout/widgets/workout_dialog_utils.dart';
 import 'package:healthymate/features/workout/widgets/category_selection_view.dart';
 import 'package:healthymate/features/workout/widgets/workout_top_stats_card.dart';
