@@ -12,7 +12,8 @@ if ($method !== 'GET') {
     exit();
 }
 
-$userId = isset($_GET['nUserId']) ? intval($_GET['nUserId']) : 1;
+$authUserId = getAuthenticatedUserId();
+$userId = $authUserId !== null ? $authUserId : (isset($_GET['nUserId']) ? intval($_GET['nUserId']) : 1);
 $today = date('Y-m-d');
 
 try {
@@ -21,62 +22,49 @@ try {
     $stmtUser->execute([':userId' => $userId]);
     $user = $stmtUser->fetch();
 
-    // 2. Health Record ล่าสุด
-    $stmtHR = $conn->prepare("
-        SELECT * FROM TbHealthRecords 
-        WHERE nUserId = :userId 
-        ORDER BY dtRecordedAt DESC 
-        LIMIT 1
-    ");
+    // 2. Health Record ล่าสุด และ Goal ล่าสุด
+    $stmtHR = $conn->prepare("SELECT * FROM TbHealthRecords WHERE nUserId = :userId ORDER BY dtRecordedAt DESC LIMIT 1");
     $stmtHR->execute([':userId' => $userId]);
     $latestHealthRecord = $stmtHR->fetch();
 
-    // 3. สถิติ Workouts
-    $stmtWorkout = $conn->prepare("
-        SELECT 
-            COUNT(*) as totalCount,
-            COALESCE(SUM(nDistance), 0) as totalDistance,
-            COALESCE(SUM(nCaloriesBurned), 0) as totalCalories,
-            COALESCE(SUM(nDuration), 0) as totalDuration
-        FROM TbWorkouts 
-        WHERE nUserId = :userId
-    ");
-    $stmtWorkout->execute([':userId' => $userId]);
-    $workoutStats = $stmtWorkout->fetch();
-
-    // 4. Nutrition วันนี้
-    $stmtNutrition = $conn->prepare("
-        SELECT COALESCE(SUM(nCalories), 0) as totalCalories, COUNT(*) as logCount
-        FROM TbNutritionLogs 
-        WHERE nUserId = :userId AND dtLoggedAt LIKE :today
-    ");
-    $stmtNutrition->execute([':userId' => $userId, ':today' => "$today%"]);
-    $nutritionToday = $stmtNutrition->fetch();
-
-    // 5. เป้าหมายหลัก
-    $stmtGoal = $conn->prepare("
-        SELECT * FROM TbGoals 
-        WHERE nUserId = :userId 
-        ORDER BY nGoalId DESC 
-        LIMIT 1
-    ");
+    $stmtGoal = $conn->prepare("SELECT * FROM TbGoals WHERE nUserId = :userId ORDER BY nGoalId DESC LIMIT 1");
     $stmtGoal->execute([':userId' => $userId]);
     $goal = $stmtGoal->fetch();
 
-    // 6. กิจวัตรสำเร็จวันนี้
-    $stmtRoutineCount = $conn->prepare("
-        SELECT COUNT(*) as totalRoutines FROM TbRoutines WHERE nUserId = :userId
+    // 3. รวมสถิติ Workouts, Nutrition, Routines ใน Query เดียว (Combined Query Optimization)
+    $stmtCombined = $conn->prepare("
+        SELECT 
+            (SELECT COUNT(*) FROM TbWorkouts WHERE nUserId = :u1) as totalWorkoutCount,
+            (SELECT COALESCE(SUM(nDistance), 0) FROM TbWorkouts WHERE nUserId = :u2) as totalWorkoutDistance,
+            (SELECT COALESCE(SUM(nCaloriesBurned), 0) FROM TbWorkouts WHERE nUserId = :u3) as totalWorkoutCalories,
+            (SELECT COALESCE(SUM(nDuration), 0) FROM TbWorkouts WHERE nUserId = :u4) as totalWorkoutDuration,
+            (SELECT COALESCE(SUM(nCalories), 0) FROM TbNutritionLogs WHERE nUserId = :u5 AND dtLoggedAt LIKE :t1) as totalNutritionCalories,
+            (SELECT COUNT(*) FROM TbNutritionLogs WHERE nUserId = :u6 AND dtLoggedAt LIKE :t2) as nutritionLogCount,
+            (SELECT COUNT(*) FROM TbRoutines WHERE nUserId = :u7) as totalRoutines,
+            (SELECT COUNT(*) FROM TbRoutineLogs rl INNER JOIN TbRoutines r ON rl.nRoutineId = r.nRoutineId WHERE r.nUserId = :u8 AND rl.dtLogDate = :t3 AND rl.isCompleted = 1) as completedRoutines
     ");
-    $stmtRoutineCount->execute([':userId' => $userId]);
-    $routineTotal = intval($stmtRoutineCount->fetch()['totalRoutines']);
+    $todayLike = "$today%";
+    $stmtCombined->execute([
+        ':u1' => $userId, ':u2' => $userId, ':u3' => $userId, ':u4' => $userId,
+        ':u5' => $userId, ':t1' => $todayLike,
+        ':u6' => $userId, ':t2' => $todayLike,
+        ':u7' => $userId,
+        ':u8' => $userId, ':t3' => $today
+    ]);
+    $stats = $stmtCombined->fetch();
 
-    $stmtRoutineCompleted = $conn->prepare("
-        SELECT COUNT(*) as completedRoutines FROM TbRoutineLogs rl
-        INNER JOIN TbRoutines r ON rl.nRoutineId = r.nRoutineId
-        WHERE r.nUserId = :userId AND rl.dtLogDate = :today AND rl.isCompleted = 1
-    ");
-    $stmtRoutineCompleted->execute([':userId' => $userId, ':today' => $today]);
-    $routineCompleted = intval($stmtRoutineCompleted->fetch()['completedRoutines']);
+    $workoutStats = [
+        'totalCount' => intval($stats['totalWorkoutCount']),
+        'totalDistance' => floatval($stats['totalWorkoutDistance']),
+        'totalCalories' => floatval($stats['totalWorkoutCalories']),
+        'totalDuration' => intval($stats['totalWorkoutDuration']),
+    ];
+    $nutritionToday = [
+        'totalCalories' => intval($stats['totalNutritionCalories']),
+        'logCount' => intval($stats['nutritionLogCount']),
+    ];
+    $routineTotal = intval($stats['totalRoutines']);
+    $routineCompleted = intval($stats['completedRoutines']);
 
     echo json_encode([
         "status" => "success",

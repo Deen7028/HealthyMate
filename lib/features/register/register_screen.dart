@@ -144,8 +144,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
 
       // ตรวจสอบกับ Remote Server เผื่อกรณีลบแอปแล้วติดตั้งใหม่ (Server Duplication Check)
-      final remoteCheck = await HealthApiService.loginRemote(email: sEmail, password: '');
-      if (remoteCheck['status'] == 'success' || remoteCheck['status'] == 'invalid_password') {
+      final remoteCheck = await HealthApiService.checkEmailRemote(sEmail);
+      if (remoteCheck['exists'] == true || remoteCheck['status'] == 'exists') {
         if (!mounted) return;
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(

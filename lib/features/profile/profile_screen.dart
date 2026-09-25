@@ -287,7 +287,8 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
     try {
       final docDir = await getApplicationDocumentsDirectory();
       final userId = _currentUser?.nUserId ?? 1;
-      final fileExtension = tempPath.split('.').last;
+      final rawExt = tempPath.contains('.') ? tempPath.split('.').last.toLowerCase() : 'jpg';
+      final fileExtension = (rawExt.length <= 4 && !rawExt.contains('/')) ? rawExt : 'jpg';
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final permanentPath = '${docDir.path}/profile_avatar_${userId}_$timestamp.$fileExtension';
 

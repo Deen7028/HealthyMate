@@ -14,8 +14,13 @@ import 'package:healthymate/features/workout/widgets/workout_map_view.dart';
 /// Logic การคำนวณและ State ทั้งหมดจะถูก Delegate ไปยัง [WorkoutTrackingState]
 class WorkoutTrackingScreen extends StatefulWidget {
   final VoidCallback? onBackToDashboard;
+  final String? initialCategory;
 
-  const WorkoutTrackingScreen({super.key, this.onBackToDashboard});
+  const WorkoutTrackingScreen({
+    super.key,
+    this.onBackToDashboard,
+    this.initialCategory,
+  });
 
   @override
   State<WorkoutTrackingScreen> createState() => _WorkoutTrackingScreenState();
@@ -34,6 +39,9 @@ class _WorkoutTrackingScreenState extends State<WorkoutTrackingScreen>
   void initState() {
     super.initState();
     _state = WorkoutTrackingState();
+    if (widget.initialCategory != null && widget.initialCategory!.isNotEmpty) {
+      _state.selectCategoryByName(widget.initialCategory);
+    }
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 1),
@@ -41,6 +49,16 @@ class _WorkoutTrackingScreenState extends State<WorkoutTrackingScreen>
 
     // ดึงพิกัดตำแหน่งจริงทันทีเมื่อเข้าหน้าจอ
     _initCurrentLocation();
+  }
+
+  @override
+  void didUpdateWidget(covariant WorkoutTrackingScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialCategory != oldWidget.initialCategory &&
+        widget.initialCategory != null &&
+        widget.initialCategory!.isNotEmpty) {
+      _state.selectCategoryByName(widget.initialCategory);
+    }
   }
 
   /// ขอสิทธิ์และดึงตำแหน่ง GPS จริง คืนค่า true ถ้ามีสิทธิ์และ GPS พร้อมใช้งาน

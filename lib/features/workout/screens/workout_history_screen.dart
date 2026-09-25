@@ -5,6 +5,7 @@ import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/sync_service.dart';
 import 'package:healthymate/core/theme/app_theme.dart';
 import 'package:healthymate/features/workout/screens/workout_share_screen.dart';
+import 'package:healthymate/features/workout/widgets/history_route_painter.dart';
 
 /// หน้าแสดงประวัติการออกกำลังกายจากตาราง TbWorkouts
 class WorkoutHistoryScreen extends StatefulWidget {
@@ -412,67 +413,16 @@ class _WorkoutHistoryScreenState extends State<WorkoutHistoryScreen> {
                     width: double.infinity,
                     child: Stack(
                       children: [
-                        GoogleMap(
-                          initialCameraPosition: CameraPosition(
-                            target: routePoints.first,
-                            zoom: 16.0,
+                        Container(
+                          width: double.infinity,
+                          height: 200,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1E293B),
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                          liteModeEnabled: true,
-                          zoomGesturesEnabled: false,
-                          zoomControlsEnabled: false,
-                          scrollGesturesEnabled: false,
-                          rotateGesturesEnabled: false,
-                          tiltGesturesEnabled: false,
-                          myLocationButtonEnabled: false,
-                          mapToolbarEnabled: false,
-                          compassEnabled: false,
-                          mapType: MapType.normal,
-                          onMapCreated: (GoogleMapController controller) {
-                            if (routePoints.length >= 2) {
-                              double minLat = routePoints.first.latitude;
-                              double maxLat = routePoints.first.latitude;
-                              double minLng = routePoints.first.longitude;
-                              double maxLng = routePoints.first.longitude;
-
-                              for (final pt in routePoints) {
-                                if (pt.latitude < minLat) minLat = pt.latitude;
-                                if (pt.latitude > maxLat) maxLat = pt.latitude;
-                                if (pt.longitude < minLng) minLng = pt.longitude;
-                                if (pt.longitude > maxLng) maxLng = pt.longitude;
-                              }
-
-                              final bounds = LatLngBounds(
-                                southwest: LatLng(minLat, minLng),
-                                northeast: LatLng(maxLat, maxLng),
-                              );
-                              controller.animateCamera(
-                                CameraUpdate.newLatLngBounds(bounds, 36),
-                              );
-                            }
-                          },
-                          polylines: routePoints.length >= 2
-                              ? {
-                                  Polyline(
-                                    polylineId: PolylineId('history_route_$index'),
-                                    color: const Color(0xFFFC5200), // สีส้มสไตล์ Strava
-                                    width: 4,
-                                    points: routePoints,
-                                  ),
-                                }
-                              : {},
-                          markers: {
-                            Marker(
-                              markerId: MarkerId('start_$index'),
-                              position: routePoints.first,
-                              icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-                            ),
-                            if (routePoints.length >= 2)
-                              Marker(
-                                markerId: MarkerId('end_$index'),
-                                position: routePoints.last,
-                                icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-                              ),
-                          },
+                          child: CustomPaint(
+                            painter: HistoryRoutePainter(points: routePoints),
+                          ),
                         ),
                         // ป้าย Overlay มินิระบุแผนที่เส้นทาง
                         Positioned(
@@ -615,3 +565,5 @@ class _WorkoutHistoryScreenState extends State<WorkoutHistoryScreen> {
     );
   }
 }
+
+

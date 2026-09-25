@@ -54,6 +54,30 @@ class HealthApiService {
     }
     return {'status': 'offline_or_error', 'message': 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้'};
   }
+
+  /// ตรวจสอบการซ้ำของอีเมลกับ Remote Server (`check_email.php`)
+  static Future<Map<String, dynamic>> checkEmailRemote(String email) async {
+    try {
+      final uri = Uri.parse('$baseUrl/check_email.php');
+      final response = await http
+          .post(
+            uri,
+            headers: defaultHeaders,
+            body: jsonEncode({'sEmail': email}),
+          )
+          .timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body is Map<String, dynamic>) {
+          return body;
+        }
+      }
+    } catch (e) {
+      debugPrint('HealthApiService: Check email error: $e');
+    }
+    return {'status': 'offline_or_error', 'exists': false};
+  }
   
   /// ส่งคำขอ OTP ไปยังอีเมล
   static Future<Map<String, dynamic>> sendEmailOtp(String sEmail) async {
@@ -492,6 +516,64 @@ class HealthApiService {
       debugPrint('[API EXCEPTION] toggleRoutineLogRemote failed: $e');
     }
     return null;
+  }
+
+  /// 13. อัปเดตความคืบหน้าย่อยของกิจวัตรบน Server (`update_progress`)
+  static Future<bool> updateRoutineProgressRemote({
+    required int routineId,
+    required String date,
+    required int progressValue,
+    required bool isCompleted,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl/routines.php');
+      final response = await http
+          .post(
+            uri,
+            headers: defaultHeaders,
+            body: jsonEncode({
+              'action': 'update_progress',
+              'nRoutineId': routineId,
+              'dtLogDate': date,
+              'nProgressValue': progressValue,
+              'isCompleted': isCompleted ? 1 : 0,
+            }),
+          )
+          .timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        return body['status'] == 'success';
+      }
+    } catch (e) {
+      debugPrint('[API EXCEPTION] updateRoutineProgressRemote failed: $e');
+    }
+    return false;
+  }
+
+  /// 14. ลบ/ปลดเป้าหมายหลักของผู้ใช้บน Server
+  static Future<bool> clearMainGoalRemote(int userId) async {
+    try {
+      final uri = Uri.parse('$baseUrl/goals.php');
+      final response = await http
+          .delete(
+            uri,
+            headers: defaultHeaders,
+            body: jsonEncode({
+              'action': 'clear_goal',
+              'nUserId': userId,
+            }),
+          )
+          .timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        return body['status'] == 'success';
+      }
+    } catch (e) {
+      debugPrint('[API EXCEPTION] clearMainGoalRemote failed: $e');
+    }
+    return false;
   }
 
   /// Helper: วันที่วันนี้ในรูปแบบ yyyy-MM-dd

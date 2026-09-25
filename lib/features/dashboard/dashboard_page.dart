@@ -9,6 +9,7 @@ import 'package:healthymate/core/utils/health_calculator.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
 import 'package:healthymate/features/health_calculator/models/health_record_model.dart';
 import 'package:healthymate/features/health_calculator/models/activity_level.dart';
+import 'widgets/calendar_strip_widget.dart';
 
 class DashboardPageUpdated extends StatefulWidget {
   final bool isActive;
@@ -230,21 +231,16 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
         serverUser = TbUser.fromMap(userMap);
       }
 
-      // ใช้ค่าที่มากกว่า (Server อาจมีข้อมูลจากหลายเครื่อง)
+      // ซิงค์ข้อมูลกับ UI โดยอัปเดตจาก Server (ไม่ใช้บังคับเลือกค่าที่มากกว่า เพื่อเปิดให้ผู้ใช้ลบรายการได้)
       if (mounted) {
         setState(() {
           if (serverUser != null) _user = serverUser;
           if (serverRecord != null) _latestRecord = serverRecord;
-          if (serverWorkoutCount > _workoutCount)
-            _workoutCount = serverWorkoutCount;
-          if (serverDistance > _totalDistanceKm)
-            _totalDistanceKm = serverDistance;
-          if (serverCalories > _totalCaloriesBurned)
-            _totalCaloriesBurned = serverCalories;
-          if (serverDuration > _totalWorkoutDurationSec)
-            _totalWorkoutDurationSec = serverDuration;
-          if (serverNutritionCal > _todayNutritionCalories)
-            _todayNutritionCalories = serverNutritionCal;
+          _workoutCount = serverWorkoutCount;
+          _totalDistanceKm = serverDistance;
+          _totalCaloriesBurned = serverCalories;
+          _totalWorkoutDurationSec = serverDuration;
+          _todayNutritionCalories = serverNutritionCal;
           if (goalMap != null) _userGoal = goalMap;
         });
         debugPrint('[Dashboard] 🌐 ✅ อัปเดต UI จาก Server เรียบร้อย');
@@ -502,167 +498,13 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
 
   // --- Calendar Strip ---
   Widget _buildCalendarStrip() {
-    // คำนวณวันในสัปดาห์ปัจจุบัน (จันทร์ - อาทิตย์)
-    final monday = _now.subtract(Duration(days: _now.weekday - 1));
-    final days = List.generate(7, (i) => monday.add(Duration(days: i)));
-    const dayLabels = ['จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.', 'อา.'];
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  const Icon(
-                    Icons.calendar_today,
-                    size: 16,
-                    color: Colors.blueGrey,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'สัปดาห์นี้ • $_thaiMonthName ${_now.year + 543}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    Text(
-                      '🏃 ',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.orange.shade400,
-                      ),
-                    ),
-                    Text(
-                      '$_workoutCount ครั้งออกกำลังกาย',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Colors.orange.shade800,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          // Days Row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: List.generate(7, (i) {
-              final isToday =
-                  days[i].day == _now.day &&
-                  days[i].month == _now.month &&
-                  days[i].year == _now.year;
-              final isPast = days[i].isBefore(
-                DateTime(_now.year, _now.month, _now.day),
-              );
-              return _buildDayItem(
-                dayLabels[i],
-                '${days[i].day}',
-                isToday,
-                isPast,
-              );
-            }),
-          ),
-          const SizedBox(height: 16),
-          const Divider(height: 1),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  const Icon(
-                    Icons.fitness_center,
-                    size: 14,
-                    color: Colors.teal,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'ออกกำลังกายแล้ว $_workoutCount ครั้ง | ${_totalDistanceKm.toStringAsFixed(1)} กม.',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.teal,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              Text(
-                '${_totalCaloriesBurned.toStringAsFixed(0)} kcal',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.teal,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDayItem(String day, String date, bool isSelected, bool isPast) {
-    return Column(
-      children: [
-        Text(
-          day,
-          style: TextStyle(
-            fontSize: 12,
-            color: isSelected ? darkGreen : Colors.grey,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          width: 32,
-          height: 40,
-          decoration: BoxDecoration(
-            color: isSelected ? darkGreen : Colors.transparent,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Center(
-            child: Text(
-              date,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: isSelected ? Colors.white : Colors.black87,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Container(
-          width: 4,
-          height: 4,
-          decoration: BoxDecoration(
-            color: isSelected
-                ? Colors.greenAccent
-                : (isPast ? darkGreen : Colors.grey.shade300),
-            shape: BoxShape.circle,
-          ),
-        ),
-      ],
+    return CalendarStripWidget(
+      now: _now,
+      thaiMonthName: _thaiMonthName,
+      workoutCount: _workoutCount,
+      totalDistanceKm: _totalDistanceKm,
+      totalCaloriesBurned: _totalCaloriesBurned,
+      darkGreen: darkGreen,
     );
   }
 

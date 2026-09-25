@@ -27,7 +27,7 @@ if (file_exists($envFile)) {
     }
 }
 
-// ป้องกันการเข้าถึงไฟล์ API ตรงๆ ผ่าน Web Browser (Direct Browser Access)
+// ตรวจสอบ APP_KEY บังคับสำหรับทุก Request ป้องกันการ Bypass
 $headers = getallheaders();
 $normalizedHeaders = [];
 foreach ($headers as $key => $val) {
@@ -36,27 +36,66 @@ foreach ($headers as $key => $val) {
 
 $expectedAppKey = getenv('APP_KEY') ?: 'HealthyMate_Secure_App_2026';
 $appKey = isset($normalizedHeaders['x-app-key']) ? $normalizedHeaders['x-app-key'] : '';
-$userAgent = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
 
-// ตรวจจับเบราว์เซอร์ทั่วไป (Chrome, Firefox, Safari, Edge ฯลฯ) ที่เปิดเข้ามาดู URL ตรงๆ
-$isBrowser = preg_match('/(Mozilla|Chrome|Safari|Firefox|Edge|Opera)/i', $userAgent) && !preg_match('/Dart/i', $userAgent);
-
-// ถือว่าเป็นการเข้าตรงๆ หากไม่มี App Key ที่ถูกต้อง และเข้าผ่าน Web Browser
-if ($appKey !== $expectedAppKey && $isBrowser) {
+// บังคับเช็ค App Key เสมอ ไม่ว่า User-Agent จะเป็นอะไรก็ตาม
+if ($appKey !== $expectedAppKey) {
     http_response_code(403);
     echo json_encode([
         "status" => "error",
-        "message" => "ไม่อนุญาตให้เข้าถึง API โดยตรง (Direct Access Denied)"
+        "message" => "ไม่อนุญาตให้เข้าถึง API (Access Denied: Invalid APP_KEY)"
     ], JSON_UNESCAPED_UNICODE);
     exit();
 }
 
+/**
+ * สร้าง Auth Token สำหรับยืนยันตัวตน User
+ */
+function generateAuthToken($userId) {
+    global $expectedAppKey;
+    $payload = $userId . ':' . time();
+    $sig = hash_hmac('sha256', $payload, $expectedAppKey);
+    return base64_encode($payload . ':' . $sig);
+}
 
-$host = getenv('DB_HOST') ?: "172.18.111.42";   
+/**
+ * ดึงและยืนยัน userId จาก Bearer Token ใน Authorization Header
+ */
+function getAuthenticatedUserId() {
+    global $expectedAppKey;
+    $headers = getallheaders();
+    $authHeader = '';
+    foreach ($headers as $key => $val) {
+        if (strtolower($key) === 'authorization') {
+            $authHeader = $val;
+            break;
+        }
+    }
+    if (empty($authHeader) && isset($_SERVER['HTTP_AUTHORIZATION'])) {
+        $authHeader = $_SERVER['HTTP_AUTHORIZATION'];
+    }
+    if (preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
+        $token = trim($matches[1]);
+        $decoded = base64_decode($token);
+        if ($decoded) {
+            $parts = explode(':', $decoded);
+            if (count($parts) === 3) {
+                list($userId, $timestamp, $sig) = $parts;
+                $expectedSig = hash_hmac('sha256', $userId . ':' . $timestamp, $expectedAppKey);
+                if (hash_equals($expectedSig, $sig)) {
+                    return (int)$userId;
+                }
+            }
+        }
+    }
+    return null;
+}
+
+
+$host = getenv('DB_HOST') ?: "127.0.0.1";   
 $port = getenv('DB_PORT') ?: "3306";
 $db_name = getenv('DB_NAME') ?: "6620310001_HealthMateDB";
-$username = getenv('DB_USER') ?: "6620310001";
-$password = getenv('DB_PASS') ?: "6620310001";        
+$username = getenv('DB_USER') ?: "root";
+$password = getenv('DB_PASS') ?: "";        
 
 try {
     $conn = new PDO("mysql:host={$host};port={$port};dbname={$db_name};charset=utf8mb4", $username, $password, [

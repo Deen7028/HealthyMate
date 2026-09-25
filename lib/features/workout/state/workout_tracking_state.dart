@@ -89,7 +89,7 @@ class WorkoutTrackingState extends ChangeNotifier {
   void _listenBackgroundLocation() {
     final service = FlutterBackgroundService();
     _bgLocationSub = service.on('updateLocation').listen((event) {
-      if (event == null || _status != WorkoutState.running) return;
+      if (_isDisposed || event == null || _status != WorkoutState.running) return;
       final lat = (event['latitude'] as num?)?.toDouble();
       final lng = (event['longitude'] as num?)?.toDouble();
       final speed = (event['speed'] as num?)?.toDouble() ?? 0.0;
@@ -106,10 +106,20 @@ class WorkoutTrackingState extends ChangeNotifier {
     });
   }
 
+  DateTime? _workoutStartTime;
+  int _accumulatedSeconds = 0;
+
+  void selectCategoryByName(String? categoryStr) {
+    final cat = WorkoutCategory.fromIdOrTitle(categoryStr);
+    selectCategory(cat);
+  }
+
   void selectCategory(WorkoutCategory category) {
     _selectedCategory = category;
     _status = WorkoutState.initial;
     _secondsElapsed = 0;
+    _accumulatedSeconds = 0;
+    _workoutStartTime = null;
     _distanceKm = 0.0;
     _caloriesBurned = 0.0;
     _zeroSpeedSeconds = 0;
@@ -122,6 +132,7 @@ class WorkoutTrackingState extends ChangeNotifier {
 
   void returnToCategorySelection() {
     _timer?.cancel();
+    _workoutStartTime = null;
     LocationBackgroundService.instance.stopTracking();
     _status = WorkoutState.selectingCategory;
     _secondsElapsed = 0;
@@ -157,12 +168,15 @@ class WorkoutTrackingState extends ChangeNotifier {
     _status = WorkoutState.running;
     _isAutoPaused = false;
     _zeroSpeedSeconds = 0;
+    _workoutStartTime = DateTime.now();
     _safeNotifyListeners();
 
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_status == WorkoutState.running && !_isAutoPaused) {
-        _secondsElapsed++;
+        if (_workoutStartTime != null) {
+          _secondsElapsed = _accumulatedSeconds + DateTime.now().difference(_workoutStartTime!).inSeconds;
+        }
         _checkAutoPauseCondition();
         _safeNotifyListeners();
       }
@@ -267,8 +281,11 @@ class WorkoutTrackingState extends ChangeNotifier {
         final currentKmFloor = _distanceKm.floor();
         if (currentKmFloor > _lastAnnouncedKm && currentKmFloor >= 1) {
           _lastAnnouncedKm = currentKmFloor;
-          final paceMinutesPerKm = _distanceKm > 0 ? (_secondsElapsed / 60.0) / _distanceKm : 0.0;
-          final paceStr = paceMinutesPerKm.toStringAsFixed(2);
+          final double validDistance = _distanceKm >= 0.05 ? _distanceKm : 0.0;
+          final double paceMinutesPerKm = validDistance > 0 ? ((_secondsElapsed / 60.0) / validDistance).clamp(0.0, 99.0) : 0.0;
+          final int paceMin = paceMinutesPerKm.floor();
+          final int paceSec = ((paceMinutesPerKm - paceMin) * 60).round();
+          final paceStr = '$paceMin นาที ${paceSec.toString().padLeft(2, '0')} วินาที ต่อกิโลเมตร';
           TtsService.instance.announceWorkoutProgress(
             distanceKm: _distanceKm,
             secondsElapsed: _secondsElapsed,
@@ -296,6 +313,10 @@ class WorkoutTrackingState extends ChangeNotifier {
   }
 
   void pauseWorkout() {
+    if (_workoutStartTime != null) {
+      _accumulatedSeconds += DateTime.now().difference(_workoutStartTime!).inSeconds;
+      _workoutStartTime = null;
+    }
     _timer?.cancel();
     _positionStreamSub?.cancel();
     LocationBackgroundService.instance.stopTracking();

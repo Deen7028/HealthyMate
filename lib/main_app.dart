@@ -25,9 +25,14 @@ class _MainAppShellState extends State<MainAppShell> {
     super.dispose();
   }
 
-  void _onTabTapped(int index) {
+  String? _selectedWorkoutCategory;
+
+  void _onTabTapped(int index, [String? category]) {
     setState(() {
       _currentIndex = index;
+      if (category != null) {
+        _selectedWorkoutCategory = category;
+      }
     });
   }
 
@@ -49,13 +54,14 @@ class _MainAppShellState extends State<MainAppShell> {
           // 1: Workout (ออกกำลังกาย)
           WorkoutTrackingScreen(
             onBackToDashboard: () => _onTabTapped(0),
+            initialCategory: _selectedWorkoutCategory,
           ),
           // 2: Health Calculator (สุขภาพ)
           HealthCalculatorScreen(state: _healthState),
           // 3: Routine (กิจวัตร)
           MyRoutinesPage(
             isActive: _currentIndex == 3,
-            onNavigateToWorkout: (category) => _onTabTapped(1),
+            onNavigateToWorkout: (category) => _onTabTapped(1, category),
           ),
           // 4: Profile (โปรไฟล์)
           const ProfileScreen(),

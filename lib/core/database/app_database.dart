@@ -1571,6 +1571,48 @@ class AppDatabase {
     }
   }
 
+  /// บันทึกหรืออัปเดต Routine Log (รวมทั้งค่าความคืบหน้า progressValue)
+  Future<void> insertOrUpdateRoutineLog({
+    required int routineId,
+    required String dateStr,
+    required bool isCompleted,
+    int? progressValue,
+  }) async {
+    if (kIsWeb) return;
+    final db = await database;
+    if (db == null) return;
+    try {
+      final existing = await getRoutineLogForDate(
+        routineId: routineId,
+        dateStr: dateStr,
+      );
+
+      if (existing == null) {
+        await db.insert(tableRoutineLogs, {
+          'nRoutineId': routineId,
+          'isCompleted': isCompleted ? 1 : 0,
+          'dtLogDate': dateStr,
+          if (progressValue != null) 'nProgressValue': progressValue,
+        });
+      } else {
+        final Map<String, dynamic> updateData = {
+          'isCompleted': isCompleted ? 1 : 0,
+        };
+        if (progressValue != null) {
+          updateData['nProgressValue'] = progressValue;
+        }
+        await db.update(
+          tableRoutineLogs,
+          updateData,
+          where: 'nLogId = ?',
+          whereArgs: [existing['nLogId']],
+        );
+      }
+    } catch (e) {
+      debugPrint('[AppDatabase] insertOrUpdateRoutineLog error: $e');
+    }
+  }
+
   /// นับจำนวนกิจวัตรที่เสร็จแล้วในวันนั้น
   Future<int> getRoutineCompletionCount({
     required int userId,

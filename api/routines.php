@@ -4,9 +4,11 @@ require_once "db_connect.php";
 $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
+
     // 1. GET: ดึงกิจวัตรทั้งหมดของ user + สถานะ log ของวันนี้
     case 'GET':
-        $userId = isset($_GET['nUserId']) ? intval($_GET['nUserId']) : 1;
+        $authUserId = getAuthenticatedUserId();
+        $userId = $authUserId !== null ? $authUserId : (isset($_GET['nUserId']) ? intval($_GET['nUserId']) : 1);
         $date = isset($_GET['date']) ? trim($_GET['date']) : date('Y-m-d');
 
         try {
@@ -15,9 +17,14 @@ switch ($method) {
             $stmt->execute([':userId' => $userId]);
             $routines = $stmt->fetchAll();
 
-            // ดึง log ของวันที่ระบุสำหรับแต่ละ routine
+            // ดึง log ของวันที่ระบุสำหรับแต่ละ routine (รวม nProgressValue)
+            try {
+                $conn->exec("ALTER TABLE TbRoutineLogs ADD COLUMN nProgressValue INT DEFAULT 0");
+            } catch (\Throwable $e) {
+            }
+
             $stmtLog = $conn->prepare("
-                SELECT nRoutineId, isCompleted FROM TbRoutineLogs 
+                SELECT nRoutineId, isCompleted, COALESCE(nProgressValue, 0) as nProgressValue FROM TbRoutineLogs 
                 WHERE nRoutineId = :routineId AND dtLogDate = :logDate
                 LIMIT 1
             ");
@@ -30,6 +37,7 @@ switch ($method) {
                 ]);
                 $log = $stmtLog->fetch();
                 $r['todayCompleted'] = $log ? intval($log['isCompleted']) : 0;
+                $r['todayProgressValue'] = $log ? intval($log['nProgressValue']) : 0;
                 $result[] = $r;
             }
 
@@ -63,42 +71,74 @@ switch ($method) {
         $data = json_decode(file_get_contents("php://input"), true);
         if (!$data) $data = $_POST;
 
+        $authUserId = getAuthenticatedUserId();
         $action = isset($data['action']) ? $data['action'] : 'insert';
 
-        if ($action === 'toggle_log') {
-            // สลับสถานะเช็ค/ยกเลิกเช็ค
+        if ($action === 'toggle_log' || $action === 'update_progress') {
+            // สลับสถานะเช็ค/ยกเลิกเช็ค หรืออัปเดตความคืบหน้าย่อย (Atomic UPSERT)
             $routineId = isset($data['nRoutineId']) ? intval($data['nRoutineId']) : 0;
             $dateStr = isset($data['dtLogDate']) ? trim($data['dtLogDate']) : date('Y-m-d');
+            $progressVal = isset($data['nProgressValue']) ? intval($data['nProgressValue']) : null;
 
             try {
-                // ตรวจดูว่ามี log อยู่แล้วหรือไม่
-                $stmt = $conn->prepare("SELECT * FROM TbRoutineLogs WHERE nRoutineId = :rid AND dtLogDate = :d LIMIT 1");
-                $stmt->execute([':rid' => $routineId, ':d' => $dateStr]);
-                $existing = $stmt->fetch();
-
-                if (!$existing) {
-                    // สร้างใหม่เป็น completed
-                    $stmt = $conn->prepare("INSERT INTO TbRoutineLogs (nRoutineId, isCompleted, dtLogDate) VALUES (:rid, 1, :d)");
-                    $stmt->execute([':rid' => $routineId, ':d' => $dateStr]);
-                    $newState = 1;
-                } else {
-                    // toggle
-                    $newState = intval($existing['isCompleted']) === 1 ? 0 : 1;
-                    $stmt = $conn->prepare("UPDATE TbRoutineLogs SET isCompleted = :val WHERE nLogId = :lid");
-                    $stmt->execute([':val' => $newState, ':lid' => $existing['nLogId']]);
+                // ตรวจสอบ Ownership ของ Routine
+                if ($authUserId !== null) {
+                    $stmtCheckOwner = $conn->prepare("SELECT nUserId FROM TbRoutines WHERE nRoutineId = :rid LIMIT 1");
+                    $stmtCheckOwner->execute([':rid' => $routineId]);
+                    $owner = $stmtCheckOwner->fetch();
+                    if ($owner && intval($owner['nUserId']) !== $authUserId) {
+                        echo json_encode(["status" => "error", "message" => "ไม่อนุญาตให้แก้ไขข้อมูลผู้อื่น (Access Denied)"]);
+                        exit();
+                    }
                 }
+
+                // การันตี UNIQUE CONSTRAINT ป้องกัน Race Condition
+                try {
+                    $conn->exec("ALTER TABLE TbRoutineLogs ADD CONSTRAINT uk_routine_date UNIQUE (nRoutineId, dtLogDate)");
+                } catch (\Throwable $e) {
+                }
+
+                // อ่านสถานะเดิมกรณี toggle
+                $stmtCheck = $conn->prepare("SELECT isCompleted, COALESCE(nProgressValue, 0) as nProgressValue FROM TbRoutineLogs WHERE nRoutineId = :rid AND dtLogDate = :d LIMIT 1");
+                $stmtCheck->execute([':rid' => $routineId, ':d' => $dateStr]);
+                $existing = $stmtCheck->fetch();
+
+                if ($action === 'update_progress' && $progressVal !== null) {
+                    $pVal = $progressVal;
+                    $defaultState = 0; // หากเป็นการส่ง progress ย่อยครั้งแรกของวัน ให้ถือว่ายังไม่เสร็จ (0) จนกว่าจะส่ง isCompleted ยืนยัน
+                    $newState = isset($data['isCompleted']) ? (intval($data['isCompleted']) ? 1 : 0) : ($existing ? intval($existing['isCompleted']) : $defaultState);
+                } else {
+                    $newState = isset($data['isCompleted']) ? (intval($data['isCompleted']) ? 1 : 0) : ($existing ? (intval($existing['isCompleted']) === 1 ? 0 : 1) : 1);
+                    $pVal = $progressVal !== null ? $progressVal : ($existing ? intval($existing['nProgressValue']) : 0);
+                }
+
+                // สั่ง UPSERT แบบ Atomic ในคำสั่งเดียว ป้องกัน Race Condition เมื่อกดรัวๆ
+                $stmtUpsert = $conn->prepare("
+                    INSERT INTO TbRoutineLogs (nRoutineId, isCompleted, nProgressValue, dtLogDate)
+                    VALUES (:rid, :isComp, :pVal, :d)
+                    ON DUPLICATE KEY UPDATE 
+                        isCompleted = VALUES(isCompleted),
+                        nProgressValue = VALUES(nProgressValue)
+                ");
+                $stmtUpsert->execute([
+                    ':rid' => $routineId,
+                    ':isComp' => $newState,
+                    ':pVal' => $pVal,
+                    ':d' => $dateStr
+                ]);
 
                 echo json_encode([
                     "status" => "success",
                     "isCompleted" => $newState,
-                    "message" => $newState ? "เช็คกิจวัตรสำเร็จ" : "ยกเลิกเช็ค"
+                    "nProgressValue" => $pVal,
+                    "message" => "อัปเดตสถานะกิจวัตรสำเร็จ"
                 ], JSON_UNESCAPED_UNICODE);
             } catch (PDOException $e) {
                 echo json_encode(["status" => "error", "message" => $e->getMessage()]);
             }
         } else {
             // เพิ่มกิจวัตรใหม่
-            $userId = isset($data['nUserId']) ? intval($data['nUserId']) : 1;
+            $userId = $authUserId !== null ? $authUserId : (isset($data['nUserId']) ? intval($data['nUserId']) : 1);
             $title = isset($data['sTitle']) ? trim($data['sTitle']) : '';
             $time = isset($data['sTime']) ? trim($data['sTime']) : '';
             $isNotif = isset($data['isNotificationActive']) ? intval($data['isNotificationActive']) : 1;
@@ -136,6 +176,7 @@ switch ($method) {
     // 3. PUT: แก้ไขกิจวัตร
     case 'PUT':
         $data = json_decode(file_get_contents("php://input"), true);
+        $authUserId = getAuthenticatedUserId();
 
         $routineId = isset($data['nRoutineId']) ? intval($data['nRoutineId']) : 0;
         $title = isset($data['sTitle']) ? trim($data['sTitle']) : '';
@@ -148,6 +189,16 @@ switch ($method) {
         }
 
         try {
+            if ($authUserId !== null) {
+                $stmtCheckOwner = $conn->prepare("SELECT nUserId FROM TbRoutines WHERE nRoutineId = :rid LIMIT 1");
+                $stmtCheckOwner->execute([':rid' => $routineId]);
+                $owner = $stmtCheckOwner->fetch();
+                if ($owner && intval($owner['nUserId']) !== $authUserId) {
+                    echo json_encode(["status" => "error", "message" => "ไม่อนุญาตให้แก้ไขข้อมูลผู้อื่น (Access Denied)"]);
+                    exit();
+                }
+            }
+
             $stmt = $conn->prepare("
                 UPDATE TbRoutines SET sTitle = :title, sTime = :time, isNotificationActive = :isNotif 
                 WHERE nRoutineId = :rid
@@ -171,6 +222,7 @@ switch ($method) {
     // 4. DELETE: ลบกิจวัตร
     case 'DELETE':
         $data = json_decode(file_get_contents("php://input"), true);
+        $authUserId = getAuthenticatedUserId();
         $routineId = isset($data['nRoutineId']) ? intval($data['nRoutineId']) : 0;
 
         if ($routineId <= 0) {
@@ -179,6 +231,16 @@ switch ($method) {
         }
 
         try {
+            if ($authUserId !== null) {
+                $stmtCheckOwner = $conn->prepare("SELECT nUserId FROM TbRoutines WHERE nRoutineId = :rid LIMIT 1");
+                $stmtCheckOwner->execute([':rid' => $routineId]);
+                $owner = $stmtCheckOwner->fetch();
+                if ($owner && intval($owner['nUserId']) !== $authUserId) {
+                    echo json_encode(["status" => "error", "message" => "ไม่อนุญาตให้ลบข้อมูลผู้อื่น (Access Denied)"]);
+                    exit();
+                }
+            }
+
             // ลบ logs ก่อน
             $stmt = $conn->prepare("DELETE FROM TbRoutineLogs WHERE nRoutineId = :rid");
             $stmt->execute([':rid' => $routineId]);
@@ -201,4 +263,3 @@ switch ($method) {
         echo json_encode(["status" => "error", "message" => "Method not allowed"]);
         break;
 }
-?>

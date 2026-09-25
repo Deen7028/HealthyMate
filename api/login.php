@@ -20,19 +20,13 @@ if (!$data) {
 
 $email = isset($data['sEmail']) ? trim(strtolower($data['sEmail'])) : '';
 $password = isset($data['sPassword']) ? $data['sPassword'] : '';
-$passwordHash = isset($data['sPasswordHash']) ? trim($data['sPasswordHash']) : '';
 
-if (empty($email) || (empty($password) && empty($passwordHash))) {
+if (empty($email) || empty($password)) {
     echo json_encode([
         "status" => "error",
         "message" => "กรุณากรอกอีเมลและรหัสผ่าน"
     ], JSON_UNESCAPED_UNICODE);
     exit();
-}
-
-// หากไม่ได้ส่ง passwordHash มา ให้คำนวณด้วย SHA-256
-if (empty($passwordHash)) {
-    $passwordHash = hash('sha256', $password);
 }
 
 try {
@@ -56,12 +50,20 @@ try {
         exit();
     }
 
-    // 2. ตรวจสอบความถูกต้องของรหัสผ่าน (รองรับทั้ง BCRYPT password_verify, Salted Hash และ Legacy SHA-256)
+    // 2. ตรวจสอบความถูกต้องของรหัสผ่าน (ใช้ password_verify หรือ Upgrade จาก Legacy Hash)
     $storedHash = $user['sPasswordHash'];
-    $isValidPassword = password_verify($password, $storedHash)
-        || ($storedHash === $passwordHash)
-        || (!empty($password) && $storedHash === hash('sha256', $password))
-        || (!empty($password) && $storedHash === $password);
+    $isValidPassword = false;
+
+    if (password_verify($password, $storedHash)) {
+        $isValidPassword = true;
+    } elseif ($storedHash === hash('sha256', $password) || $storedHash === $password) {
+        $isValidPassword = true;
+        // Re-hash เป็น BCRYPT มาตรฐานเพื่อความปลอดภัยในอนาคต
+        $newHash = password_hash($password, PASSWORD_DEFAULT);
+        $rehashStmt = $conn->prepare("UPDATE TbUsers SET sPasswordHash = :h WHERE nUserId = :id");
+        $rehashStmt->execute([':h' => $newHash, ':id' => $user['nUserId']]);
+        $user['sPasswordHash'] = $newHash;
+    }
 
     if (!$isValidPassword) {
         echo json_encode([
@@ -71,10 +73,14 @@ try {
         exit();
     }
 
-    // 3. เข้าสู่ระบบสำเร็จ -> ส่งข้อมูลผู้ใช้กลับไปให้แอปเพื่อ Hydrate ลง SQLite
+    // 3. เข้าสู่ระบบสำเร็จ -> สร้าง Auth Token และส่งข้อมูลผู้ใช้กลับ
+    $authToken = generateAuthToken($user['nUserId']);
+    $user['token'] = $authToken;
+
     echo json_encode([
         "status" => "success",
         "message" => "เข้าสู่ระบบสำเร็จ",
+        "token" => $authToken,
         "user" => $user
     ], JSON_UNESCAPED_UNICODE);
 

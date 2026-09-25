@@ -23,7 +23,7 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
   final _notificationTimeController = TextEditingController(text: '08:00 น.');
   final _durationController = TextEditingController(text: '1');
 
-  String _durationUnit = 'เดือน';
+  final String _durationUnit = 'เดือน';
   String? _selectedLinkedWorkout;
   final List<String> _workoutTypes = [
     'วิ่ง',

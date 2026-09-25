@@ -46,6 +46,22 @@ class WorkoutCategory {
       metValue: 7.5,
     ),
   ];
+
+  static WorkoutCategory fromIdOrTitle(String? categoryStr) {
+    if (categoryStr == null || categoryStr.isEmpty) return categories.first;
+    final lower = categoryStr.toLowerCase();
+    for (final c in categories) {
+      if (c.id == lower ||
+          lower.contains(c.id) ||
+          c.title.toLowerCase().contains(lower) ||
+          (lower.contains('ปั่น') && c.id == 'cycling') ||
+          (lower.contains('วิ่ง') && c.id == 'running') ||
+          (lower.contains('เดิน') && c.id == 'walking')) {
+        return c;
+      }
+    }
+    return categories.first;
+  }
 }
 
 /// รูปแบบการแสดงผลของแผนที่

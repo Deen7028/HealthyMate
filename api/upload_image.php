@@ -33,11 +33,23 @@ if ($fileInputName && isset($_FILES[$fileInputName]) && $_FILES[$fileInputName][
     $fileName = $_FILES[$fileInputName]['name'];
     $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
 
-    $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
-    if (!in_array($fileExtension, $allowedExtensions)) {
+    // ตรวจสอบ Magic Bytes (MIME Type) จากเนื้อหาไฟล์ดิบเพื่อป้องกัน RCE / Web Shell
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mimeType = finfo_file($finfo, $fileTmpPath);
+    finfo_close($finfo);
+
+    $allowedMimes = [
+        'jpg' => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        'png' => 'image/png',
+        'webp' => 'image/webp',
+        'gif' => 'image/gif',
+    ];
+
+    if (!in_array($fileExtension, array_keys($allowedMimes)) || !in_array($mimeType, array_values($allowedMimes))) {
         echo json_encode([
             "status" => "error",
-            "message" => "ไม่อนุญาตให้อัปโหลดไฟล์นามสกุลนี้ (รองรับเฉพาะ jpg, jpeg, png, webp, gif)"
+            "message" => "ไม่อนุญาตให้อัปโหลดไฟล์นี้"
         ], JSON_UNESCAPED_UNICODE);
         exit();
     }
@@ -46,7 +58,7 @@ if ($fileInputName && isset($_FILES[$fileInputName]) && $_FILES[$fileInputName][
     $newFileName = uniqid($type . "_", true) . "." . $fileExtension;
     $destPath = $targetDir . $newFileName;
 
-    if (move_uploaded_file($fileTmpPath, $destPath)) {
+    if (optimizeAndSaveImage($fileTmpPath, $destPath, $mimeType)) {
         // Path สัมพัทธ์สำหรับบันทึกลง Database เช่น "uploads/profile/profile_123.jpg"
         $relativePath = "uploads/" . $type . "/" . $newFileName;
 
@@ -57,7 +69,7 @@ if ($fileInputName && isset($_FILES[$fileInputName]) && $_FILES[$fileInputName][
 
         echo json_encode([
             "status" => "success",
-            "message" => "อัปโหลดรูปภาพสำเร็จ",
+            "message" => "อัปโหลดและบีบอัดรูปภาพสำเร็จ",
             "filePath" => $relativePath,   // <--- นำค่านี้ไปเก็บลง Database (Column sProfileImagePath / sImagePath)
             "fileUrl" => $fullUrl,        // <--- URL เต็ม สำหรับเปิดดูผ่าน Web / App
             "fileName" => $newFileName
@@ -66,7 +78,7 @@ if ($fileInputName && isset($_FILES[$fileInputName]) && $_FILES[$fileInputName][
     } else {
         echo json_encode([
             "status" => "error",
-            "message" => "ไม่สามารถย้ายไฟล์ไปยังโฟลเดอร์ uploads ได้ ตรวจสอบ Permission ของโฟลเดอร์"
+            "message" => "ไม่สามารถบันทึกและย่อขนาดไฟล์ไปยังโฟลเดอร์ uploads ได้"
         ], JSON_UNESCAPED_UNICODE);
         exit();
     }
@@ -137,4 +149,76 @@ echo json_encode([
     "status" => "error",
     "message" => "ไม่พบไฟล์รูปภาพที่ส่งมา (กรุณาส่งผ่าน multipart/form-data key 'image' หรือ JSON body key 'base64Image')"
 ], JSON_UNESCAPED_UNICODE);
+
+/**
+ * ย่อขนาดและบีบอัดรูปภาพด้วย GD Library ให้ไม่เกิน 800x800 px เพื่อประหยัดพื้นที่และแบนด์วิดท์
+ */
+function optimizeAndSaveImage($sourcePath, $destPath, $mimeType, $maxWidth = 800, $maxHeight = 800, $quality = 82) {
+    if (!extension_loaded('gd')) {
+        return move_uploaded_file($sourcePath, $destPath) || @copy($sourcePath, $destPath);
+    }
+    list($origWidth, $origHeight) = @getimagesize($sourcePath);
+    if (!$origWidth || !$origHeight) {
+        return move_uploaded_file($sourcePath, $destPath) || @copy($sourcePath, $destPath);
+    }
+
+    $ratio = min($maxWidth / $origWidth, $maxHeight / $origHeight);
+    if ($ratio >= 1.0) {
+        return move_uploaded_file($sourcePath, $destPath) || @copy($sourcePath, $destPath);
+    }
+
+    $newWidth = (int)round($origWidth * $ratio);
+    $newHeight = (int)round($origHeight * $ratio);
+
+    switch ($mimeType) {
+        case 'image/jpeg':
+        case 'image/jpg':
+            $srcImg = @imagecreatefromjpeg($sourcePath);
+            break;
+        case 'image/png':
+            $srcImg = @imagecreatefrompng($sourcePath);
+            break;
+        case 'image/webp':
+            $srcImg = @imagecreatefromwebp($sourcePath);
+            break;
+        case 'image/gif':
+            $srcImg = @imagecreatefromgif($sourcePath);
+            break;
+        default:
+            $srcImg = false;
+    }
+
+    if (!$srcImg) {
+        return move_uploaded_file($sourcePath, $destPath) || @copy($sourcePath, $destPath);
+    }
+
+    $dstImg = imagecreatetruecolor($newWidth, $newHeight);
+    if ($mimeType === 'image/png' || $mimeType === 'image/webp') {
+        imagealphablending($dstImg, false);
+        imagesavealpha($dstImg, true);
+    }
+
+    imagecopyresampled($dstImg, $srcImg, 0, 0, 0, 0, $newWidth, $newHeight, $origWidth, $origHeight);
+
+    $saved = false;
+    switch ($mimeType) {
+        case 'image/jpeg':
+        case 'image/jpg':
+            $saved = imagejpeg($dstImg, $destPath, $quality);
+            break;
+        case 'image/png':
+            $saved = imagepng($dstImg, $destPath, 6);
+            break;
+        case 'image/webp':
+            $saved = imagewebp($dstImg, $destPath, $quality);
+            break;
+        case 'image/gif':
+            $saved = imagegif($dstImg, $destPath);
+            break;
+    }
+
+    imagedestroy($srcImg);
+    imagedestroy($dstImg);
+    return $saved;
+}
 ?>

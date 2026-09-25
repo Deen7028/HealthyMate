@@ -36,13 +36,19 @@ class _OtpVerificationDialogState extends State<OtpVerificationDialog> {
     super.dispose();
   }
 
+  DateTime? _endTime;
+
   void _startCountdown() {
+    _endTime = DateTime.now().add(const Duration(seconds: 60));
     setState(() => _nCountdown = 60);
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_nCountdown > 0) {
-        setState(() => _nCountdown--);
+      if (_endTime == null) return;
+      final remaining = _endTime!.difference(DateTime.now()).inSeconds;
+      if (remaining > 0) {
+        if (mounted) setState(() => _nCountdown = remaining);
       } else {
+        if (mounted) setState(() => _nCountdown = 0);
         timer.cancel();
       }
     });
