@@ -135,4 +135,16 @@ class DashboardController extends ChangeNotifier {
   int get weekOfMonth => ((now.day + DateTime(now.year, now.month, 1).weekday - 2) / 7).ceil();
   String get thaiDayName => ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'][now.weekday - 1];
   String get thaiMonthName => ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'][now.month - 1];
+
+  Future<void> toggleRoutineCompletion(int routineId, bool isDone) async {
+    todayCompletionMap[routineId] = isDone;
+    notifyListeners();
+    try {
+      final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+      await AppDatabase.instance.toggleRoutineLog(
+        routineId: routineId,
+        dateStr: todayStr,
+      );
+    } catch (_) {}
+  }
 }

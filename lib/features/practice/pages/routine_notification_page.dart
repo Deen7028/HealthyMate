@@ -1,10 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:healthymate/core/database/app_database.dart';
-import 'package:healthymate/core/services/api_service.dart';
-import 'package:healthymate/features/health_calculator/models/user_model.dart';
 import '../models/routine_item.dart';
 import '../widgets/index.dart';
+import '../controllers/routine_controller.dart';
 
 class MyRoutinesPage extends StatefulWidget {
   final bool isActive;
@@ -21,228 +19,31 @@ class MyRoutinesPage extends StatefulWidget {
 }
 
 class _MyRoutinesPageState extends State<MyRoutinesPage> {
+  late final RoutineController _controller;
+
   final Color primaryGreen = const Color(0xFF0F9C58);
   final Color darkGreen = const Color(0xFF006432);
   final Color lightBg = const Color(0xFFF7F9FB);
   final Color cardGreenBg = const Color(0xFFE8F5E9);
 
-  // ---------- State ----------
-  bool _isLoading = true;
-  TbUser? _user;
-  List<Map<String, dynamic>> _routines = [];
-  // routineId -> isCompleted (for today)
-  Map<int, bool> _todayCompletionMap = {};
-  int _completedCount = 0;
-  Map<String, dynamic>? _userGoal;
-  // เก็บสถิติออกกำลังกายของวันนี้แยกตามประเภท (เช่น 'วิ่ง', 'เดิน')
-  Map<String, Map<String, double>> _todayWorkoutStats = {};
-  // routineId -> currentValue (for today step progress)
-  Map<int, double> _todayProgressValues = {};
+  @override
+  void initState() {
+    super.initState();
+    _controller = RoutineController()..loadData();
+  }
 
   @override
   void didUpdateWidget(covariant MyRoutinesPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.isActive && !oldWidget.isActive) {
-      _loadData();
+      _controller.loadData();
     }
-  }
-
-  String get _todayStr {
-    final now = DateTime.now();
-    return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
   }
 
   @override
-  void initState() {
-    super.initState();
-    _loadData();
-  }
-
-  Future<void> _loadData() async {
-    try {
-      final db = AppDatabase.instance;
-
-      // 1. หา user
-      final email = await db.getLoggedInUserEmail();
-      TbUser? user;
-      if (email != null && email.isNotEmpty) {
-        user = await db.getUserByEmail(email);
-      }
-      user ??= await db.getUser(userId: 1);
-
-      if (user == null) {
-        debugPrint('[Routines] ❌ ไม่พบข้อมูลผู้ใช้');
-        if (mounted) setState(() => _isLoading = false);
-        return;
-      }
-
-      final userId = user.nUserId;
-      debugPrint('[Routines] ✅ ผู้ใช้: ${user.sFullName} (ID=$userId)');
-
-      // 2. ดึงกิจวัตรทั้งหมด
-      final routines = await db.getRoutines(userId: userId);
-      debugPrint('[Routines] 📋 กิจวัตร: ${routines.length} รายการ');
-
-      // 3. ดึง completion สำหรับวันนี้ทั้งหมดใน Query เดียว (Batch Query Optimization ป้องกัน N+1)
-      final allLogsToday = await db.getRoutineLogsForDate(
-        userId: userId,
-        dateStr: _todayStr,
-      );
-      final Map<int, Map<String, dynamic>> logsMap = {};
-      for (final log in allLogsToday) {
-        final rId = (log['nRoutineId'] as num?)?.toInt() ?? 0;
-        logsMap[rId] = log;
-      }
-
-      final Map<int, bool> completionMap = {};
-      final Map<int, double> progressValues = {};
-      for (final r in routines) {
-        final routineId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
-        final targetVal = (r['targetValue'] as num?)?.toDouble() ?? 1.0;
-        final log = logsMap[routineId];
-        final isDone = (log?['isCompleted'] as num?)?.toInt() == 1;
-        completionMap[routineId] = isDone;
-        progressValues[routineId] = isDone ? targetVal : 0.0;
-      }
-      int completedCount = completionMap.values.where((v) => v).length;
-
-      // 4. ดึงเป้าหมายหลัก
-      final goal = await db.getUserGoal(userId);
-
-      // 5. ดึงข้อมูล workout และแยกสถิติของวันนี้
-      final workouts = await db.getWorkouts(userId: userId);
-      Map<String, Map<String, double>> todayStats = {};
-
-      for (final w in workouts) {
-        // คำนวณเฉพาะข้อมูลของวันนี้ เพื่อนำไปแสดงในกล่องกิจวัตรแต่ละประเภท
-        final workoutDate = w['dtWorkoutDate']?.toString() ?? '';
-        if (workoutDate.startsWith(_todayStr)) {
-          final type = w['sType']?.toString() ?? 'อื่นๆ'; // เช่น 'วิ่ง', 'เดิน'
-          final dist = (w['nDistance'] as num?)?.toDouble() ?? 0.0;
-          final duration =
-              (w['nDuration'] as num?)?.toDouble() ?? 0.0; // เป็นนาที
-          final calories = (w['nCaloriesBurned'] as num?)?.toDouble() ?? 0.0;
-
-          if (!todayStats.containsKey(type)) {
-            todayStats[type] = {'distance': 0.0, 'duration': 0.0, 'caloriesBurned': 0.0};
-          }
-          todayStats[type]!['distance'] =
-              (todayStats[type]!['distance'] ?? 0) + dist;
-          todayStats[type]!['duration'] =
-              (todayStats[type]!['duration'] ?? 0) + duration;
-          todayStats[type]!['caloriesBurned'] =
-              (todayStats[type]!['caloriesBurned'] ?? 0) + calories;
-        }
-      }
-
-      // Auto-GPS Sync: ประเมินความสำเร็จของกิจวัตรประเภทการออกกำลังกายจากสถิติ GPS วันนี้ให้อัตโนมัติ
-      for (final r in routines) {
-        final routineId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
-        final targetVal = (r['targetValue'] as num?)?.toDouble() ?? 1.0;
-        final title = (r['sTitle'] as String? ?? '').toLowerCase();
-        final unit = (r['unit'] as String? ?? '').toLowerCase();
-
-        String matchedType = r['sLinkedWorkout']?.toString() ?? '';
-        if (matchedType.isEmpty) {
-          if (title.contains('วิ่ง')) {
-            matchedType = 'วิ่ง';
-          } else if (title.contains('เดิน')) {
-            matchedType = 'เดิน';
-          } else if (title.contains('จักรยาน') || title.contains('ปั่น')) {
-            matchedType = 'ปั่นจักรยาน';
-          } else if (title.contains('ลู่วิ่ง')) {
-            matchedType = 'ลู่วิ่งในร่ม';
-          }
-        }
-
-        if (matchedType.isNotEmpty && todayStats.containsKey(matchedType)) {
-          final stats = todayStats[matchedType]!;
-          double workoutVal = 0.0;
-          if (unit.contains('กม') || unit.contains('กิโล') || unit.contains('km')) {
-            workoutVal = stats['distance'] ?? 0.0;
-          } else if (unit.contains('นาที') || unit.contains('min') || unit.contains('เวลา') || unit.contains('ชม')) {
-            workoutVal = stats['duration'] ?? 0.0;
-          }
-          if (workoutVal > 0) {
-            progressValues[routineId] = workoutVal;
-            if (workoutVal >= targetVal) {
-              completionMap[routineId] = true;
-            }
-          }
-        }
-      }
-      completedCount = completionMap.values.where((v) => v).length;
-
-      if (mounted) {
-        setState(() {
-          _user = user;
-          _routines = routines;
-          _todayCompletionMap = completionMap;
-          _todayProgressValues = progressValues;
-          _completedCount = completedCount;
-          _userGoal = _userGoal ?? goal;
-          _todayWorkoutStats = todayStats; // 🔥 นำค่าของวันนี้มาเก็บไว้ใน State
-          _isLoading = false;
-        });
-      }
-
-      // 6. Sync จาก Server (background)
-      _syncRoutinesFromServer(userId);
-    } catch (e, stack) {
-      debugPrint('[Routines] ❌ Error loading data: $e');
-      debugPrint('[Routines] Stack: $stack');
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  /// ดึงกิจวัตรจาก Server แล้ว merge กับ local
-  Future<void> _syncRoutinesFromServer(int userId) async {
-    try {
-      debugPrint('[Routines] 🌐 กำลังซิงค์จาก Server...');
-      final serverResult = await HealthApiService.fetchRoutines(userId: userId);
-
-      if (serverResult == null) {
-        debugPrint('[Routines] 🌐 Server ไม่ตอบ — ใช้ข้อมูล Local');
-        return;
-      }
-
-      final serverRoutines =
-          (serverResult['data'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-      debugPrint(
-        '[Routines] 🌐 ✅ Server routines: ${serverRoutines.length} รายการ',
-      );
-
-      // Merge: เมื่อ Server ตอบกลับสถานะสำเร็จ ให้อัปเดต UI, สถานะเช็ค และค่าความคืบหน้าย่อยของวันนี้
-      if (serverResult['status'] == 'success' &&
-          serverRoutines.isNotEmpty &&
-          mounted) {
-        final Map<int, bool> newCompletionMap = Map.from(_todayCompletionMap);
-        final Map<int, double> newProgressMap = Map.from(_todayProgressValues);
-
-        for (final r in serverRoutines) {
-          final routineId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
-          if (r.containsKey('todayCompleted') && r['todayCompleted'] != null) {
-            newCompletionMap[routineId] =
-                (r['todayCompleted'] as num?)?.toInt() == 1;
-          }
-        // ต้องเพิ่มบรรทัดนี้เพื่อรับค่าความคืบหน้าย่อย
-          if (r.containsKey('todayProgressValue') &&
-              r['todayProgressValue'] != null) {
-            newProgressMap[routineId] =
-                (r['todayProgressValue'] as num?)?.toDouble() ?? 0.0;
-          }
-        }
-        setState(() {
-          _routines = serverRoutines;
-          _todayCompletionMap = newCompletionMap;
-          _todayProgressValues = newProgressMap;
-          _completedCount = newCompletionMap.values.where((v) => v).length;
-        });
-        debugPrint('[Routines] 🌐 ✅ UI และ Progress อัปเดตจาก Server เรียบร้อย');
-      }
-    } catch (e) {
-      debugPrint('[Routines] 🌐 ❌ Sync error: $e');
-    }
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   Future<void> _openAddRoutineDialog() async {
@@ -255,125 +56,9 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
       builder: (context) => const AddRoutineDialog(),
     );
 
-    if (newRoutine != null && _user != null) {
-      // บันทึก Local
-      final id = await AppDatabase.instance.insertRoutine(
-        userId: _user!.nUserId,
-        title: newRoutine.title,
-        time: newRoutine.notificationTime,
-        targetValue: newRoutine.targetValue,
-        unit: newRoutine.unit,
-        linkedWorkout: newRoutine.linkedWorkoutType ?? '',
-        color: newRoutine.color.toARGB32(),
-        iconData: newRoutine.iconData.codePoint,
-        isNotificationActive: newRoutine.isNotificationEnabled,
-      );
-      debugPrint('[Routines] ✅ เพิ่มกิจวัตร: "${newRoutine.title}" (ID=$id)');
+    if (newRoutine != null) {
+      await _controller.addRoutine(newRoutine);
       _showSnackBar('เพิ่ม "${newRoutine.title}" ในกิจวัตรสำเร็จ!');
-
-      // บันทึก Server (background)
-      HealthApiService.insertRoutineRemote(
-        userId: _user!.nUserId,
-        title: newRoutine.title,
-        time: newRoutine.notificationTime,
-        isNotificationActive: newRoutine.isNotificationEnabled,
-      ).then((serverId) {
-        debugPrint('[Routines] 🌐 Server insert: ID=$serverId');
-      });
-
-      await _loadData();
-    }
-  }
-
-  Future<void> _pinAsMainGoal(Map<String, dynamic> routine) async {
-    final title = routine['sTitle']?.toString() ?? 'ไม่มีชื่อ';
-    final routineId = (routine['nRoutineId'] as num?)?.toInt() ?? 0;
-    final targetVal = (routine['targetValue'] as num?)?.toDouble() ?? 1.0;
-    final unitText = routine['unit']?.toString() ?? 'ครั้ง';
-
-    // คำนวณ progress เริ่มต้น
-    final lowerTitle = title.toLowerCase();
-    String matchedType = routine['sLinkedWorkout']?.toString() ?? '';
-    if (matchedType.isEmpty) {
-      if (lowerTitle.contains('วิ่ง')) {
-        matchedType = 'วิ่ง';
-      } else if (lowerTitle.contains('เดิน')) {
-        matchedType = 'เดิน';
-      } else if (lowerTitle.contains('จักรยาน') ||
-          lowerTitle.contains('ปั่น')) {
-        matchedType = 'ปั่นจักรยาน';
-      } else if (lowerTitle.contains('ลู่วิ่ง')) {
-        matchedType = 'ลู่วิ่งในร่ม';
-      }
-    }
-
-    double currentVal = 0.0;
-    if (matchedType.isNotEmpty && _todayWorkoutStats.containsKey(matchedType)) {
-      final stats = _todayWorkoutStats[matchedType]!;
-      if (unitText.contains('กม') ||
-          unitText.contains('กิโล') ||
-          unitText.contains('km')) {
-        currentVal = stats['distance'] ?? 0.0;
-      } else if (unitText.contains('นาที') ||
-          unitText.contains('min') ||
-          unitText.contains('เวลา') ||
-          unitText.contains('ชม')) {
-        currentVal = stats['duration'] ?? 0.0;
-      }
-    } else {
-      final isDone = _todayCompletionMap[routineId] ?? false;
-      currentVal = isDone ? targetVal : 0.0;
-    }
-
-    final double progress = targetVal > 0
-        ? (currentVal / targetVal).clamp(0.0, 1.0)
-        : 0.0;
-    final int percent = (progress * 100).toInt();
-    final String remainingText =
-        'ความคืบหน้า: ${currentVal == currentVal.toInt() ? currentVal.toInt() : currentVal.toStringAsFixed(1)} / ${targetVal == targetVal.toInt() ? targetVal.toInt() : targetVal.toStringAsFixed(1)} $unitText ($percent%)';
-
-    // อัปเดต State เพื่อแสดงกล่องเป้าหมายหลัก
-    setState(() {
-      _userGoal = {
-        'nRoutineId': routineId,
-        'sTitle': title,
-        'nProgress': progress,
-        'sRemainingText': remainingText,
-      };
-    });
-
-    _showSnackBar('ปักหมุด "$title" เป็นเป้าหมายหลักแล้ว');
-
-    // 🔥 บันทึกลง Database
-    if (_user != null) {
-      try {
-        await AppDatabase.instance.saveUserGoal(
-          userId: _user!.nUserId,
-          nRoutineId: routineId,
-          title: title,
-          progress: progress,
-          remainingText: remainingText,
-        );
-      } catch (e) {
-        debugPrint('Error saving pin: $e');
-      }
-    }
-  }
-
-  Future<void> _unpinMainGoal() async {
-    setState(() {
-      _userGoal = null;
-    });
-
-    _showSnackBar('ยกเลิกการปักหมุดเป้าหมายหลักแล้ว');
-
-    // 🔥 ลบออกจาก Database
-    if (_user != null) {
-      try {
-        await AppDatabase.instance.clearUserGoal(_user!.nUserId);
-      } catch (e) {
-        debugPrint('Error clearing pin: $e');
-      }
     }
   }
 
@@ -400,38 +85,14 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     );
 
     if (confirm == true) {
-      // ลบ Local
-      await AppDatabase.instance.deleteRoutine(routineId);
-      debugPrint('[Routines] 🗑️ ลบกิจวัตร: "$title" (ID=$routineId)');
+      await _controller.deleteRoutine(routineId, title);
       _showSnackBar('ลบ "$title" เรียบร้อย');
-
-      // หากเป็นตัวที่ปักหมุดไว้ ให้เคลียร์ออกจาก Goal ด้วย
-      if (_userGoal != null) {
-        final pinnedId = (_userGoal!['nRoutineId'] as num?)?.toInt() ?? 0;
-        if (pinnedId == routineId || _userGoal!['sTitle'] == title) {
-          setState(() {
-            _userGoal = null;
-          });
-          if (_user != null) {
-            await AppDatabase.instance.clearUserGoal(_user!.nUserId);
-          }
-        }
-      }
-
-      // ลบ Server (background)
-      HealthApiService.deleteRoutineRemote(routineId).then((ok) {
-        debugPrint('[Routines] 🌐 Server delete: ${ok ? "✅" : "❌"}');
-      });
-
-      await _loadData();
     }
   }
 
   Future<void> _editRoutine(Map<String, dynamic> routine) async {
     final routineId = (routine['nRoutineId'] as num?)?.toInt() ?? 0;
-    final currentTitle = routine['sTitle']?.toString() ?? '';
 
-    // เรียกหน้า AddRoutineDialog พร้อมส่งข้อมูลเก่าไป (initialRoutine)
     final RoutineItem? updatedRoutine = await showModalBottomSheet<RoutineItem>(
       context: context,
       isScrollControlled: true,
@@ -442,126 +103,9 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     );
 
     if (updatedRoutine != null) {
-      final newTitle = updatedRoutine.title;
-      final newTime = updatedRoutine.notificationTime;
-
-      // อัปเดต Local Database
-      await AppDatabase.instance.updateRoutine(
-        routineId: routineId,
-        title: newTitle,
-        time: newTime,
-        targetValue: updatedRoutine.targetValue,
-        unit: updatedRoutine.unit,
-        linkedWorkout: updatedRoutine.linkedWorkoutType ?? '',
-        color: updatedRoutine.color.toARGB32(),
-        iconData: updatedRoutine.iconData.codePoint,
-        isNotificationActive: updatedRoutine.isNotificationEnabled,
-      );
-      debugPrint('[Routines] ✏️ แก้ไขกิจวัตร: "$currentTitle" → "$newTitle"');
-      _showSnackBar('แก้ไขกิจวัตรสำเร็จ');
-
-      // 🔥 เช็คและอัปเดตกล่องเป้าหมายหลักแบบ Real-time
-      if (_userGoal != null) {
-        final pinnedId = (_userGoal!['nRoutineId'] as num?)?.toInt() ?? 0;
-        // เช็คว่า ID ตรงกัน หรือชื่อเก่าตรงกันหรือไม่
-        if (pinnedId == routineId || _userGoal!['sTitle'] == currentTitle) {
-          final targetVal = updatedRoutine.targetValue;
-          final unitText = updatedRoutine.unit;
-          final isDone = _todayCompletionMap[routineId] ?? false;
-          final progress = isDone ? 1.0 : 0.0;
-          final remainingText =
-              'ความคืบหน้า: ${isDone ? targetVal : 0} / $targetVal $unitText';
-
-          setState(() {
-            _userGoal!['sTitle'] = newTitle;
-            _userGoal!['sRemainingText'] = remainingText;
-          });
-
-          if (_user != null) {
-            await AppDatabase.instance.saveUserGoal(
-              userId: _user!.nUserId,
-              nRoutineId: routineId,
-              title: newTitle,
-              progress: progress,
-              remainingText: remainingText,
-            );
-          }
-        }
-      }
-
-      // อัปเดต Server (background)
-      HealthApiService.updateRoutineRemote(
-        routineId: routineId,
-        title: newTitle,
-        time: newTime,
-      ).then((ok) {
-        debugPrint('[Routines] 🌐 Server update: ${ok ? "✅" : "❌"}');
-      });
-
-      await _loadData();
+      await _controller.editRoutine(routineId, updatedRoutine);
+      _showSnackBar('อัปเดตกิจวัตรเรียบร้อยแล้ว');
     }
-  }
-
-  Future<void> _toggleRoutineCompletion(int routineId) async {
-    // Toggle Local
-    final isCompleted = await AppDatabase.instance.toggleRoutineLog(
-      routineId: routineId,
-      dateStr: _todayStr,
-    );
-
-    if (mounted) {
-      setState(() {
-        _todayCompletionMap[routineId] = isCompleted;
-        _completedCount = _todayCompletionMap.values.where((v) => v).length;
-      });
-    }
-
-    // ถ้าตัวที่ toggle คือเป้าหมายหลัก ให้คำนวณ progress ใหม่และอัปเดต Goal ใน DB ด้วย
-    if (_userGoal != null && _user != null) {
-      final pinnedId = (_userGoal!['nRoutineId'] as num?)?.toInt() ?? 0;
-      if (pinnedId == routineId) {
-        final r = _routines.firstWhere(
-          (item) => ((item['nRoutineId'] as num?)?.toInt() ?? 0) == routineId,
-          orElse: () => {},
-        );
-        if (r.isNotEmpty) {
-          final targetVal = (r['targetValue'] as num?)?.toDouble() ?? 1.0;
-          final unitText = r['unit']?.toString() ?? 'ครั้ง';
-          final currentVal = isCompleted ? targetVal : 0.0;
-          final progress = isCompleted ? 1.0 : 0.0;
-          final percent = (progress * 100).toInt();
-          final remainingText =
-              'ความคืบหน้า: ${currentVal == currentVal.toInt() ? currentVal.toInt() : currentVal.toStringAsFixed(1)} / ${targetVal == targetVal.toInt() ? targetVal.toInt() : targetVal.toStringAsFixed(1)} $unitText ($percent%)';
-
-          setState(() {
-            _userGoal = {
-              'nRoutineId': routineId,
-              'sTitle': r['sTitle']?.toString() ?? _userGoal!['sTitle'],
-              'nProgress': progress,
-              'sRemainingText': remainingText,
-            };
-          });
-
-          AppDatabase.instance.saveUserGoal(
-            userId: _user!.nUserId,
-            nRoutineId: routineId,
-            title: r['sTitle']?.toString() ?? _userGoal!['sTitle'],
-            progress: progress,
-            remainingText: remainingText,
-          );
-        }
-      }
-    }
-
-    // Toggle Server (background)
-    HealthApiService.toggleRoutineLogRemote(
-      routineId: routineId,
-      date: _todayStr,
-    ).then((serverResult) {
-      debugPrint(
-        '[Routines] 🌐 Server toggle: routineId=$routineId → $serverResult',
-      );
-    });
   }
 
   RoutineButtonType _getRoutineButtonType(
@@ -574,7 +118,6 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     final title = (routine['sTitle']?.toString() ?? '').toLowerCase();
     final targetVal = (routine['targetValue'] as num?)?.toDouble() ?? 1.0;
 
-    // 1. Interactive Timer: unit = นาที, min, ชม, hr หรือ title มีคำว่า สมาธิ, หายใจ
     if (unit.contains('นาที') ||
         unit.contains('min') ||
         unit.contains('ชม') ||
@@ -585,7 +128,6 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
       return RoutineButtonType.timer;
     }
 
-    // 2. Quick Step-Add: unit = มล, ml, ลิตร, l, มื้อ, แก้ว, จาน, ครั้ง (และ targetVal > 1)
     if ((unit.contains('มล') ||
             unit.contains('ml') ||
             unit.contains('ลิตร') ||
@@ -598,7 +140,6 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
       return RoutineButtonType.stepAdd;
     }
 
-    // 3. Single-Check Toggle
     return RoutineButtonType.singleCheck;
   }
 
@@ -626,43 +167,6 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     return (targetVal / 4).roundToDouble().clamp(1.0, targetVal);
   }
 
-  Future<void> _incrementRoutineValue(
-    int routineId,
-    double stepVal,
-    double targetVal,
-  ) async {
-    final current = _todayProgressValues[routineId] ?? 0.0;
-    double nextVal = current + stepVal;
-    bool isNowComplete = false;
-
-    if (nextVal >= targetVal) {
-      nextVal = targetVal;
-      isNowComplete = true;
-    }
-
-    setState(() {
-      _todayProgressValues[routineId] = nextVal;
-      if (isNowComplete) {
-        _todayCompletionMap[routineId] = true;
-        _completedCount = _todayCompletionMap.values.where((v) => v).length;
-      }
-    });
-
-    await AppDatabase.instance.insertOrUpdateRoutineLog(
-      routineId: routineId,
-      dateStr: _todayStr,
-      isCompleted: isNowComplete,
-      progressValue: nextVal.toInt(),
-    );
-
-    HealthApiService.updateRoutineProgressRemote(
-      routineId: routineId,
-      date: _todayStr,
-      progressValue: nextVal.toInt(),
-      isCompleted: isNowComplete,
-    );
-  }
-
   void _showCountdownTimerDialog(
     BuildContext context,
     Map<String, dynamic> routine,
@@ -670,9 +174,6 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
   ) {
     final title = routine['sTitle']?.toString() ?? 'จับเวลาทำกิจกรรม';
     final routineId = (routine['nRoutineId'] as num?)?.toInt() ?? 0;
-    final targetVal =
-        (routine['targetValue'] as num?)?.toDouble() ??
-        durationMinutes.toDouble();
 
     showDialog(
       context: context,
@@ -683,12 +184,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
           durationMinutes: durationMinutes,
           onTimerCompleted: () async {
             if (mounted) {
-              setState(() {
-                _todayProgressValues[routineId] = targetVal;
-              });
-              if (!(_todayCompletionMap[routineId] ?? false)) {
-                await _toggleRoutineCompletion(routineId);
-              }
+              await _controller.toggleRoutineCompletion(routineId);
               _showSnackBar('🎉 ทำ "$title" ครบเวลาเรียบร้อยแล้ว!');
             }
           },
@@ -716,7 +212,6 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     );
   }
 
-  // --- เมนู 3 จุด (Popup Menu) ---
   Widget _buildThreeDotsMenu({
     required VoidCallback onEdit,
     required VoidCallback onDelete,
@@ -728,10 +223,9 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
       onSelected: (value) {
         if (value == 'edit') onEdit();
         if (value == 'delete') onDelete();
-        if (value == 'pin') onPinAsMainGoal(); // เพิ่มเงื่อนไขนี้
+        if (value == 'pin') onPinAsMainGoal();
       },
       itemBuilder: (context) => [
-        // เพิ่มเมนูปักหมุดไว้บนสุด
         const PopupMenuItem(
           value: 'pin',
           child: Row(
@@ -766,18 +260,6 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     );
   }
 
-  // ---------- สีและไอคอนตามลำดับกิจวัตร ----------
-  static const _routineColors = [
-    Colors.blue,
-    Colors.orange,
-    Colors.purple,
-    Colors.teal,
-    Colors.red,
-    Colors.indigo,
-    Colors.green,
-    Colors.pink,
-  ];
-
   static const _routineIcons = [
     Icons.check_circle_outline,
     Icons.fitness_center,
@@ -789,16 +271,11 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     Icons.favorite,
   ];
 
-  // ignore: unused_element
-  Color _getRoutineColor(int index) =>
-      _routineColors[index % _routineColors.length];
   IconData _getRoutineIcon(int index) =>
       _routineIcons[index % _routineIcons.length];
 
-  // ---------- Time block classification ----------
   String _getTimeBlock(String? time) {
     if (time == null || time.isEmpty) return 'other';
-    // ลองแปลง HH:mm
     final match = RegExp(r'(\d{1,2})[:\.](\d{2})').firstMatch(time);
     if (match != null) {
       final hour = int.tryParse(match.group(1) ?? '') ?? 12;
@@ -806,7 +283,6 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
       if (hour < 18) return 'afternoon';
       return 'night';
     }
-    // ถ้าไม่มีเวลา ดูจาก keyword
     if (time.contains('เช้า') || time.contains('Morning')) return 'morning';
     if (time.contains('บ่าย') || time.contains('Afternoon')) return 'afternoon';
     if (time.contains('เย็น') || time.contains('คืน') || time.contains('Night')) {
@@ -817,144 +293,155 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return Scaffold(
-        backgroundColor: lightBg,
-        appBar: _buildAppBar(),
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(color: primaryGreen),
-              const SizedBox(height: 16),
-              Text(
-                'กำลังโหลดกิจวัตร...',
-                style: TextStyle(color: Colors.grey.shade600),
+    return ListenableBuilder(
+      listenable: _controller,
+      builder: (context, _) {
+        if (_controller.isLoading) {
+          return Scaffold(
+            backgroundColor: lightBg,
+            appBar: _buildAppBar(),
+            body: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: primaryGreen),
+                  const SizedBox(height: 16),
+                  Text(
+                    'กำลังโหลดกิจวัตร...',
+                    style: TextStyle(color: Colors.grey.shade600),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
-      );
-    }
+            ),
+          );
+        }
 
-    // จัดกลุ่มกิจวัตรตามช่วงเวลา
-    final morningRoutines = <Map<String, dynamic>>[];
-    final afternoonRoutines = <Map<String, dynamic>>[];
-    final nightRoutines = <Map<String, dynamic>>[];
-    final otherRoutines = <Map<String, dynamic>>[];
+        final morningRoutines = <Map<String, dynamic>>[];
+        final afternoonRoutines = <Map<String, dynamic>>[];
+        final nightRoutines = <Map<String, dynamic>>[];
+        final otherRoutines = <Map<String, dynamic>>[];
 
-    for (final r in _routines) {
-      final time = r['sTime']?.toString() ?? '';
-      switch (_getTimeBlock(time)) {
-        case 'morning':
-          morningRoutines.add(r);
-          break;
-        case 'afternoon':
-          afternoonRoutines.add(r);
-          break;
-        case 'night':
-          nightRoutines.add(r);
-          break;
-        default:
-          otherRoutines.add(r);
-      }
-    }
+        for (final r in _controller.routines) {
+          final time = r['sTime']?.toString() ?? '';
+          switch (_getTimeBlock(time)) {
+            case 'morning':
+              morningRoutines.add(r);
+              break;
+            case 'afternoon':
+              afternoonRoutines.add(r);
+              break;
+            case 'night':
+              nightRoutines.add(r);
+              break;
+            default:
+              otherRoutines.add(r);
+          }
+        }
 
-    return Scaffold(
-      backgroundColor: lightBg,
-      appBar: _buildAppBar(),
-      body: RefreshIndicator(
-        color: primaryGreen,
-        onRefresh: _loadData,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 1.1 Top Overview Banner (สรุปภารกิจประจำวัน โทนสีเขียวป่า #2E5327)
-                _buildTopOverviewBanner(),
-                const SizedBox(height: 20),
-
-                // 📌 นำฟังก์ชัน _buildMainGoalCard
-                _buildMainGoalCard(),
-
-                // Daily Routines Header
-                _buildDailyRoutinesHeader(),
-                const SizedBox(height: 16),
-                // Empty state
-                if (_routines.isEmpty) _buildEmptyState(),
-
-                // ☀️ ช่วงเช้า
-                if (morningRoutines.isNotEmpty) ...[
-                  _buildTimeBlockHeader(
-                    '☀️ ช่วงเช้า (Morning)',
-                    '06:00 - 11:00',
-                  ),
-                  ...morningRoutines.map(
-                    (r) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _buildRoutineCardFromDb(r, _routines.indexOf(r)),
+        return Scaffold(
+          backgroundColor: lightBg,
+          appBar: _buildAppBar(),
+          body: RefreshIndicator(
+            color: primaryGreen,
+            onRefresh: _controller.loadData,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    RoutineTopOverviewBanner(
+                      completedCount: _controller.completedCount,
+                      totalCount: _controller.routines.length,
+                      todayWorkoutStats: _controller.todayWorkoutStats,
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                ],
+                    const SizedBox(height: 20),
 
-                // 🏃 ระหว่างวัน
-                if (afternoonRoutines.isNotEmpty) ...[
-                  _buildTimeBlockHeader(
-                    '🏃 ระหว่างวัน (Afternoon)',
-                    '12:00 - 18:00',
-                  ),
-                  ...afternoonRoutines.map(
-                    (r) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _buildRoutineCardFromDb(r, _routines.indexOf(r)),
+                    RoutineMainGoalCard(
+                      userGoal: _controller.userGoal,
+                      completedCount: _controller.completedCount,
+                      totalRoutinesCount: _controller.routines.length,
+                      onUnpin: () async {
+                        await _controller.unpinMainGoal();
+                        _showSnackBar('ยกเลิกการปักหมุดเป้าหมายหลักแล้ว');
+                      },
+                      cardGreenBg: cardGreenBg,
+                      primaryGreen: primaryGreen,
+                      darkGreen: darkGreen,
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                ],
 
-                // 🌙 ก่อนนอน
-                if (nightRoutines.isNotEmpty) ...[
-                  _buildTimeBlockHeader('🌙 ก่อนนอน (Night)', '21:00 - 23:00'),
-                  ...nightRoutines.map(
-                    (r) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _buildRoutineCardFromDb(r, _routines.indexOf(r)),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                ],
+                    _buildDailyRoutinesHeader(),
+                    const SizedBox(height: 16),
+                    if (_controller.routines.isEmpty) _buildEmptyState(),
 
-                // ⭐ อื่นๆ
-                if (otherRoutines.isNotEmpty) ...[
-                  _buildTimeBlockHeader('⭐ กิจวัตรอื่นๆ', 'ตลอดทั้งวัน'),
-                  ...otherRoutines.map(
-                    (r) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _buildRoutineCardFromDb(r, _routines.indexOf(r)),
-                    ),
-                  ),
-                ],
+                    if (morningRoutines.isNotEmpty) ...[
+                      _buildTimeBlockHeader(
+                        '☀️ ช่วงเช้า (Morning)',
+                        '06:00 - 11:00',
+                      ),
+                      ...morningRoutines.map(
+                        (r) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _buildRoutineCardFromDb(r, _controller.routines.indexOf(r)),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
 
-                const SizedBox(height: 100),
-              ],
+                    if (afternoonRoutines.isNotEmpty) ...[
+                      _buildTimeBlockHeader(
+                        '🏃 ระหว่างวัน (Afternoon)',
+                        '12:00 - 18:00',
+                      ),
+                      ...afternoonRoutines.map(
+                        (r) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _buildRoutineCardFromDb(r, _controller.routines.indexOf(r)),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+
+                    if (nightRoutines.isNotEmpty) ...[
+                      _buildTimeBlockHeader('🌙 ก่อนนอน (Night)', '21:00 - 23:00'),
+                      ...nightRoutines.map(
+                        (r) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _buildRoutineCardFromDb(r, _controller.routines.indexOf(r)),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+
+                    if (otherRoutines.isNotEmpty) ...[
+                      _buildTimeBlockHeader('⭐ กิจวัตรอื่นๆ', 'ตลอดทั้งวัน'),
+                      ...otherRoutines.map(
+                        (r) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _buildRoutineCardFromDb(r, _controller.routines.indexOf(r)),
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 100),
+                  ],
+                ),
+              ),
             ),
           ),
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _openAddRoutineDialog,
-        backgroundColor: darkGreen,
-        child: const Icon(Icons.add, color: Colors.white, size: 30),
-      ),
+          floatingActionButton: FloatingActionButton(
+            onPressed: _openAddRoutineDialog,
+            backgroundColor: darkGreen,
+            child: const Icon(Icons.add, color: Colors.white, size: 30),
+          ),
+        );
+      },
     );
   }
 
   PreferredSizeWidget _buildAppBar() {
-    final userName = _user?.sFirstName ?? 'ผู้ใช้งาน';
+    final userName = _controller.user?.sFirstName ?? 'ผู้ใช้งาน';
     return AppBar(
       backgroundColor: lightBg,
       elevation: 0,
@@ -1004,7 +491,6 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     );
   }
 
-  // --- Empty State ---
   Widget _buildEmptyState() {
     return Container(
       width: double.infinity,
@@ -1041,23 +527,9 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     );
   }
 
-  // --- Main Goal Card ---
-  Widget _buildMainGoalCard() {
-    return RoutineMainGoalCard(
-      userGoal: _userGoal,
-      completedCount: _completedCount,
-      totalRoutinesCount: _routines.length,
-      onUnpin: _unpinMainGoal,
-      cardGreenBg: cardGreenBg,
-      primaryGreen: primaryGreen,
-      darkGreen: darkGreen,
-    );
-  }
-
   Widget _buildDailyRoutinesHeader() {
-    // นับจำนวนช่วงเวลาที่มีกิจวัตร
     int timeBlockCount = 0;
-    final times = _routines
+    final times = _controller.routines
         .map((r) => _getTimeBlock(r['sTime']?.toString() ?? ''))
         .toSet();
     timeBlockCount = times.length;
@@ -1075,7 +547,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
           ),
         ),
         Text(
-          _routines.isEmpty ? 'ยังไม่มี' : '$timeBlockCount ช่วง\nเวลา',
+          _controller.routines.isEmpty ? 'ยังไม่มี' : '$timeBlockCount ช่วง\nเวลา',
           textAlign: TextAlign.right,
           style: const TextStyle(fontSize: 12, color: Colors.grey),
         ),
@@ -1106,16 +578,6 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     );
   }
 
-  // --- 1.1 Top Overview Banner (ส่วนสรุปความคืบหน้ารวม โทนสีเขียวป่า #2E5327) ---
-  Widget _buildTopOverviewBanner() {
-    return RoutineTopOverviewBanner(
-      completedCount: _completedCount,
-      totalCount: _routines.length,
-      todayWorkoutStats: _todayWorkoutStats,
-    );
-  }
-
-  // --- Routine Card จาก Database (Unified Routine Cards แบบใหม่) ---
   Widget _buildRoutineCardFromDb(Map<String, dynamic> routine, int index) {
     final routineId = (routine['nRoutineId'] as num?)?.toInt() ?? 0;
     final title = routine['sTitle']?.toString() ?? 'ไม่มีชื่อ';
@@ -1131,7 +593,6 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     final unitText = routine['unit']?.toString() ?? 'ครั้ง';
     final lowerTitle = title.toLowerCase();
 
-    // ดึงประเภทการออกกำลังกายที่เชื่อมไว้
     String matchedType = routine['sLinkedWorkout']?.toString() ?? '';
     if (matchedType.isEmpty) {
       if (lowerTitle.contains('วิ่ง')) {
@@ -1154,8 +615,8 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
         lowerTitle.contains('ลู่วิ่ง');
 
     double? workoutCurrentVal;
-    if (matchedType.isNotEmpty && _todayWorkoutStats.containsKey(matchedType)) {
-      final stats = _todayWorkoutStats[matchedType]!;
+    if (matchedType.isNotEmpty && _controller.todayWorkoutStats.containsKey(matchedType)) {
+      final stats = _controller.todayWorkoutStats[matchedType]!;
       if (unitText.contains('กม') ||
           unitText.contains('กิโล') ||
           unitText.contains('km')) {
@@ -1168,9 +629,9 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
       }
     }
 
-    final isManuallyCompleted = _todayCompletionMap[routineId] ?? false;
+    final isManuallyCompleted = _controller.todayCompletionMap[routineId] ?? false;
     final double accumulatedVal =
-        _todayProgressValues[routineId] ??
+        _controller.todayProgressValues[routineId] ??
         (isManuallyCompleted ? targetVal : 0.0);
     final currentVal = workoutCurrentVal ?? accumulatedVal;
     final bool isActuallyCompleted =
@@ -1208,7 +669,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
           ),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF2E5327), // Forest Green #2E5327
+          backgroundColor: const Color(0xFF2E5327),
           elevation: 1,
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           shape: RoundedRectangleBorder(
@@ -1219,10 +680,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     } else if (isActuallyCompleted) {
       actionButton = InkWell(
         onTap: () async {
-          setState(() {
-            _todayProgressValues[routineId] = 0.0;
-          });
-          await _toggleRoutineCompletion(routineId);
+          await _controller.resetRoutineProgress(routineId);
         },
         borderRadius: BorderRadius.circular(8),
         child: Container(
@@ -1254,7 +712,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
       final stepAmount = _calculateStepAmount(targetVal, unitText);
       final stepStr = formatValue(stepAmount);
       actionButton = InkWell(
-        onTap: () => _incrementRoutineValue(routineId, stepAmount, targetVal),
+        onTap: () => _controller.incrementRoutineValue(routineId, stepAmount),
         borderRadius: BorderRadius.circular(8),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -1315,7 +773,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
       );
     } else {
       actionButton = InkWell(
-        onTap: () => _toggleRoutineCompletion(routineId),
+        onTap: () => _controller.toggleRoutineCompletion(routineId),
         borderRadius: BorderRadius.circular(8),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -1356,7 +814,10 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
       threeDotsMenu: _buildThreeDotsMenu(
         onEdit: () => _editRoutine(routine),
         onDelete: () => _deleteRoutine(routineId, title),
-        onPinAsMainGoal: () => _pinAsMainGoal(routine),
+        onPinAsMainGoal: () async {
+          await _controller.pinAsMainGoal(routine);
+          _showSnackBar('ปักหมุด "$title" เป็นเป้าหมายหลักแล้ว');
+        },
       ),
     );
   }
