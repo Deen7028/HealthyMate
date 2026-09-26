@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/percent_indicator.dart';
+import 'package:healthymate/core/database/app_database.dart';
+import 'package:healthymate/core/services/routine_state_notifier.dart';
+import 'package:healthymate/features/practice/widgets/add_main_goal_bottom_sheet.dart';
 import '../controllers/dashboard_controller.dart';
 import '../utils/dashboard_ui_helpers.dart';
+
 
 class MainGoalCard extends StatelessWidget {
   final DashboardController controller;
@@ -151,106 +155,152 @@ class MainGoalCard extends StatelessWidget {
       child: Column(
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: goalColor.withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(goalIcon, color: goalColor, size: 22),
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: goalColor.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(goalIcon, color: goalColor, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
                             displayTitle,
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                             ),
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          if (hasPinnedGoal) ...[
-                            const SizedBox(width: 6),
-                            Icon(
-                              Icons.push_pin,
-                              size: 14,
-                              color: Colors.orange.shade700,
-                            ),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        displayDetail,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isCompleted
-                              ? Colors.green.shade700
-                              : Colors.grey,
-                          fontWeight: isCompleted
-                              ? FontWeight.bold
-                              : FontWeight.normal,
                         ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              if (!hasPinnedGoal)
-                TextButton(
-                  onPressed: onNavigateToPractice,
-                  child: const Text(
-                    'ปักหมุด >',
-                    style: TextStyle(
-                      color: Color(0xFF0F9C58),
-                      fontWeight: FontWeight.bold,
+                        if (hasPinnedGoal) ...[
+                          const SizedBox(width: 6),
+                          Icon(
+                            Icons.push_pin,
+                            size: 14,
+                            color: Colors.orange.shade700,
+                          ),
+                        ],
+                      ],
                     ),
-                  ),
+                    const SizedBox(height: 2),
+                    Text(
+                      displayDetail,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isCompleted
+                            ? Colors.green.shade700
+                            : Colors.grey,
+                        fontWeight: isCompleted
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    ),
+                  ],
                 ),
+              ),
             ],
           ),
 
-          const SizedBox(height: 16),
+          if (!hasPinnedGoal) ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  final result = await showModalBottomSheet<Map<String, dynamic>>(
+                    context: context,
+                    isScrollControlled: true,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                    ),
+                    builder: (context) => const AddMainGoalBottomSheet(),
+                  );
+                  if (result != null && controller.user != null) {
+                    final title = result['title']?.toString() ?? '';
+                    final icon = result['icon']?.toString() ?? '🚩';
+                    final unit = result['unit']?.toString() ?? '';
+                    final targetVal = (result['targetValue'] as num?)?.toDouble() ?? 1.0;
+                    final deadlineDate = result['deadlineDate'] as DateTime? ?? DateTime.now().add(const Duration(days: 30));
+                    final now = DateTime.now();
+                    final remainingDays = deadlineDate.difference(now).inDays.clamp(1, 9999);
+                    final deadlineStr = '${deadlineDate.day}/${deadlineDate.month}/${deadlineDate.year}';
+                    final remainingText = 'เป้าหมาย: 0 / ${targetVal == targetVal.toInt() ? targetVal.toInt() : targetVal.toStringAsFixed(1)} $unit (เหลือ $remainingDays วัน • สิ้นสุด $deadlineStr)';
 
-          CircularPercentIndicator(
-            radius: 54.0,
-            lineWidth: 9.0,
-            percent: progress,
-            center: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  '${(progress * 100).toInt()}%',
+                    await AppDatabase.instance.saveUserGoal(
+                      userId: controller.user!.nUserId,
+                      nRoutineId: 0,
+                      title: '$icon $title',
+                      progress: 0.0,
+                      remainingText: remainingText,
+                    );
+                    RoutineStateNotifier.instance.loadData(userId: controller.user!.nUserId);
+                  }
+                },
+                icon: const Icon(Icons.add_circle_outline, size: 20, color: Colors.white),
+                label: const Text(
+                  '+ ตั้งเป้าหมายหลัก (Set Main Goal)',
                   style: TextStyle(
-                    fontSize: 20,
+                    color: Colors.white,
                     fontWeight: FontWeight.bold,
-                    color: goalColor,
+                    fontSize: 14,
                   ),
                 ),
-                Text(
-                  isCompleted ? 'สำเร็จ!' : 'ความคืบหน้า',
-                  style: TextStyle(
-                    fontSize: 9,
-                    color: isCompleted ? Colors.green.shade800 : Colors.grey,
-                    fontWeight: isCompleted
-                        ? FontWeight.bold
-                        : FontWeight.normal,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF006432),
+                  elevation: 1,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-              ],
+              ),
             ),
-            progressColor: goalColor,
-            backgroundColor: goalColor.withValues(alpha: 0.12),
-            circularStrokeCap: CircularStrokeCap.round,
-            animation: true,
-          ),
+          ] else ...[
+            const SizedBox(height: 16),
+
+            CircularPercentIndicator(
+              radius: 54.0,
+              lineWidth: 9.0,
+              percent: progress,
+              center: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '${(progress * 100).toInt()}%',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: goalColor,
+                    ),
+                  ),
+                  Text(
+                    isCompleted ? 'สำเร็จ!' : 'ความคืบหน้า',
+                    style: TextStyle(
+                      fontSize: 9,
+                      color: isCompleted ? Colors.green.shade800 : Colors.grey,
+                      fontWeight: isCompleted
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                    ),
+                  ),
+                ],
+              ),
+              progressColor: goalColor,
+              backgroundColor: goalColor.withValues(alpha: 0.12),
+              circularStrokeCap: CircularStrokeCap.round,
+              animation: true,
+            ),
+          ],
+
 
           if (isCompleted) ...[
             const SizedBox(height: 12),

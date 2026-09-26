@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:healthymate/core/services/routine_state_notifier.dart';
 import '../models/routine_item.dart';
 import '../widgets/index.dart';
 import '../controllers/routine_controller.dart';
@@ -30,6 +31,13 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
   void initState() {
     super.initState();
     _controller = RoutineController()..loadData();
+    RoutineStateNotifier.instance.addListener(_onStateChanged);
+  }
+
+  void _onStateChanged() {
+    if (mounted) {
+      _controller.loadData();
+    }
   }
 
   @override
@@ -42,11 +50,36 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
 
   @override
   void dispose() {
+    RoutineStateNotifier.instance.removeListener(_onStateChanged);
     _controller.dispose();
     super.dispose();
   }
 
+  Future<void> _openAddMainGoalBottomSheet() async {
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (context) => const AddMainGoalBottomSheet(),
+    );
+
+    if (result != null) {
+      await _controller.setCustomMainGoal(
+        title: result['title']?.toString() ?? '',
+        icon: result['icon']?.toString() ?? '🚩',
+        unit: result['unit']?.toString() ?? '',
+        targetValue: (result['targetValue'] as num?)?.toDouble() ?? 1.0,
+        linkedWorkout: result['linkedWorkout']?.toString() ?? '',
+        deadlineDate: result['deadlineDate'] as DateTime? ?? DateTime.now().add(const Duration(days: 30)),
+      );
+      _showSnackBar('ตั้งเป้าหมายหลัก "${result['title']}" เรียบร้อย!');
+    }
+  }
+
   Future<void> _openAddRoutineDialog() async {
+
     final RoutineItem? newRoutine = await showModalBottomSheet<RoutineItem>(
       context: context,
       isScrollControlled: true,
@@ -215,7 +248,6 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
   Widget _buildThreeDotsMenu({
     required VoidCallback onEdit,
     required VoidCallback onDelete,
-    required VoidCallback onPinAsMainGoal,
   }) {
     return PopupMenuButton<String>(
       icon: const Icon(Icons.more_vert, color: Colors.grey),
@@ -223,19 +255,8 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
       onSelected: (value) {
         if (value == 'edit') onEdit();
         if (value == 'delete') onDelete();
-        if (value == 'pin') onPinAsMainGoal();
       },
       itemBuilder: (context) => [
-        const PopupMenuItem(
-          value: 'pin',
-          child: Row(
-            children: [
-              Icon(Icons.push_pin, color: Colors.orange, size: 20),
-              SizedBox(width: 8),
-              Text('ปักหมุดเป้าหมายหลัก'),
-            ],
-          ),
-        ),
         const PopupMenuItem(
           value: 'edit',
           child: Row(
@@ -378,6 +399,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
                       userGoal: _controller.userGoal,
                       completedCount: displayCompletedCount,
                       totalRoutinesCount: displayRoutines.length,
+                      onSetMainGoal: _openAddMainGoalBottomSheet,
                       onUnpin: () async {
                         await _controller.unpinMainGoal();
                         _showSnackBar('ยกเลิกการปักหมุดเป้าหมายหลักแล้ว');
@@ -386,6 +408,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
                       primaryGreen: primaryGreen,
                       darkGreen: darkGreen,
                     ),
+
 
                     _buildDailyRoutinesHeader(),
                     const SizedBox(height: 16),
@@ -458,6 +481,15 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
 
   PreferredSizeWidget _buildAppBar() {
     final userName = _controller.user?.sFirstName ?? 'ผู้ใช้งาน';
+    final profilePath = _controller.user?.sProfileImagePath ?? '';
+
+    ImageProvider? imageProvider;
+    if (profilePath.isNotEmpty) {
+      if (profilePath.startsWith('http')) {
+        imageProvider = NetworkImage(profilePath);
+      }
+    }
+
     return AppBar(
       backgroundColor: lightBg,
       elevation: 0,
@@ -493,19 +525,23 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
           child: CircleAvatar(
             radius: 16,
             backgroundColor: primaryGreen,
-            child: Text(
-              userName.isNotEmpty ? userName[0].toUpperCase() : '?',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            backgroundImage: imageProvider,
+            child: imageProvider == null
+                ? Text(
+                    userName.isNotEmpty ? userName[0].toUpperCase() : '?',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  )
+                : null,
           ),
         ),
       ],
     );
   }
+
 
   Widget _buildEmptyState() {
     return Container(
@@ -609,8 +645,17 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     final unitText = routine['unit']?.toString() ?? 'ครั้ง';
     final lowerTitle = title.toLowerCase();
 
+    const workoutKeywords = ['วิ่ง', 'เดิน', 'ปั่นจักรยาน', 'จักรยาน', 'ลู่วิ่ง', 'คาร์ดิโอ', 'ออกกำลังกาย'];
+    final bool isNonWorkout = lowerTitle.contains('น้ำ') ||
+        lowerTitle.contains('สมาธิ') ||
+        lowerTitle.contains('นอน') ||
+        lowerTitle.contains('กิน') ||
+        lowerTitle.contains('อาหาร') ||
+        lowerTitle.contains('ยา') ||
+        lowerTitle.contains('อ่าน');
+
     String matchedType = routine['sLinkedWorkout']?.toString() ?? '';
-    if (matchedType.isEmpty) {
+    if (matchedType.isEmpty && !isNonWorkout) {
       if (lowerTitle.contains('วิ่ง')) {
         matchedType = 'วิ่ง';
       } else if (lowerTitle.contains('เดิน')) {
@@ -622,16 +667,14 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
       }
     }
 
-    final bool isWorkoutRoutine =
-        matchedType.isNotEmpty ||
-        lowerTitle.contains('วิ่ง') ||
-        lowerTitle.contains('เดิน') ||
-        lowerTitle.contains('จักรยาน') ||
-        lowerTitle.contains('ปั่น') ||
-        lowerTitle.contains('ลู่วิ่ง');
+    final bool isWorkoutRoutine = !isNonWorkout &&
+        (matchedType.isNotEmpty ||
+            workoutKeywords.any((kw) => lowerTitle.contains(kw)));
 
     double? workoutCurrentVal;
-    if (matchedType.isNotEmpty && _controller.todayWorkoutStats.containsKey(matchedType)) {
+    if (isWorkoutRoutine &&
+        matchedType.isNotEmpty &&
+        _controller.todayWorkoutStats.containsKey(matchedType)) {
       final stats = _controller.todayWorkoutStats[matchedType]!;
       if (unitText.contains('กม') ||
           unitText.contains('กิโล') ||
@@ -694,37 +737,32 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
         ),
       );
     } else if (isActuallyCompleted) {
-      actionButton = InkWell(
-        onTap: () async {
-          await _controller.resetRoutineProgress(routineId);
-        },
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          decoration: BoxDecoration(
-            color: const Color(0xFF2E5327),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.check_rounded, size: 14, color: Colors.white),
-              const SizedBox(width: 4),
-              Text(
-                buttonType == RoutineButtonType.stepAdd
-                    ? '✓ ครบแล้ว'
-                    : '✓ เสร็จแล้ว',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
+      actionButton = Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xFF2E5327),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.check_rounded, size: 14, color: Colors.white),
+            const SizedBox(width: 4),
+            Text(
+              buttonType == RoutineButtonType.stepAdd
+                  ? ' ครบแล้ว'
+                  : ' เสร็จแล้ว',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       );
     } else if (buttonType == RoutineButtonType.stepAdd) {
+
       final stepAmount = _calculateStepAmount(targetVal, unitText);
       final stepStr = formatValue(stepAmount);
       actionButton = InkWell(
@@ -830,10 +868,6 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
       threeDotsMenu: _buildThreeDotsMenu(
         onEdit: () => _editRoutine(routine),
         onDelete: () => _deleteRoutine(routineId, title),
-        onPinAsMainGoal: () async {
-          await _controller.pinAsMainGoal(routine);
-          _showSnackBar('ปักหมุด "$title" เป็นเป้าหมายหลักแล้ว');
-        },
       ),
     );
   }

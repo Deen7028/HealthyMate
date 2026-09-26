@@ -5,6 +5,7 @@ class DashboardOtherGoalsCard extends StatelessWidget {
   final Map<String, dynamic>? userGoal;
   final List<Map<String, dynamic>> routines;
   final Map<int, bool> todayCompletionMap;
+  final Map<int, double> todayProgressValues;
   final Map<String, Map<String, double>> todayWorkoutStats;
   final DateTime now;
   final Color darkGreen;
@@ -16,12 +17,14 @@ class DashboardOtherGoalsCard extends StatelessWidget {
     this.userGoal,
     required this.routines,
     required this.todayCompletionMap,
+    this.todayProgressValues = const {},
     required this.todayWorkoutStats,
     required this.now,
     required this.darkGreen,
     required this.lightBg,
     this.onNavigateToPractice,
   });
+
 
   String _formatNum(double val) =>
       val == val.toInt() ? val.toInt().toString() : val.toStringAsFixed(1);
@@ -113,9 +116,18 @@ class DashboardOtherGoalsCard extends StatelessWidget {
                 final icon = DashboardUiHelpers.getRoutineIcon(routine, index);
 
                 final lowerTitle = title.toLowerCase();
+                const workoutKeywords = ['วิ่ง', 'เดิน', 'ปั่นจักรยาน', 'จักรยาน', 'ลู่วิ่ง', 'คาร์ดิโอ', 'ออกกำลังกาย'];
+                final bool isNonWorkout = lowerTitle.contains('น้ำ') ||
+                    lowerTitle.contains('สมาธิ') ||
+                    lowerTitle.contains('นอน') ||
+                    lowerTitle.contains('กิน') ||
+                    lowerTitle.contains('อาหาร') ||
+                    lowerTitle.contains('ยา') ||
+                    lowerTitle.contains('อ่าน');
+
                 String matchedType =
                     routine['sLinkedWorkout']?.toString() ?? '';
-                if (matchedType.isEmpty) {
+                if (matchedType.isEmpty && !isNonWorkout) {
                   if (lowerTitle.contains('วิ่ง')) {
                     matchedType = 'วิ่ง';
                   } else if (lowerTitle.contains('เดิน')) {
@@ -128,8 +140,13 @@ class DashboardOtherGoalsCard extends StatelessWidget {
                   }
                 }
 
+                final bool isWorkout = !isNonWorkout &&
+                    (matchedType.isNotEmpty ||
+                        workoutKeywords.any((kw) => lowerTitle.contains(kw)));
+
                 double? workoutVal;
-                if (matchedType.isNotEmpty &&
+                if (isWorkout &&
+                    matchedType.isNotEmpty &&
                     todayWorkoutStats.containsKey(matchedType)) {
                   final stats = todayWorkoutStats[matchedType]!;
                   if (unitText.contains('กม') ||
@@ -145,11 +162,10 @@ class DashboardOtherGoalsCard extends StatelessWidget {
                 }
 
                 final isDone = todayCompletionMap[rId] ?? false;
-                final currentVal = workoutVal ??
-                    (isDone
-                        ? targetVal
-                        : ((routine['currentValue'] as num?)?.toDouble() ??
-                            0.0));
+                final accumulatedVal = todayProgressValues[rId] ?? (isDone ? targetVal : 0.0);
+                final currentVal = workoutVal ?? accumulatedVal;
+                final isActuallyCompleted = isDone || currentVal >= targetVal;
+
 
                 return InkWell(
                   onTap: onNavigateToPractice,
@@ -162,14 +178,14 @@ class DashboardOtherGoalsCard extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: isDone
+                            color: isActuallyCompleted
                                 ? Colors.green.withValues(alpha: 0.15)
                                 : color.withValues(alpha: 0.15),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
-                            isDone ? Icons.check_circle_rounded : icon,
-                            color: isDone ? Colors.green.shade700 : color,
+                            isActuallyCompleted ? Icons.check_circle_rounded : icon,
+                            color: isActuallyCompleted ? Colors.green.shade700 : color,
                             size: 20,
                           ),
                         ),
@@ -185,28 +201,29 @@ class DashboardOtherGoalsCard extends StatelessWidget {
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 15,
-                                  color: isDone ? Colors.grey.shade500 : const Color(0xFF1E293B),
-                                  decoration: isDone ? TextDecoration.lineThrough : null,
+                                  color: isActuallyCompleted ? Colors.grey.shade500 : const Color(0xFF1E293B),
+                                  decoration: isActuallyCompleted ? TextDecoration.lineThrough : null,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                isDone
-                                    ? 'ทำสำเร็จแล้ววันนี้'
+                                isActuallyCompleted
+                                    ? 'ทำสำเร็จแล้ววันนี้ (${_formatNum(currentVal)} / ${_formatNum(targetVal)} $unitText)'
                                     : 'ความคืบหน้า: ${_formatNum(currentVal)} / ${_formatNum(targetVal)} $unitText',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: isDone ? Colors.green.shade600 : Colors.grey.shade500,
+                                  color: isActuallyCompleted ? Colors.green.shade600 : Colors.grey.shade500,
                                 ),
                               ),
                             ],
                           ),
                         ),
 
-                        // 3. ป้ายกำกับสถานะ (Badge เล็กๆ แทนหลอด Progress ใหญ่ๆ)
-                        if (!isDone)
+                        // 3. ป้ายกำกับสถานะ
+                        if (!isActuallyCompleted)
+
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(

@@ -30,7 +30,16 @@ try {
 
     if ($user) {
         // มีบัญชีอยู่แล้ว -> อัปเดตรูปโปรไฟล์เผื่อมีการเปลี่ยนแปลง
-        if (!empty($profileImage) && empty($user['sProfileImagePath'])) {
+        if (!empty($profileImage) && $user['sProfileImagePath'] !== $profileImage) {
+            // ลบรูปภาพเก่าจากดิสก์เซิร์ฟเวอร์ หากเป็นไฟล์ท้องถิ่นในโฟลเดอร์ uploads/
+            $oldImg = $user['sProfileImagePath'] ?? '';
+            if (!empty($oldImg) && strpos($oldImg, 'http') !== 0) {
+                $oldPath = __DIR__ . '/../' . ltrim($oldImg, '/');
+                if (file_exists($oldPath) && is_file($oldPath)) {
+                    @unlink($oldPath);
+                }
+            }
+
             $updateStmt = $conn->prepare("UPDATE TbUsers SET sProfileImagePath = :img WHERE nUserId = :id");
             $updateStmt->execute([':img' => $profileImage, ':id' => $user['nUserId']]);
             $user['sProfileImagePath'] = $profileImage;

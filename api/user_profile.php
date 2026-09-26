@@ -116,13 +116,17 @@ switch ($method) {
                 ], JSON_UNESCAPED_UNICODE);
             } else {
                 // ยังไม่มีในเซิร์ฟเวอร์ -> ทำการ INSERT ผู้ใช้ใหม่ (สมัครสมาชิกใหม่)
+                $finalPasswordHash = !empty($passwordHash) 
+                    ? (strpos($passwordHash, '$2y$') === 0 ? $passwordHash : password_hash($passwordHash, PASSWORD_BCRYPT)) 
+                    : password_hash(bin2hex(random_bytes(8)), PASSWORD_BCRYPT);
+
                 $insertStmt = $conn->prepare("
                     INSERT INTO TbUsers (sEmail, sPasswordHash, sFirstName, sLastName, nAge, nHeight, nWeight, sGender, sActivityLevel, sProfileImagePath, isSynced, dtUpdatedAt, dtCreatedAt)
                     VALUES (:email, :passwordHash, :firstName, :lastName, :age, :height, :weight, :gender, :activityLevel, :profileImagePath, 1, NOW(), NOW())
                 ");
                 $insertStmt->execute([
                     ':email' => $email,
-                    ':passwordHash' => $passwordHash,
+                    ':passwordHash' => $finalPasswordHash,
                     ':firstName' => $firstName ?: 'ผู้ใช้งาน',
                     ':lastName' => $lastName,
                     ':age' => $age,

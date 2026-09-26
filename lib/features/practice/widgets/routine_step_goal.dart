@@ -5,6 +5,7 @@ class RoutineStepGoal extends StatelessWidget {
   final TextEditingController unitController;
   final String? selectedLinkedWorkout;
   final String? autoDetected;
+  final bool showGpsSyncOption;
   final ValueChanged<bool> onToggleAutoLink;
   final ValueChanged<String> onSelectUnit;
 
@@ -14,6 +15,7 @@ class RoutineStepGoal extends StatelessWidget {
     required this.unitController,
     required this.selectedLinkedWorkout,
     required this.autoDetected,
+    this.showGpsSyncOption = true,
     required this.onToggleAutoLink,
     required this.onSelectUnit,
   });
@@ -95,90 +97,92 @@ class RoutineStepGoal extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 18),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: isAutoLinked
-                  ? const Color(0xFFE8F3EB)
-                  : const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
+          if (showGpsSyncOption) ...[
+            const SizedBox(height: 18),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
                 color: isAutoLinked
-                    ? const Color(0xFF2E5327)
-                    : const Color(0xFFCBD5E1),
-                width: 1.2,
+                    ? const Color(0xFFE8F3EB)
+                    : const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isAutoLinked
+                      ? const Color(0xFF2E5327)
+                      : const Color(0xFFCBD5E1),
+                  width: 1.2,
+                ),
               ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.link_rounded,
+                              color: isAutoLinked
+                                  ? const Color(0xFF2E5327)
+                                  : Colors.grey,
+                              size: 22,
+                            ),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                '🔗 เชื่อมโยงข้อมูล GPS ออกกำลังกายอัตโนมัติ',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: isAutoLinked
+                                      ? const Color(0xFF2E5327)
+                                      : const Color(0xFF334155),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Switch(
+                        value: isAutoLinked,
+                        onChanged: onToggleAutoLink,
+                        activeThumbColor: const Color(0xFF2E5327),
+                      ),
+                    ],
+                  ),
+                  if (isAutoLinked) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFCBE3D3)),
+                      ),
                       child: Row(
                         children: [
-                          Icon(
-                            Icons.link_rounded,
-                            color: isAutoLinked
-                                ? const Color(0xFF2E5327)
-                                : Colors.grey,
-                            size: 22,
-                          ),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              '🔗 เชื่อมโยงข้อมูล GPS ออกกำลังกายอัตโนมัติ',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: isAutoLinked
-                                    ? const Color(0xFF2E5327)
-                                    : const Color(0xFF334155),
-                              ),
+                          const Icon(Icons.bolt_rounded,
+                              size: 16, color: Colors.orange),
+                          const SizedBox(width: 6),
+                          Text(
+                            'ตรวจจับกีฬา: "${selectedLinkedWorkout ?? autoDetected}" Auto-GPS Sync',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF2E5327),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    Switch(
-                      value: isAutoLinked,
-                      onChanged: onToggleAutoLink,
-                      activeThumbColor: const Color(0xFF2E5327),
-                    ),
                   ],
-                ),
-                if (isAutoLinked) ...[
-                  const SizedBox(height: 8),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFFCBE3D3)),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.bolt_rounded,
-                            size: 16, color: Colors.orange),
-                        const SizedBox(width: 6),
-                        Text(
-                          'ตรวจจับกีฬา: "${selectedLinkedWorkout ?? autoDetected}" Auto-GPS Sync',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF2E5327),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ],
-              ],
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );

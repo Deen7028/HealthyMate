@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/api_service.dart';
+import 'package:healthymate/core/services/routine_state_notifier.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
 import '../models/routine_item.dart';
 
@@ -78,7 +79,8 @@ class RoutineController extends ChangeNotifier {
         if (workoutDate.startsWith(todayStr)) {
           final type = w['sType']?.toString() ?? 'อื่นๆ';
           final dist = (w['nDistance'] as num?)?.toDouble() ?? 0.0;
-          final duration = (w['nDuration'] as num?)?.toDouble() ?? 0.0;
+          final durationSec = (w['nDuration'] as num?)?.toDouble() ?? 0.0;
+          final durationMin = durationSec > 0 ? (durationSec / 60.0) : 0.0;
           final calories = (w['nCaloriesBurned'] as num?)?.toDouble() ?? 0.0;
 
           todayWorkoutStats.putIfAbsent(
@@ -88,11 +90,12 @@ class RoutineController extends ChangeNotifier {
           todayWorkoutStats[type]!['distance'] =
               (todayWorkoutStats[type]!['distance'] ?? 0) + dist;
           todayWorkoutStats[type]!['duration'] =
-              (todayWorkoutStats[type]!['duration'] ?? 0) + duration;
+              (todayWorkoutStats[type]!['duration'] ?? 0) + durationMin;
           todayWorkoutStats[type]!['caloriesBurned'] =
               (todayWorkoutStats[type]!['caloriesBurned'] ?? 0) + calories;
         }
       }
+
 
       // Auto-GPS Sync: ประเมินความสำเร็จของกิจวัตรประเภทการออกกำลังกายจากสถิติ GPS วันนี้
       for (final r in routines) {
@@ -103,8 +106,17 @@ class RoutineController extends ChangeNotifier {
         final title = (r['sTitle'] as String? ?? '').toLowerCase();
         final unit = (r['unit'] as String? ?? (r['sUnit'] as String? ?? '')).toLowerCase();
 
+        const workoutKeywords = ['วิ่ง', 'เดิน', 'ปั่นจักรยาน', 'จักรยาน', 'ลู่วิ่ง', 'คาร์ดิโอ', 'ออกกำลังกาย'];
+        final bool isNonWorkout = title.contains('น้ำ') ||
+            title.contains('สมาธิ') ||
+            title.contains('นอน') ||
+            title.contains('กิน') ||
+            title.contains('อาหาร') ||
+            title.contains('ยา') ||
+            title.contains('อ่าน');
+
         String matchedType = r['sLinkedWorkout']?.toString() ?? '';
-        if (matchedType.isEmpty) {
+        if (matchedType.isEmpty && !isNonWorkout) {
           if (title.contains('วิ่ง')) {
             matchedType = 'วิ่ง';
           } else if (title.contains('เดิน')) {
@@ -116,7 +128,11 @@ class RoutineController extends ChangeNotifier {
           }
         }
 
-        if (matchedType.isNotEmpty && todayWorkoutStats.containsKey(matchedType)) {
+        final bool isWorkout = !isNonWorkout &&
+            (matchedType.isNotEmpty ||
+                workoutKeywords.any((kw) => title.contains(kw)));
+
+        if (isWorkout && matchedType.isNotEmpty && todayWorkoutStats.containsKey(matchedType)) {
           final stats = todayWorkoutStats[matchedType]!;
           double workoutVal = 0.0;
           if (unit.contains('กม') || unit.contains('กิโล') || unit.contains('km')) {
@@ -230,6 +246,8 @@ class RoutineController extends ChangeNotifier {
         routineId: routineId,
         date: todayStr,
       );
+
+      RoutineStateNotifier.instance.loadData(userId: user!.nUserId);
     }
   }
 
@@ -266,6 +284,8 @@ class RoutineController extends ChangeNotifier {
         progressValue: newVal,
         isCompleted: isDone,
       );
+
+      RoutineStateNotifier.instance.loadData(userId: user!.nUserId);
     }
   }
 
@@ -347,17 +367,59 @@ class RoutineController extends ChangeNotifier {
           progress: progress,
           remainingText: remainingText,
         );
+        RoutineStateNotifier.instance.loadData(userId: user!.nUserId);
+      } catch (_) {}
+    }
+  }
+
+  Future<void> setCustomMainGoal({
+    required String title,
+    required String icon,
+    required String unit,
+    required double targetValue,
+    required String linkedWorkout,
+    required DateTime deadlineDate,
+  }) async {
+    final now = DateTime.now();
+    final remainingDays = deadlineDate.difference(now).inDays.clamp(1, 9999);
+    final deadlineStr = '${deadlineDate.day}/${deadlineDate.month}/${deadlineDate.year}';
+    final remainingText = 'เป้าหมาย: 0 / ${targetValue == targetValue.toInt() ? targetValue.toInt() : targetValue.toStringAsFixed(1)} $unit (เหลือ $remainingDays วัน • สิ้นสุด $deadlineStr)';
+
+    userGoal = {
+      'nRoutineId': 0,
+      'sTitle': '$icon $title',
+      'nProgress': 0.0,
+      'sRemainingText': remainingText,
+      'targetValue': targetValue,
+      'unit': unit,
+      'linkedWorkout': linkedWorkout,
+      'dtDeadline': deadlineDate.toIso8601String(),
+    };
+    notifyListeners();
+
+    if (user != null) {
+      try {
+        await AppDatabase.instance.saveUserGoal(
+          userId: user!.nUserId,
+          nRoutineId: 0,
+          title: '$icon $title',
+          progress: 0.0,
+          remainingText: remainingText,
+        );
+        RoutineStateNotifier.instance.loadData(userId: user!.nUserId);
       } catch (_) {}
     }
   }
 
   Future<void> unpinMainGoal() async {
+
     userGoal = null;
     notifyListeners();
 
     if (user != null) {
       try {
         await AppDatabase.instance.clearUserGoal(user!.nUserId);
+        RoutineStateNotifier.instance.loadData(userId: user!.nUserId);
       } catch (_) {}
     }
   }

@@ -56,18 +56,19 @@ class RoutineCardWidget extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: const Color(0xFFE8F3EB),
                   shape: BoxShape.circle,
                   border: Border.all(color: const Color(0xFFCBE3D3)),
                 ),
-                child: Icon(icon, color: const Color(0xFF2E5327), size: 24),
+                child: Icon(icon, color: const Color(0xFF2E5327), size: 22),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
 
               Expanded(
                 child: Column(
@@ -80,7 +81,7 @@ class RoutineCardWidget extends StatelessWidget {
                             title,
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: 15.5,
+                              fontSize: 15,
                               color: Color(0xFF1E281F),
                             ),
                             maxLines: 1,
@@ -90,19 +91,17 @@ class RoutineCardWidget extends StatelessWidget {
                         const SizedBox(width: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
+                            horizontal: 7,
+                            vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(
-                              0xFF2E5327,
-                            ).withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
+                            color: const Color(0xFF2E5327).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
                             '$percent%',
                             style: const TextStyle(
-                              fontSize: 11,
+                              fontSize: 10.5,
                               fontWeight: FontWeight.bold,
                               color: Color(0xFF2E5327),
                             ),
@@ -113,7 +112,10 @@ class RoutineCardWidget extends StatelessWidget {
                     const SizedBox(height: 4),
 
                     if (isWorkoutRoutine) ...[
-                      Row(
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 6,
+                        runSpacing: 4,
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -145,16 +147,13 @@ class RoutineCardWidget extends StatelessWidget {
                               ],
                             ),
                           ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              'เป้าหมาย: ${_formatValue(targetVal)} $unitText',
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                color: Colors.grey.shade600,
-                              ),
-                              overflow: TextOverflow.ellipsis,
+                          Text(
+                            'เป้าหมาย: ${_formatValue(targetVal)} $unitText',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey.shade600,
                             ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
@@ -162,7 +161,7 @@ class RoutineCardWidget extends StatelessWidget {
                       Text(
                         'เป้าหมายประจำวัน: ${_formatValue(targetVal)} $unitText',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 11.5,
                           color: Colors.grey.shade600,
                         ),
                       ),
@@ -171,16 +170,17 @@ class RoutineCardWidget extends StatelessWidget {
                 ),
               ),
 
+              const SizedBox(width: 8),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   actionButton,
-                  const SizedBox(width: 2),
                   threeDotsMenu,
                 ],
               ),
             ],
           ),
+
 
           const SizedBox(height: 14),
 

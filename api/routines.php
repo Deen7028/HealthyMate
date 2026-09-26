@@ -72,7 +72,7 @@ switch ($method) {
             // สลับสถานะเช็ค/ยกเลิกเช็ค หรืออัปเดตความคืบหน้าย่อย (Atomic UPSERT)
             $routineId = isset($data['nRoutineId']) ? intval($data['nRoutineId']) : 0;
             $dateStr = isset($data['dtLogDate']) ? trim($data['dtLogDate']) : date('Y-m-d');
-            $progressVal = isset($data['nProgressValue']) ? intval($data['nProgressValue']) : null;
+            $progressVal = isset($data['nProgressValue']) ? floatval($data['nProgressValue']) : null;
 
             try {
                 // ตรวจสอบ Ownership ของ Routine

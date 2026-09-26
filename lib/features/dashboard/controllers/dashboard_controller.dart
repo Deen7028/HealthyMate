@@ -17,7 +17,9 @@ class DashboardController extends ChangeNotifier {
   Map<String, dynamic>? userGoal;
   List<Map<String, dynamic>> routines = [];
   Map<int, bool> todayCompletionMap = {};
+  Map<int, double> todayProgressValues = {};
   Map<String, Map<String, double>> todayWorkoutStats = {};
+
   final DateTime now = DateTime.now();
 
   Future<void> loadDashboardData() async {
@@ -59,11 +61,18 @@ class DashboardController extends ChangeNotifier {
       routines = await db.getRoutines(userId: userId);
       final todayStr = DateFormat('yyyy-MM-dd').format(now);
       todayCompletionMap.clear();
+      todayProgressValues.clear();
       for (final r in routines) {
         final rId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
+        final targetVal = (r['targetValue'] as num?)?.toDouble() ?? 1.0;
         final log = await db.getRoutineLogForDate(routineId: rId, dateStr: todayStr);
-        todayCompletionMap[rId] = (log?['isCompleted'] as num?)?.toInt() == 1;
+        final isDone = (log?['isCompleted'] as num?)?.toInt() == 1;
+        final progressVal = (log?['nProgressValue'] as num?)?.toDouble();
+        
+        todayCompletionMap[rId] = isDone;
+        todayProgressValues[rId] = progressVal ?? (isDone ? targetVal : 0.0);
       }
+
 
       todayWorkoutStats.clear();
       for (final w in workouts) {

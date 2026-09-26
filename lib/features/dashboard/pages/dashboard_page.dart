@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:healthymate/core/services/routine_state_notifier.dart';
 import 'package:healthymate/shared/widgets/fade_slide_entrance.dart';
 import '../widgets/index.dart';
 import '../controllers/dashboard_controller.dart';
@@ -35,6 +36,13 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
   void initState() {
     super.initState();
     _controller = DashboardController()..loadDashboardData();
+    RoutineStateNotifier.instance.addListener(_onRoutineStateChanged);
+  }
+
+  void _onRoutineStateChanged() {
+    if (mounted) {
+      _controller.loadDashboardData();
+    }
   }
 
   @override
@@ -47,6 +55,7 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
 
   @override
   void dispose() {
+    RoutineStateNotifier.instance.removeListener(_onRoutineStateChanged);
     _controller.dispose();
     super.dispose();
   }
@@ -178,12 +187,14 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                           userGoal: _controller.userGoal,
                           routines: _controller.routines,
                           todayCompletionMap: _controller.todayCompletionMap,
+                          todayProgressValues: _controller.todayProgressValues,
                           todayWorkoutStats: _controller.todayWorkoutStats,
                           now: _controller.now,
                           darkGreen: darkGreen,
                           lightBg: lightBg,
                           onNavigateToPractice: widget.onNavigateToPractice,
                         ),
+
                       ),
                       const SizedBox(height: 40),
                     ],

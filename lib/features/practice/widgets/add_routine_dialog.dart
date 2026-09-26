@@ -241,6 +241,16 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
 
   String? _detectLinkedWorkout(String title, RoutineCategory category) {
     final lower = title.toLowerCase();
+    final isNonWorkout = lower.contains('น้ำ') ||
+        lower.contains('สมาธิ') ||
+        lower.contains('นอน') ||
+        lower.contains('กิน') ||
+        lower.contains('อาหาร') ||
+        lower.contains('ยา') ||
+        lower.contains('อ่าน');
+
+    if (isNonWorkout) return null;
+
     if (lower.contains('วิ่ง') || lower.contains('run')) {
       return 'วิ่ง';
     } else if (lower.contains('ลู่วิ่ง') || lower.contains('treadmill')) {
@@ -249,8 +259,6 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
       return 'เดิน';
     } else if (lower.contains('จักรยาน') || lower.contains('ปั่น') || lower.contains('bike') || lower.contains('cycle')) {
       return 'ปั่นจักรยาน';
-    } else if (category == RoutineCategory.fitness) {
-      return 'เดิน';
     }
     return null;
   }
@@ -446,14 +454,25 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
   }
 
   Widget _buildStep2DurationAndSync(Color btnColor) {
-    final autoDetected =
-        _detectLinkedWorkout(_titleController.text.trim(), _selectedCategory);
+    final title = _titleController.text.trim();
+    final autoDetected = _detectLinkedWorkout(title, _selectedCategory);
+    final lowerTitle = title.toLowerCase();
+    final isNonWorkout = lowerTitle.contains('น้ำ') ||
+        lowerTitle.contains('สมาธิ') ||
+        lowerTitle.contains('นอน') ||
+        lowerTitle.contains('กิน') ||
+        lowerTitle.contains('อาหาร') ||
+        lowerTitle.contains('ยา') ||
+        lowerTitle.contains('อ่าน');
+    final isWorkoutCategory = _selectedCategory == RoutineCategory.fitness;
+    final showGpsSyncOption = !isNonWorkout && (autoDetected != null || isWorkoutCategory);
 
     return RoutineStepGoal(
       targetController: _targetController,
       unitController: _unitController,
       selectedLinkedWorkout: _selectedLinkedWorkout,
       autoDetected: autoDetected,
+      showGpsSyncOption: showGpsSyncOption,
       onToggleAutoLink: (val) {
         setState(() {
           _selectedLinkedWorkout = val ? (autoDetected ?? 'วิ่ง') : null;

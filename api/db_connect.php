@@ -82,6 +82,10 @@ function getAuthenticatedUserId() {
                 list($userId, $timestamp, $sig) = $parts;
                 $expectedSig = hash_hmac('sha256', $userId . ':' . $timestamp, $expectedAppKey);
                 if (hash_equals($expectedSig, $sig)) {
+                    // ตรวจสอบเวลาหมดอายุของ Token (30 วัน = 2592000 วินาที)
+                    if (time() - (int)$timestamp > 2592000) {
+                        return null; // Token Expired
+                    }
                     return (int)$userId;
                 }
             }

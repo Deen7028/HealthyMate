@@ -7,9 +7,10 @@ import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/auth_service.dart';
 import 'package:healthymate/core/services/location_background_service.dart';
 import 'package:healthymate/core/services/sync_service.dart';
-import 'package:healthymate/core/services/theme_service.dart';
+import 'package:healthymate/shared/theme/theme_service.dart';
 import 'package:healthymate/core/services/tts_service.dart';
-import 'package:healthymate/core/theme/app_theme.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
+
 import 'package:healthymate/features/login/pages/login_page.dart';
 import 'package:healthymate/main_app.dart';
 
