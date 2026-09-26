@@ -4,6 +4,7 @@ import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/api_service.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
 import 'package:healthymate/features/health_calculator/models/health_record_model.dart';
+import 'package:healthymate/features/practice/controllers/routine_controller.dart';
 
 class DashboardController extends ChangeNotifier {
   bool isLoading = true;
@@ -80,10 +81,23 @@ class DashboardController extends ChangeNotifier {
         if (workoutDate.startsWith(todayStr)) {
           final type = w['sType']?.toString() ?? 'อื่นๆ';
           final dist = (w['nDistance'] as num?)?.toDouble() ?? 0.0;
-          final duration = (w['nDuration'] as num?)?.toDouble() ?? 0.0;
-          todayWorkoutStats.putIfAbsent(type, () => {'distance': 0.0, 'duration': 0.0});
-          todayWorkoutStats[type]!['distance'] = (todayWorkoutStats[type]!['distance'] ?? 0) + dist;
-          todayWorkoutStats[type]!['duration'] = (todayWorkoutStats[type]!['duration'] ?? 0) + duration;
+          final durationSec = (w['nDuration'] as num?)?.toDouble() ?? 0.0;
+          final durationMin = durationSec > 0 ? (durationSec / 60.0) : 0.0;
+          final calories = (w['nCaloriesBurned'] as num?)?.toDouble() ?? 0.0;
+
+          final normType = RoutineController.normalizeCategoryType(type);
+          final keysToUpdate = {type, normType};
+
+          for (final k in keysToUpdate) {
+            todayWorkoutStats.putIfAbsent(
+                k, () => {'distance': 0.0, 'duration': 0.0, 'caloriesBurned': 0.0});
+            todayWorkoutStats[k]!['distance'] =
+                (todayWorkoutStats[k]!['distance'] ?? 0) + dist;
+            todayWorkoutStats[k]!['duration'] =
+                (todayWorkoutStats[k]!['duration'] ?? 0) + durationMin;
+            todayWorkoutStats[k]!['caloriesBurned'] =
+                (todayWorkoutStats[k]!['caloriesBurned'] ?? 0) + calories;
+          }
         }
       }
 
@@ -128,7 +142,7 @@ class DashboardController extends ChangeNotifier {
 
   String formatNumber(double val) => val >= 1000 ? NumberFormat('#,##0', 'th').format(val.round()) : val.toStringAsFixed(val.truncateToDouble() == val ? 0 : 1);
   String formatInt(int val) => NumberFormat('#,##0', 'th').format(val);
-  String formatNum(double val) => val == val.toInt() ? val.toInt().toString() : val.toStringAsFixed(1);
+  String formatNum(double val) => val == val.toInt() ? val.toInt().toString() : val.toStringAsFixed(2);
   
   String getGreeting() {
     final hour = now.hour;

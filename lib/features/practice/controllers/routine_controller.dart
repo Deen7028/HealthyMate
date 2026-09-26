@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/api_service.dart';
+import 'package:healthymate/core/services/notification_service.dart';
 import 'package:healthymate/core/services/routine_state_notifier.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
 import '../models/routine_item.dart';
@@ -14,6 +16,24 @@ class RoutineController extends ChangeNotifier {
   int completedCount = 0;
   Map<String, dynamic>? userGoal;
   Map<String, Map<String, double>> todayWorkoutStats = {};
+  double overallProgressRatio = 0.0;
+
+  static String normalizeCategoryType(String rawType) {
+    if (rawType.isEmpty) return 'อื่นๆ';
+    final lower = rawType.toLowerCase();
+    if (rawType.contains('วิ่ง') || lower.contains('running')) {
+      if (rawType.contains('ลู่วิ่ง') || lower.contains('treadmill')) return 'ลู่วิ่งในร่ม';
+      return 'วิ่ง';
+    }
+    if (rawType.contains('เดิน') || lower.contains('walking')) return 'เดิน';
+    if (rawType.contains('จักรยาน') || rawType.contains('ปั่น') || lower.contains('cycling')) return 'ปั่นจักรยาน';
+    if (rawType.contains('สมาธิ') || lower.contains('meditation')) return 'ทำสมาธิ';
+    if (rawType.contains('โยคะ') || lower.contains('yoga')) return 'โยคะ';
+    if (rawType.contains(' (')) {
+      return rawType.split(' (').first.trim();
+    }
+    return rawType.trim();
+  }
 
   String get todayStr {
     final now = DateTime.now();
@@ -83,19 +103,23 @@ class RoutineController extends ChangeNotifier {
           final durationMin = durationSec > 0 ? (durationSec / 60.0) : 0.0;
           final calories = (w['nCaloriesBurned'] as num?)?.toDouble() ?? 0.0;
 
-          todayWorkoutStats.putIfAbsent(
-            type,
-            () => {'distance': 0.0, 'duration': 0.0, 'caloriesBurned': 0.0},
-          );
-          todayWorkoutStats[type]!['distance'] =
-              (todayWorkoutStats[type]!['distance'] ?? 0) + dist;
-          todayWorkoutStats[type]!['duration'] =
-              (todayWorkoutStats[type]!['duration'] ?? 0) + durationMin;
-          todayWorkoutStats[type]!['caloriesBurned'] =
-              (todayWorkoutStats[type]!['caloriesBurned'] ?? 0) + calories;
+          final normType = normalizeCategoryType(type);
+          final keysToUpdate = {type, normType};
+
+          for (final k in keysToUpdate) {
+            todayWorkoutStats.putIfAbsent(
+              k,
+              () => {'distance': 0.0, 'duration': 0.0, 'caloriesBurned': 0.0},
+            );
+            todayWorkoutStats[k]!['distance'] =
+                (todayWorkoutStats[k]!['distance'] ?? 0) + dist;
+            todayWorkoutStats[k]!['duration'] =
+                (todayWorkoutStats[k]!['duration'] ?? 0) + durationMin;
+            todayWorkoutStats[k]!['caloriesBurned'] =
+                (todayWorkoutStats[k]!['caloriesBurned'] ?? 0) + calories;
+          }
         }
       }
-
 
       // Auto-GPS Sync: ประเมินความสำเร็จของกิจวัตรประเภทการออกกำลังกายจากสถิติ GPS วันนี้
       for (final r in routines) {
@@ -137,8 +161,12 @@ class RoutineController extends ChangeNotifier {
           double workoutVal = 0.0;
           if (unit.contains('กม') || unit.contains('กิโล') || unit.contains('km')) {
             workoutVal = stats['distance'] ?? 0.0;
-          } else if (unit.contains('นาที') || unit.contains('min') || unit.contains('เวลา') || unit.contains('ชม')) {
+          } else if (unit.contains('ชม') || unit.contains('ชั่วโมง') || unit.contains('hour') || unit.contains('hr')) {
+            workoutVal = (stats['duration'] ?? 0.0) / 60.0;
+          } else if (unit.contains('นาที') || unit.contains('min') || unit.contains('เวลา')) {
             workoutVal = stats['duration'] ?? 0.0;
+          } else if (unit.contains('แคล') || unit.contains('cal')) {
+            workoutVal = stats['caloriesBurned'] ?? 0.0;
           }
           if (workoutVal > 0) {
             todayProgressValues[routineId] = workoutVal;
@@ -150,6 +178,21 @@ class RoutineController extends ChangeNotifier {
       }
 
       completedCount = todayCompletionMap.values.where((v) => v).length;
+
+      double totalRatioSum = 0.0;
+      for (final r in routines) {
+        final routineId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
+        final targetVal = (r['targetValue'] as num?)?.toDouble() ??
+            (r['nTargetValue'] as num?)?.toDouble() ??
+            1.0;
+        final currentVal = todayProgressValues[routineId] ?? 0.0;
+        final isDone = todayCompletionMap[routineId] ?? false;
+        final ratio = isDone
+            ? 1.0
+            : (targetVal > 0 ? (currentVal / targetVal).clamp(0.0, 1.0) : 0.0);
+        totalRatioSum += ratio;
+      }
+      overallProgressRatio = routines.isNotEmpty ? (totalRatioSum / routines.length) : 0.0;
       isLoading = false;
       notifyListeners();
 
@@ -168,6 +211,9 @@ class RoutineController extends ChangeNotifier {
             (serverResult['data'] as List?)?.cast<Map<String, dynamic>>() ?? [];
 
         if (serverRoutines.isNotEmpty) {
+          await AppDatabase.instance.upsertRoutinesFromServer(userId, serverRoutines);
+          routines = await AppDatabase.instance.getRoutines(userId: userId);
+
           for (final r in serverRoutines) {
             final routineId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
             if (routineId == 0) continue;
@@ -198,7 +244,7 @@ class RoutineController extends ChangeNotifier {
     if (user == null) return;
     final userId = user!.nUserId;
 
-    await AppDatabase.instance.insertRoutine(
+    final routineId = await AppDatabase.instance.insertRoutine(
       userId: userId,
       title: newRoutine.title,
       time: newRoutine.notificationTime,
@@ -214,10 +260,52 @@ class RoutineController extends ChangeNotifier {
       userId: userId,
       title: newRoutine.title,
       time: newRoutine.notificationTime,
+      targetValue: newRoutine.targetValue,
+      unit: newRoutine.unit,
+      linkedWorkout: newRoutine.linkedWorkoutType ?? '',
+      color: newRoutine.color.toARGB32(),
+      iconData: newRoutine.iconData.codePoint,
       isNotificationActive: newRoutine.isNotificationEnabled,
     );
 
+    // 🟢 ระบบการแจ้งเตือน Local Notifications
+    await _syncLocalNotification(routineId, newRoutine);
+
     await loadData();
+  }
+
+  Future<void> _syncLocalNotification(int routineId, RoutineItem routine) async {
+    if (routineId <= 0) return;
+
+    if (routine.isNotificationEnabled) {
+      final hasPermission = await NotificationService.instance.requestPermission();
+      if (hasPermission) {
+        final timeStr = routine.notificationTime;
+        if (timeStr.contains('ทุก') || timeStr.contains('ชั่วโมง')) {
+          await NotificationService.instance.schedulePeriodicRoutine(
+            id: routineId,
+            title: 'ถึงเวลาทำกิจวัตร! 🎯',
+            body: 'ได้เวลา: ${routine.title} แล้วครับ',
+            interval: RepeatInterval.hourly,
+          );
+        } else {
+          final match = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(timeStr);
+          if (match != null) {
+            final hour = int.parse(match.group(1)!);
+            final minute = int.parse(match.group(2)!);
+            await NotificationService.instance.scheduleDailyRoutine(
+              id: routineId,
+              title: 'กิจวัตรของคุณ 🌟',
+              body: 'อย่าลืมทำ ${routine.title} นะครับ',
+              hour: hour,
+              minute: minute,
+            );
+          }
+        }
+      }
+    } else {
+      await NotificationService.instance.cancelNotification(routineId);
+    }
   }
 
   Future<void> toggleRoutineCompletion(int routineId) async {
@@ -337,7 +425,9 @@ class RoutineController extends ChangeNotifier {
       final stats = todayWorkoutStats[matchedType]!;
       if (unitText.contains('กม') || unitText.contains('กิโล') || unitText.contains('km')) {
         currentVal = stats['distance'] ?? 0.0;
-      } else if (unitText.contains('นาที') || unitText.contains('min') || unitText.contains('เวลา') || unitText.contains('ชม')) {
+      } else if (unitText.contains('ชม') || unitText.contains('ชั่วโมง') || unitText.contains('hour') || unitText.contains('hr')) {
+        currentVal = (stats['duration'] ?? 0.0) / 60.0;
+      } else if (unitText.contains('นาที') || unitText.contains('min') || unitText.contains('เวลา')) {
         currentVal = stats['duration'] ?? 0.0;
       }
     } else {
@@ -426,6 +516,7 @@ class RoutineController extends ChangeNotifier {
 
   Future<void> deleteRoutine(int routineId, String title) async {
     await AppDatabase.instance.deleteRoutine(routineId);
+    await NotificationService.instance.cancelNotification(routineId);
 
     if (userGoal != null) {
       final pinnedId = (userGoal!['nRoutineId'] as num?)?.toInt() ?? 0;
@@ -458,8 +549,15 @@ class RoutineController extends ChangeNotifier {
       routineId: routineId,
       title: updatedRoutine.title,
       time: updatedRoutine.notificationTime,
+      targetValue: updatedRoutine.targetValue,
+      unit: updatedRoutine.unit,
+      linkedWorkout: updatedRoutine.linkedWorkoutType ?? '',
+      color: updatedRoutine.color.toARGB32(),
+      iconData: updatedRoutine.iconData.codePoint,
       isNotificationActive: updatedRoutine.isNotificationEnabled,
     );
+
+    await _syncLocalNotification(routineId, updatedRoutine);
 
     await loadData();
   }

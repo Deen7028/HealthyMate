@@ -232,7 +232,8 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
         return;
       }
 
-      // 6. เข้าสู่ระบบสำเร็จ -> รีเซ็ตจำนวนครั้งที่ผิด
+      // 6. เข้าสู่ระบบสำเร็จ -> บันทึกลงตู้เซฟนิรภัยเพื่อ Biometric & รีเซ็ตจำนวนครั้งที่ผิด
+      await BiometricAuthService.instance.saveCredentials(rawEmail, rawPassword);
       _failedAttempts = 0;
       _lockoutUntil = null;
 
@@ -302,19 +303,58 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       );
       return;
     }
+
+    final credentials = await BiometricAuthService.instance.getCredentials();
+    if (credentials == null) {
+      _showError('กรุณาเข้าสู่ระบบด้วยอีเมลและรหัสผ่านในครั้งแรกเพื่อเปิดใช้งานสแกนนิ้ว');
+      return;
+    }
+
     final authenticated = await BiometricAuthService.instance.authenticate(
       reason: 'ยืนยันตัวตนด้วย FaceID / TouchID เพื่อเข้าสู่ระบบ HealthyMate',
     );
+
     if (authenticated) {
-      final email = AuthService.instance.currentUserEmail;
-      if (email.isNotEmpty) {
-        await AuthService.instance.setLoginSession(email);
-        if (!mounted) return;
+      setState(() => _isLoading = true);
+
+      final loginResult = await AuthService.instance.login(
+        credentials['email']!,
+        credentials['password']!,
+      );
+
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      if (loginResult['success'] == true) {
+        final loggedInUser = loginResult['user'] as TbUser?;
+        if (loggedInUser != null) {
+          SyncService.instance.pullDownstreamWorkouts(loggedInUser.nUserId);
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: const [
+                Icon(Icons.check_circle_rounded, color: Colors.white),
+                SizedBox(width: 10),
+                Text('เข้าสู่ระบบด้วย Biometric สำเร็จแล้ว!'),
+              ],
+            ),
+            backgroundColor: AppTheme.primaryGreen,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+
         if (widget.onLoginSuccess != null) {
           widget.onLoginSuccess!();
+        } else if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
         }
       } else {
-        _showError('กรุณาล็อกอินด้วยอีเมลครั้งแรกเพื่อเปิดใช้งาน Biometric');
+        _showError('ข้อมูลยืนยันตัวตนหมดอายุหรือรหัสผ่านถูกเปลี่ยนแปลง กรุณาล็อกอินใหม่ด้วยรหัสผ่าน');
+        await BiometricAuthService.instance.clearCredentials();
       }
     }
   }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class RoutineStepStyle extends StatelessWidget {
+class RoutineStepStyle extends StatefulWidget {
   final Color btnColor;
   final bool isNotificationEnabled;
   final TextEditingController notificationTimeController;
@@ -26,6 +26,11 @@ class RoutineStepStyle extends StatelessWidget {
     required this.onSelectColor,
   });
 
+  @override
+  State<RoutineStepStyle> createState() => _RoutineStepStyleState();
+}
+
+class _RoutineStepStyleState extends State<RoutineStepStyle> {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -56,10 +61,10 @@ class RoutineStepStyle extends StatelessWidget {
                     Row(
                       children: [
                         Icon(
-                          isNotificationEnabled
+                          widget.isNotificationEnabled
                               ? Icons.notifications_active_rounded
                               : Icons.notifications_off_rounded,
-                          color: isNotificationEnabled
+                          color: widget.isNotificationEnabled
                               ? Colors.amber.shade800
                               : Colors.grey,
                         ),
@@ -74,26 +79,98 @@ class RoutineStepStyle extends StatelessWidget {
                       ],
                     ),
                     Switch(
-                      value: isNotificationEnabled,
-                      onChanged: onToggleNotification,
-                      activeThumbColor: btnColor,
+                      value: widget.isNotificationEnabled,
+                      onChanged: widget.onToggleNotification,
+                      activeThumbColor: widget.btnColor,
                     ),
                   ],
                 ),
-                if (isNotificationEnabled) ...[
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: notificationTimeController,
-                    decoration: InputDecoration(
-                      labelText: 'เวลา / ความถี่การแจ้งเตือน',
-                      hintText: 'เช่น 08:00 น. หรือ ทุก 2 ชั่วโมง',
-                      prefixIcon: const Icon(Icons.access_time_rounded),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      border: OutlineInputBorder(
+                if (widget.isNotificationEnabled) ...[
+                  const SizedBox(height: 10),
+                  InkWell(
+                    onTap: () async {
+                      final currentText = widget.notificationTimeController.text.trim();
+                      TimeOfDay initialTime = const TimeOfDay(hour: 8, minute: 0);
+                      final match = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(currentText);
+                      if (match != null) {
+                        initialTime = TimeOfDay(
+                          hour: int.parse(match.group(1)!),
+                          minute: int.parse(match.group(2)!),
+                        );
+                      }
+
+                      final picked = await showTimePicker(
+                        context: context,
+                        initialTime: initialTime,
+                        builder: (context, child) {
+                          return Theme(
+                            data: Theme.of(context).copyWith(
+                              colorScheme: ColorScheme.light(
+                                primary: widget.btnColor,
+                                onPrimary: Colors.white,
+                                onSurface: const Color(0xFF1E293B),
+                              ),
+                            ),
+                            child: child!,
+                          );
+                        },
+                      );
+
+                      if (picked != null) {
+                        final formattedHour = picked.hour.toString().padLeft(2, '0');
+                        final formattedMinute = picked.minute.toString().padLeft(2, '0');
+                        setState(() {
+                          widget.notificationTimeController.text = '$formattedHour:$formattedMinute น.';
+                        });
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.access_time_filled_rounded,
+                                color: Color(0xFF2E5327),
+                                size: 20,
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                widget.notificationTimeController.text.isNotEmpty
+                                    ? widget.notificationTimeController.text
+                                    : '08:00 น.',
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1E293B),
+                                ),
+                              ),
+                            ],
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE8F3EB),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              'เลือกเวลา',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2E5327),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -112,13 +189,13 @@ class RoutineStepStyle extends StatelessWidget {
                   height: 38,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
-                    itemCount: availableIcons.length + 1,
+                    itemCount: widget.availableIcons.length + 1,
                     separatorBuilder: (ctx, idx) => const SizedBox(width: 6),
                     itemBuilder: (context, index) {
                       if (index == 0) {
-                        final isSelected = selectedIcon == null;
+                        final isSelected = widget.selectedIcon == null;
                         return InkWell(
-                          onTap: () => onSelectIcon(null),
+                          onTap: () => widget.onSelectIcon(null),
                           child: Container(
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
@@ -137,25 +214,25 @@ class RoutineStepStyle extends StatelessWidget {
                           ),
                         );
                       }
-                      final icon = availableIcons[index - 1];
-                      final isSelected = icon == selectedIcon;
+                      final icon = widget.availableIcons[index - 1];
+                      final isSelected = icon == widget.selectedIcon;
                       return InkWell(
-                        onTap: () => onSelectIcon(icon),
+                        onTap: () => widget.onSelectIcon(icon),
                         child: Container(
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? btnColor.withAlpha(50)
+                                ? widget.btnColor.withAlpha(50)
                                 : Colors.grey.shade100,
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: isSelected ? btnColor : Colors.transparent,
+                              color: isSelected ? widget.btnColor : Colors.transparent,
                             ),
                           ),
                           child: Icon(
                             icon,
                             size: 18,
-                            color: isSelected ? btnColor : Colors.grey.shade700,
+                            color: isSelected ? widget.btnColor : Colors.grey.shade700,
                           ),
                         ),
                       );
@@ -176,13 +253,13 @@ class RoutineStepStyle extends StatelessWidget {
                   height: 34,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
-                    itemCount: availableColors.length + 1,
+                    itemCount: widget.availableColors.length + 1,
                     separatorBuilder: (ctx, idx) => const SizedBox(width: 6),
                     itemBuilder: (context, index) {
                       if (index == 0) {
-                        final isSelected = selectedColor == null;
+                        final isSelected = widget.selectedColor == null;
                         return GestureDetector(
-                          onTap: () => onSelectColor(null),
+                          onTap: () => widget.onSelectColor(null),
                           child: Container(
                             width: 30,
                             height: 30,
@@ -203,10 +280,10 @@ class RoutineStepStyle extends StatelessWidget {
                           ),
                         );
                       }
-                      final color = availableColors[index - 1];
-                      final isSelected = color == selectedColor;
+                      final color = widget.availableColors[index - 1];
+                      final isSelected = color == widget.selectedColor;
                       return GestureDetector(
-                        onTap: () => onSelectColor(color),
+                        onTap: () => widget.onSelectColor(color),
                         child: Container(
                           width: 30,
                           height: 30,

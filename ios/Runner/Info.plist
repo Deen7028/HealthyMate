@@ -32,6 +32,8 @@
 	<string>HealthyMate ต้องการสิทธิ์ตำแหน่งเพื่อติดตามระยะทางการออกกำลังกายในเบื้องหลัง</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>HealthyMate ต้องการบันทึกรูปภาพสรุปการออกกำลังกายลงในคลังภาพของคุณ</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>HealthyMate ต้องการสิทธิ์การใช้งาน Face ID เพื่อยืนยันตัวตนเข้าสู่ระบบอย่างปลอดภัย</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

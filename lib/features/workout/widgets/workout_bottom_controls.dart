@@ -57,8 +57,10 @@ class _WorkoutBottomControlsState extends State<WorkoutBottomControls>
 
   @override
   Widget build(BuildContext context) {
+    final double bottomPadding = MediaQuery.of(context).padding.bottom + 90.0;
+
     return Container(
-      padding: const EdgeInsets.only(left: 28, right: 28, top: 22, bottom: 30),
+      padding: EdgeInsets.only(left: 36, right: 36, top: 20, bottom: bottomPadding),
       decoration: BoxDecoration(
         color: const Color(0xFFF9FAF8).withValues(alpha: 0.97),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
@@ -80,22 +82,12 @@ class _WorkoutBottomControlsState extends State<WorkoutBottomControls>
             icon: Icons.stop_rounded,
             color: const Color(0xFFFEE6E6),
             iconColor: const Color(0xFFD32F2F),
-            size: 58,
-            iconSize: 28,
+            size: 64,
+            iconSize: 32,
             enabled: widget.canStop,
             onTap: widget.canStop ? widget.onStop : null,
           ),
           _buildMainCenterButton(),
-          _buildActionButton(
-            label: 'ชั่วคราว',
-            icon: Icons.pause_rounded,
-            color: const Color(0xFFEAEFEA),
-            iconColor: const Color(0xFF5A665A),
-            size: 58,
-            iconSize: 28,
-            enabled: widget.isRunning,
-            onTap: widget.isRunning ? widget.onPause : null,
-          ),
         ],
       ),
     );

@@ -392,6 +392,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
                       completedCount: displayCompletedCount,
                       totalCount: displayRoutines.length,
                       todayWorkoutStats: _controller.todayWorkoutStats,
+                      overallProgressRatio: _controller.overallProgressRatio,
                     ),
                     const SizedBox(height: 20),
 
@@ -544,39 +545,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
 
 
   Widget _buildEmptyState() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        children: [
-          Icon(
-            Icons.playlist_add_check_rounded,
-            size: 64,
-            color: Colors.grey.shade300,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'ยังไม่มีกิจวัตร',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey.shade600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'กดปุ่ม + ด้านล่างเพื่อเพิ่มกิจวัตรประจำวัน\nเช่น ดื่มน้ำ, ออกกำลังกาย, นั่งสมาธิ',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
-          ),
-        ],
-      ),
-    );
+    return const RoutineEmptyView();
   }
 
   Widget _buildDailyRoutinesHeader() {
@@ -680,11 +649,17 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
           unitText.contains('กิโล') ||
           unitText.contains('km')) {
         workoutCurrentVal = stats['distance'];
+      } else if (unitText.contains('ชม') ||
+          unitText.contains('ชั่วโมง') ||
+          unitText.contains('hour') ||
+          unitText.contains('hr')) {
+        workoutCurrentVal = (stats['duration'] ?? 0.0) / 60.0;
       } else if (unitText.contains('นาที') ||
           unitText.contains('min') ||
-          unitText.contains('เวลา') ||
-          unitText.contains('ชม')) {
+          unitText.contains('เวลา')) {
         workoutCurrentVal = stats['duration'];
+      } else if (unitText.contains('แคล') || unitText.contains('cal')) {
+        workoutCurrentVal = stats['caloriesBurned'];
       }
     }
 
@@ -702,7 +677,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     final int percent = (progressRatio * 100).toInt();
 
     String formatValue(double val) =>
-        val == val.toInt() ? val.toInt().toString() : val.toStringAsFixed(1);
+        val == val.toInt() ? val.toInt().toString() : val.toStringAsFixed(2);
 
     final buttonType = _getRoutineButtonType(routine, isWorkoutRoutine);
 

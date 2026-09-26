@@ -4,22 +4,22 @@ class RoutineTopOverviewBanner extends StatelessWidget {
   final int completedCount;
   final int totalCount;
   final Map<String, Map<String, double>> todayWorkoutStats;
+  final double? overallProgressRatio;
 
   const RoutineTopOverviewBanner({
     super.key,
     required this.completedCount,
     required this.totalCount,
     required this.todayWorkoutStats,
+    this.overallProgressRatio,
   });
 
   @override
   Widget build(BuildContext context) {
-    final overallPercent = totalCount > 0
-        ? ((completedCount / totalCount) * 100).toInt()
-        : 0;
-    final overallRatio = totalCount > 0
-        ? (completedCount / totalCount).clamp(0.0, 1.0)
-        : 0.0;
+    final overallRatio = (overallProgressRatio ??
+            (totalCount > 0 ? (completedCount / totalCount) : 0.0))
+        .clamp(0.0, 1.0);
+    final overallPercent = (overallRatio * 100).round();
 
     double totalCalories = 0.0;
     double totalDurationMin = 0.0;

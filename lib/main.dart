@@ -6,6 +6,7 @@ import 'package:healthymate/core/config/app_config.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/auth_service.dart';
 import 'package:healthymate/core/services/location_background_service.dart';
+import 'package:healthymate/core/services/notification_service.dart';
 import 'package:healthymate/core/services/sync_service.dart';
 import 'package:healthymate/shared/theme/theme_service.dart';
 import 'package:healthymate/core/services/tts_service.dart';
@@ -38,6 +39,7 @@ void main() async {
   await AuthService.instance.init();
   await ThemeService.instance.init();
   await SyncService.instance.init();
+  await NotificationService.instance.init();
   await LocationBackgroundService.instance.initialize();
   await TtsService.instance.init();
   await GoogleSignIn.instance.initialize(

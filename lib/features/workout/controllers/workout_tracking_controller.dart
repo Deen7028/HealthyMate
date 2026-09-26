@@ -99,12 +99,18 @@ class WorkoutTrackingController extends ChangeNotifier {
       final speed = (event['speed'] as num?)?.toDouble() ?? 0.0;
       final accuracy = (event['accuracy'] as num?)?.toDouble() ?? 10.0;
 
+      DateTime? bgTimestamp;
+      if (event['timestamp'] != null) {
+        bgTimestamp = DateTime.tryParse(event['timestamp'].toString());
+      }
+
       if (lat != null && lng != null) {
         _handleNewLocation(
           latitude: lat,
           longitude: lng,
           speedMs: speed,
           accuracy: accuracy,
+          timestamp: bgTimestamp,
         );
       }
     });
@@ -267,15 +273,22 @@ class WorkoutTrackingController extends ChangeNotifier {
   void _startLocationUpdates() {
     _positionStreamSub?.cancel();
 
+    // ดึงพิกัดตั้งต้นเฉพาะเมื่อยังไม่มี _lastPosition เพื่อป้องกัน Race Condition จาก async callback ย้อนหลัง
     Geolocator.getCurrentPosition(
       locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
     ).then((pos) {
-      _lastPosition = pos;
+      if (_lastPosition == null && _status == WorkoutState.running) {
+        _lastPosition = pos;
+        if (_routePoints.isEmpty) {
+          _routePoints.add(LatLng(pos.latitude, pos.longitude));
+          _safeNotifyListeners();
+        }
+      }
     }).catchError((_) {});
 
     const locationSettings = LocationSettings(
       accuracy: LocationAccuracy.high,
-      distanceFilter: 6,
+      distanceFilter: 5,
     );
 
     _positionStreamSub = Geolocator.getPositionStream(
@@ -287,6 +300,7 @@ class WorkoutTrackingController extends ChangeNotifier {
         longitude: position.longitude,
         speedMs: position.speed,
         accuracy: position.accuracy,
+        timestamp: position.timestamp,
       );
     });
   }
@@ -296,11 +310,14 @@ class WorkoutTrackingController extends ChangeNotifier {
     required double longitude,
     required double speedMs,
     required double accuracy,
+    DateTime? timestamp,
   }) {
     // 0. หากเป็นกิจกรรมที่ไม่เกี่ยวกับการเคลื่อนที่ (ทำสมาธิ/โยคะ) ไม่ต้องบันทึกระยะทางและเส้นทาง GPS
     if (!_selectedCategory.isMoving) {
       return;
     }
+
+    final newTime = timestamp ?? DateTime.now();
 
     // 1. ตรวจสอบความเร็วสำหรับ Auto-Pause (ความเร็วน้อยกว่า 0.3 m/s หรือ 1 km/h ถือว่าหยุดนิ่ง)
     if (speedMs < 0.3) {
@@ -316,6 +333,12 @@ class WorkoutTrackingController extends ChangeNotifier {
     if (_isAutoPaused) return;
 
     if (_lastPosition != null) {
+      // ป้องกันพิกัดที่ย้อนหลังหรือมาสลับลำดับเวลา (Chronological Check)
+      final timeDifferenceSec = newTime.difference(_lastPosition!.timestamp).inMilliseconds / 1000.0;
+      if (timeDifferenceSec <= 0.3) {
+        return;
+      }
+
       final distanceInMeters = Geolocator.distanceBetween(
         _lastPosition!.latitude,
         _lastPosition!.longitude,
@@ -323,18 +346,25 @@ class WorkoutTrackingController extends ChangeNotifier {
         longitude,
       );
 
-      // กรอง GPS Drift เข้มงวด:
+      // คำนวณความเร็วเฉลี่ยระหว่างจุดจริง (Calculated Speed = distance / time)
+      final calculatedSpeedMs = timeDifferenceSec > 0 ? (distanceInMeters / timeDifferenceSec) : 0.0;
+
+      // กรอง GPS Drift เข้มงวดระดับแอปออกกำลังกายมาตรฐาน:
       // 1. ความแม่นยำสัญญาณ GPS (accuracy) ต้องดีกว่า 15 เมตร
-      // 2. ความเร็วต้อง >= 0.7 m/s (~2.5 km/h ขึ้นไป ซึ่งเป็นความเร็วเดินจริง)
-      //    หรือหากเซนเซอร์ไม่ส่งความเร็ว ระยะทางขยับต้องเกิน 12 เมตร และต้องไกลกว่ารัศมีคลาดเคลื่อน (1.2 * accuracy)
-      final hasSpeed = speedMs >= 0.7;
-      final hasDisplacement = distanceInMeters >= 12.0 && distanceInMeters >= (accuracy * 1.2);
+      // 2. ระยะทางขยับขั้นต่ำต้อง >= 5.0 เมตร (สอดคล้องกับ distanceFilter)
+      // 3. ความเร็วที่คำนวณได้จริงต้องไม่เกิน 15.0 m/s (~54 km/h) สำหรับกีฬาเดิน/วิ่ง/จักรยาน
+      // 4. หากมีค่า speed จากฮาร์ดแวร์ ต้องสอดคล้อง ไม่ก้าวกระโดดผิดธรรมชาติ
+      final bool isAccuracyValid = accuracy <= 15.0;
+      final bool isDistanceValid = distanceInMeters >= 5.0 && distanceInMeters < 120.0;
+      final bool isSpeedValid = calculatedSpeedMs < 15.0 && speedMs < 20.0;
       
-      final isRealMovement = accuracy <= 15.0 &&
-          (hasSpeed || hasDisplacement) &&
-          distanceInMeters >= 10.0 &&
-          distanceInMeters < 150.0 &&
-          speedMs < 25.0;
+      // ตรวจสอบว่าพิกัดขยับพ้นจากวงรัศมีคลาดเคลื่อน GPS (Displacement Threshold)
+      final bool isClearDisplacement = distanceInMeters >= (accuracy * 0.8);
+
+      final bool isRealMovement = isAccuracyValid &&
+          isDistanceValid &&
+          isSpeedValid &&
+          isClearDisplacement;
 
       if (isRealMovement) {
         final addedKm = distanceInMeters / 1000.0;
@@ -348,7 +378,7 @@ class WorkoutTrackingController extends ChangeNotifier {
         _lastPosition = Position(
           longitude: longitude,
           latitude: latitude,
-          timestamp: DateTime.now(),
+          timestamp: newTime,
           accuracy: accuracy,
           altitude: 0.0,
           altitudeAccuracy: 0.0,
@@ -376,14 +406,12 @@ class WorkoutTrackingController extends ChangeNotifier {
             paceText: paceStr,
           );
         }
-
-        _safeNotifyListeners();
       }
     } else {
       _lastPosition = Position(
         longitude: longitude,
         latitude: latitude,
-        timestamp: DateTime.now(),
+        timestamp: newTime,
         accuracy: accuracy,
         altitude: 0.0,
         altitudeAccuracy: 0.0,
@@ -393,6 +421,7 @@ class WorkoutTrackingController extends ChangeNotifier {
         speedAccuracy: 0.0,
       );
       _routePoints.add(LatLng(latitude, longitude));
+      _safeNotifyListeners();
     }
   }
 

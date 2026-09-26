@@ -31,7 +31,7 @@ switch ($method) {
                 ]);
                 $log = $stmtLog->fetch();
                 $r['todayCompleted'] = $log ? intval($log['isCompleted']) : 0;
-                $r['todayProgressValue'] = $log ? intval($log['nProgressValue']) : 0;
+                $r['todayProgressValue'] = $log ? floatval($log['nProgressValue']) : 0.0;
                 $result[] = $r;
             }
 
@@ -95,7 +95,7 @@ switch ($method) {
                     $newState = isset($data['isCompleted']) ? (intval($data['isCompleted']) ? 1 : 0) : ($existing ? intval($existing['isCompleted']) : $defaultState);
                 } else {
                     $newState = isset($data['isCompleted']) ? (intval($data['isCompleted']) ? 1 : 0) : ($existing ? (intval($existing['isCompleted']) === 1 ? 0 : 1) : 1);
-                    $pVal = $progressVal !== null ? $progressVal : ($existing ? intval($existing['nProgressValue']) : 0);
+                    $pVal = $progressVal !== null ? $progressVal : ($existing ? floatval($existing['nProgressValue']) : 0.0);
                 }
 
                 // สั่ง UPSERT แบบ Atomic ในคำสั่งเดียว ป้องกัน Race Condition เมื่อกดรัวๆ

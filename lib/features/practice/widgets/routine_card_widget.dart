@@ -31,7 +31,7 @@ class RoutineCardWidget extends StatelessWidget {
   });
 
   String _formatValue(double val) =>
-      val == val.toInt() ? val.toInt().toString() : val.toStringAsFixed(1);
+      val == val.toInt() ? val.toInt().toString() : val.toStringAsFixed(2);
 
   @override
   Widget build(BuildContext context) {

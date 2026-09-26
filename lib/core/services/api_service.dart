@@ -418,6 +418,11 @@ class HealthApiService {
     required int userId,
     required String title,
     String time = '',
+    double targetValue = 1.0,
+    String unit = 'ครั้ง',
+    String linkedWorkout = '',
+    int? color,
+    int? iconData,
     bool isNotificationActive = true,
   }) async {
     try {
@@ -432,6 +437,11 @@ class HealthApiService {
               'nUserId': userId,
               'sTitle': title,
               'sTime': time,
+              'targetValue': targetValue,
+              'unit': unit,
+              'sLinkedWorkout': linkedWorkout,
+              'color': color,
+              'iconData': iconData,
               'isNotificationActive': isNotificationActive ? 1 : 0,
             }),
           )
@@ -456,6 +466,11 @@ class HealthApiService {
     required int routineId,
     required String title,
     String time = '',
+    double? targetValue,
+    String? unit,
+    String? linkedWorkout,
+    int? color,
+    int? iconData,
     bool isNotificationActive = true,
   }) async {
     try {
@@ -469,6 +484,11 @@ class HealthApiService {
               'nRoutineId': routineId,
               'sTitle': title,
               'sTime': time,
+              'targetValue': targetValue,
+              'unit': unit,
+              'sLinkedWorkout': linkedWorkout,
+              'color': color,
+              'iconData': iconData,
               'isNotificationActive': isNotificationActive ? 1 : 0,
             }),
           )

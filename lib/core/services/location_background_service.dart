@@ -23,7 +23,7 @@ void onStart(ServiceInstance service) async {
 
   const locationSettings = LocationSettings(
     accuracy: LocationAccuracy.high,
-    distanceFilter: 3,
+    distanceFilter: 5,
   );
 
   Geolocator.getPositionStream(locationSettings: locationSettings).listen(

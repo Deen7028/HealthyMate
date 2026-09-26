@@ -167,11 +167,17 @@ class DashboardMainGoalCard extends StatelessWidget {
             unitText.contains('กิโล') ||
             unitText.contains('km')) {
           workoutVal = stats['distance'];
+        } else if (unitText.contains('ชม') ||
+            unitText.contains('ชั่วโมง') ||
+            unitText.contains('hour') ||
+            unitText.contains('hr')) {
+          workoutVal = (stats['duration'] ?? 0.0) / 60.0;
         } else if (unitText.contains('นาที') ||
             unitText.contains('min') ||
-            unitText.contains('เวลา') ||
-            unitText.contains('ชม')) {
+            unitText.contains('เวลา')) {
           workoutVal = stats['duration'];
+        } else if (unitText.contains('แคล') || unitText.contains('cal')) {
+          workoutVal = stats['caloriesBurned'];
         }
       }
 
