@@ -14,37 +14,18 @@ require_once __DIR__ . '/db_connect.php';
 $rawInput = file_get_contents('php://input');
 $data = json_decode($rawInput, true);
 
-$authUserId = getAuthenticatedUserId();
-$nUserId = $authUserId !== null ? $authUserId : (isset($data['nUserId']) ? intval($data['nUserId']) : 0);
-$sEmail = isset($data['sEmail']) ? trim($data['sEmail']) : '';
+$nUserId = requireAuth();
 
-if ($nUserId <= 0 && empty($sEmail)) {
+if ($nUserId <= 0) {
+    http_response_code(400);
     echo json_encode([
         'status' => 'error',
-        'message' => 'กรุณาระบุ nUserId หรือ sEmail เพื่อยืนยันการลบบัญชี'
+        'message' => 'ไม่พบบัญชีผู้ใช้ที่ต้องการลบ'
     ], JSON_UNESCAPED_UNICODE);
     exit();
 }
 
 try {
-    // 1. ดึง nUserId และ sProfileImagePath หากยังไม่มี nUserId
-    if ($nUserId <= 0 && !empty($sEmail)) {
-        $stmtUser = $conn->prepare("SELECT nUserId FROM TbUsers WHERE LOWER(sEmail) = :email LIMIT 1");
-        $stmtUser->execute([':email' => strtolower($sEmail)]);
-        $row = $stmtUser->fetch();
-        if ($row) {
-            $nUserId = intval($row['nUserId']);
-        }
-    }
-
-    if ($nUserId <= 0) {
-        echo json_encode([
-            'status' => 'error',
-            'message' => 'ไม่พบบัญชีผู้ใช้ที่ต้องการลบ'
-        ], JSON_UNESCAPED_UNICODE);
-        exit();
-    }
-
     // 2. ลบไฟล์รูปภาพของผู้ใช้ในโฟลเดอร์ uploads/ ป้องกัน Storage Leak
     // 2.1 รูปโปรไฟล์
     $stmtProfile = $conn->prepare("SELECT sProfileImagePath FROM TbUsers WHERE nUserId = :userId LIMIT 1");
@@ -98,7 +79,6 @@ try {
         'status' => 'success',
         'message' => 'ลบบัญชีผู้ใช้ ข้อมูล และไฟล์รูปภาพทั้งหมดสำเร็จเรียบร้อยแล้ว'
     ], JSON_UNESCAPED_UNICODE);
-
 } catch (Exception $e) {
     if ($conn->inTransaction()) {
         $conn->rollBack();

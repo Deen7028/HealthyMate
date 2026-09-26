@@ -12,8 +12,7 @@ if ($method !== 'GET') {
     exit();
 }
 
-$authUserId = getAuthenticatedUserId();
-$userId = $authUserId !== null ? $authUserId : (isset($_GET['nUserId']) ? intval($_GET['nUserId']) : 1);
+$userId = requireAuth();
 $today = date('Y-m-d');
 
 try {

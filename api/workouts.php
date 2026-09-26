@@ -6,7 +6,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 switch ($method) {
     // 1. GET: ดึงประวัติการออกกำลังกาย (รองรับ Initial Sync และ Delta Sync ด้วย ?since=)
     case 'GET':
-        $userId = isset($_GET['nUserId']) ? intval($_GET['nUserId']) : 1;
+        $userId = requireAuth();
         $since = isset($_GET['since']) ? trim($_GET['since']) : null;
 
         try {
@@ -50,7 +50,7 @@ switch ($method) {
             $data = $_POST;
         }
 
-        $userId = isset($data['nUserId']) ? intval($data['nUserId']) : 1;
+        $userId = requireAuth();
         $type = isset($data['sType']) ? trim($data['sType']) : 'วิ่ง';
         $distance = isset($data['nDistance']) ? floatval($data['nDistance']) : 0.0;
         $duration = isset($data['nDuration']) ? intval($data['nDuration']) : 0;

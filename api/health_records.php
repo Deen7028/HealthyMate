@@ -6,7 +6,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 switch ($method) {
     // 1. GET: ดึงรายการประวัติการคำนวณทั้งหมด
     case 'GET':
-        $userId = isset($_GET['nUserId']) ? intval($_GET['nUserId']) : 1;
+        $userId = requireAuth();
 
         try {
             $stmt = $conn->prepare("SELECT * FROM TbHealthRecords WHERE nUserId = :userId ORDER BY dtRecordedAt DESC");
@@ -33,7 +33,7 @@ switch ($method) {
             $data = $_POST;
         }
 
-        $userId = isset($data['nUserId']) ? intval($data['nUserId']) : 1;
+        $userId = requireAuth();
         $weight = isset($data['nWeight']) ? floatval($data['nWeight']) : null;
         $height = isset($data['nHeight']) ? floatval($data['nHeight']) : null;
         $bmi = isset($data['nBmi']) ? floatval($data['nBmi']) : null;
@@ -79,6 +79,7 @@ switch ($method) {
 
     // 3. DELETE: ลบประวัติการคำนวณตาม nRecordId
     case 'DELETE':
+        $userId = requireAuth();
         $recordId = isset($_GET['nRecordId']) ? intval($_GET['nRecordId']) : null;
 
         if (!$recordId) {
@@ -95,8 +96,22 @@ switch ($method) {
         }
 
         try {
-            $stmt = $conn->prepare("DELETE FROM TbHealthRecords WHERE nRecordId = :recordId");
-            $stmt->execute([':recordId' => $recordId]);
+            // ตรวจสอบ Ownership ของ Record
+            $stmtCheck = $conn->prepare("SELECT nUserId FROM TbHealthRecords WHERE nRecordId = :recordId LIMIT 1");
+            $stmtCheck->execute([':recordId' => $recordId]);
+            $owner = $stmtCheck->fetch();
+
+            if ($owner && intval($owner['nUserId']) !== $userId) {
+                http_response_code(403);
+                echo json_encode([
+                    "status" => "error",
+                    "message" => "ไม่อนุญาตให้ลบข้อมูลสุขภาพของผู้อื่น (Access Denied)"
+                ], JSON_UNESCAPED_UNICODE);
+                exit();
+            }
+
+            $stmt = $conn->prepare("DELETE FROM TbHealthRecords WHERE nRecordId = :recordId AND nUserId = :userId");
+            $stmt->execute([':recordId' => $recordId, ':userId' => $userId]);
 
             echo json_encode([
                 "status" => "success",

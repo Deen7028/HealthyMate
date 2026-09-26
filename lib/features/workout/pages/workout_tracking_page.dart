@@ -139,38 +139,29 @@ class _WorkoutTrackingPageState extends State<WorkoutTrackingPage>
     }
   }
 
-  /// เลื่อนกล้องแผนที่ไปหาตำแหน่งปัจจุบัน
+  /// เลื่อนกล้องแผนที่ไปหาตำแหน่งปัจจุบัน (ใช้พิกัดสดใหม่จาก Controller ป้องกันบั๊กปุ่มบินกลับจุดเริ่มต้น)
   Future<void> _moveToCurrentLocation() async {
     try {
-      Position pos;
-      if (_currentPosition != null) {
-        pos = Position(
-          latitude: _currentPosition!.latitude,
-          longitude: _currentPosition!.longitude,
-          timestamp: DateTime.now(),
-          accuracy: 0,
-          altitude: 0,
-          heading: 0,
-          speed: 0,
-          speedAccuracy: 0,
-          altitudeAccuracy: 0,
-          headingAccuracy: 0,
+      LatLng? targetPos = _state.currentLatLng;
+      if (targetPos == null) {
+        final pos = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
         );
-      } else {
-        pos = await Geolocator.getCurrentPosition();
-        if (mounted) {
-          setState(() {
-            _currentPosition = LatLng(pos.latitude, pos.longitude);
-          });
-        }
+        targetPos = LatLng(pos.latitude, pos.longitude);
       }
 
       _state.enableGps();
 
+      if (mounted) {
+        setState(() {
+          _currentPosition = targetPos;
+        });
+      }
+
       _mapController?.animateCamera(
         CameraUpdate.newCameraPosition(
           CameraPosition(
-            target: LatLng(pos.latitude, pos.longitude),
+            target: targetPos,
             zoom: 16.5,
           ),
         ),
@@ -266,25 +257,46 @@ class _WorkoutTrackingPageState extends State<WorkoutTrackingPage>
           );
         }
 
+        final activePosition = _currentPosition ?? _state.currentLatLng;
+
         return Scaffold(
           backgroundColor: const Color(0xFFEBF2EA),
           body: Stack(
             children: [
-              // 1. พื้นหลังแผนที่ Google Maps จริง
+              // 1. พื้นหลังแผนที่ Google Maps จริง (แสดงเมื่อมีพิกัดจริงเท่านั้น ป้องกันแผนที่กระพริบโผล่ที่กรุงเทพฯ)
               Positioned.fill(
-                child: WorkoutMapView(
-                  mapType: _state.currentMapType,
-                  showTraffic: _state.showTraffic,
-                  isGpsEnabled: _state.isGpsEnabled,
-                  routePoints: _state.routePoints,
-                  initialPosition: _currentPosition,
-                  onMapCreated: (controller) {
-                    _mapController = controller;
-                    if (_currentPosition != null) {
-                      _moveToCurrentLocation();
-                    }
-                  },
-                ),
+                child: activePosition != null
+                    ? WorkoutMapView(
+                        mapType: _state.currentMapType,
+                        showTraffic: _state.showTraffic,
+                        isGpsEnabled: _state.isGpsEnabled,
+                        routePoints: _state.routePoints,
+                        initialPosition: activePosition,
+                        onMapCreated: (controller) {
+                          _mapController = controller;
+                          _moveToCurrentLocation();
+                        },
+                      )
+                    : Container(
+                        color: const Color(0xFFEBF2EA),
+                        child: const Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              CircularProgressIndicator(color: Color(0xFF2E5327)),
+                              SizedBox(height: 16),
+                              Text(
+                                'กำลังค้นหาสัญญาณ GPS ของคุณ...',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF2E5327),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
               ),
 
               // 2. ปุ่มลอยเลือกประเภทแผนที่ (Layers) & ตำแหน่งปัจจุบัน (My Location)
@@ -327,23 +339,28 @@ class _WorkoutTrackingPageState extends State<WorkoutTrackingPage>
                 ),
               ),
 
-              // 3. กล่องแสดงสถิติด้านบน
+              // 3. กล่องแสดงสถิติด้านบน (แยก Rebuild ด้วย ValueListenableBuilder เฉพาะตัวเลขเวลา ป้องกันการ Rebuild Google Maps ทุก 1 วินาที)
               Positioned(
                 top: 0,
                 left: 0,
                 right: 0,
                 child: SafeArea(
-                  child: WorkoutTopStatsCard(
-                    category: _state.selectedCategory,
-                    isRunning: _state.isRunning,
-                    mapType: _state.currentMapType,
-                    formattedTime: _state.formatTime(_state.secondsElapsed),
-                    distanceKm: _state.distanceKm,
-                    caloriesBurned: _state.caloriesBurned,
-                    pulseAnimation: _pulseController,
-                    onChangeCategoryTap: !_state.isRunning
-                        ? () => _state.returnToCategorySelection()
-                        : null,
+                  child: ValueListenableBuilder<int>(
+                    valueListenable: _state.secondsElapsedNotifier,
+                    builder: (context, seconds, _) {
+                      return WorkoutTopStatsCard(
+                        category: _state.selectedCategory,
+                        isRunning: _state.isRunning,
+                        mapType: _state.currentMapType,
+                        formattedTime: _state.formatTime(seconds),
+                        distanceKm: _state.distanceKm,
+                        caloriesBurned: _state.caloriesBurned,
+                        pulseAnimation: _pulseController,
+                        onChangeCategoryTap: !_state.isRunning
+                            ? () => _state.returnToCategorySelection()
+                            : null,
+                      );
+                    },
                   ),
                 ),
               ),

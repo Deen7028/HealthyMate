@@ -6,7 +6,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 switch ($method) {
     // 1. GET: ดึงข้อมูลโปรไฟล์ผู้ใช้จาก TbUsers
     case 'GET':
-        $userId = isset($_GET['nUserId']) ? intval($_GET['nUserId']) : 1;
+        $userId = requireAuth();
 
         try {
             $stmt = $conn->prepare("SELECT nUserId, sEmail, sFirstName, sLastName, nAge, nHeight, nWeight, sGender, sActivityLevel, isDarkMode, sProfileImagePath, dtCreatedAt FROM TbUsers WHERE nUserId = :userId");
@@ -41,6 +41,7 @@ switch ($method) {
             $data = $_POST;
         }
 
+        $authUserId = getAuthenticatedUserId();
         $userId = isset($data['nUserId']) ? intval($data['nUserId']) : null;
         $email = isset($data['sEmail']) ? trim($data['sEmail']) : null;
         $firstName = isset($data['sFirstName']) ? trim($data['sFirstName']) : null;
@@ -53,7 +54,7 @@ switch ($method) {
         $activityLevel = isset($data['sActivityLevel']) ? trim($data['sActivityLevel']) : 'light';
         $profileImagePath = isset($data['sProfileImagePath']) ? trim($data['sProfileImagePath']) : '';
 
-        if (!$email && !$userId) {
+        if (!$email && !$userId && !$authUserId) {
             echo json_encode([
                 "status" => "error",
                 "message" => "Missing required user identifier (nUserId or sEmail)"
@@ -62,9 +63,12 @@ switch ($method) {
         }
 
         try {
-            // 1. ตรวจสอบว่ามีผู้ใช้นี้ใน MySQL หรือยัง (ค้นหาจาก sEmail หรือ nUserId)
+            // 1. ตรวจสอบว่ามีผู้ใช้นี้ใน MySQL หรือยัง
             $stmt = null;
-            if ($email) {
+            if ($authUserId !== null) {
+                $stmt = $conn->prepare("SELECT nUserId FROM TbUsers WHERE nUserId = :userId LIMIT 1");
+                $stmt->execute([':userId' => $authUserId]);
+            } else if ($email) {
                 $stmt = $conn->prepare("SELECT nUserId FROM TbUsers WHERE sEmail = :email LIMIT 1");
                 $stmt->execute([':email' => $email]);
             } else {
@@ -74,8 +78,17 @@ switch ($method) {
             $existingUser = $stmt->fetch();
 
             if ($existingUser) {
-                // มีอยู่แล้ว -> ทำการ UPDATE ข้อมูลโปรไฟล์
-                $targetUserId = $existingUser['nUserId'];
+                // หากพบบัญชีเดิม ต้องยืนยัน Token เพื่อป้องกัน IDOR
+                $targetUserId = intval($existingUser['nUserId']);
+                if ($authUserId === null || $authUserId !== $targetUserId) {
+                    http_response_code(403);
+                    echo json_encode([
+                        "status" => "error",
+                        "message" => "ไม่อนุญาตให้แก้ไขข้อมูลโปรไฟล์ของผู้อื่น (Access Denied)"
+                    ], JSON_UNESCAPED_UNICODE);
+                    exit();
+                }
+
                 $updateFields = [];
                 $params = [':userId' => $targetUserId];
 
@@ -120,11 +133,13 @@ switch ($method) {
                     ':profileImagePath' => $profileImagePath
                 ]);
 
-                $newUserId = $conn->lastInsertId();
+                $newUserId = (int)$conn->lastInsertId();
+                $token = generateAuthToken($newUserId);
 
                 echo json_encode([
                     "status" => "success",
                     "message" => "User registered and synced successfully",
+                    "token" => $token,
                     "nUserId" => $newUserId
                 ], JSON_UNESCAPED_UNICODE);
             }

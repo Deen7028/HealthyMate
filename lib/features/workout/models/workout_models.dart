@@ -16,17 +16,19 @@ class WorkoutCategory {
     required this.metValue,
   });
 
+  bool get isMoving => id == 'running' || id == 'walking' || id == 'cycling';
+
   static const List<WorkoutCategory> categories = [
     WorkoutCategory(
       id: 'running',
-      title: 'วิ่งกลางแจ้ง (Outdoor Run)',
+      title: 'วิ่ง (Running)',
       subtitle: 'ติดตามเส้นทาง GPS และความเร็ว',
       icon: Icons.directions_run_rounded,
       metValue: 8.5,
     ),
     WorkoutCategory(
       id: 'walking',
-      title: 'เดินเร็ว (Brisk Walk)',
+      title: 'เดิน (Walking)',
       subtitle: 'ออกกำลังกายเบาๆ เผาผลาญไขมัน',
       icon: Icons.directions_walk_rounded,
       metValue: 3.8,
@@ -39,11 +41,18 @@ class WorkoutCategory {
       metValue: 7.5,
     ),
     WorkoutCategory(
-      id: 'treadmill',
-      title: 'ลู่วิ่งในร่ม (Treadmill)',
-      subtitle: 'วิ่งในฟิตเนสหรือที่บ้าน',
-      icon: Icons.fitness_center_rounded,
-      metValue: 7.5,
+      id: 'meditation',
+      title: 'ทำสมาธิ (Meditation)',
+      subtitle: 'ฝึกสติ ผ่อนคลายความเครียด และฟื้นฟูจิตใจ',
+      icon: Icons.self_improvement_rounded,
+      metValue: 1.5,
+    ),
+    WorkoutCategory(
+      id: 'yoga',
+      title: 'โยคะ (Yoga)',
+      subtitle: 'ยืดเหยียดกล้ามเนื้อ เสริมความยืดหยุ่นและสมดุล',
+      icon: Icons.spa_rounded,
+      metValue: 3.0,
     ),
   ];
 
@@ -56,7 +65,9 @@ class WorkoutCategory {
           c.title.toLowerCase().contains(lower) ||
           (lower.contains('ปั่น') && c.id == 'cycling') ||
           (lower.contains('วิ่ง') && c.id == 'running') ||
-          (lower.contains('เดิน') && c.id == 'walking')) {
+          (lower.contains('เดิน') && c.id == 'walking') ||
+          (lower.contains('สมาธิ') && c.id == 'meditation') ||
+          (lower.contains('โยคะ') && c.id == 'yoga')) {
         return c;
       }
     }

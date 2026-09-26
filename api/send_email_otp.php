@@ -56,12 +56,6 @@ try {
     }
 
     // 2. ตรวจสอบ Rate Limit ป้องกัน Spam / Email Bombing ตาม IP (สูงสุดไม่เกิน 5 ครั้ง ต่อ 10 นาที)
-    try {
-        $conn->exec("ALTER TABLE TbEmailOtps ADD COLUMN sIpAddress VARCHAR(45) DEFAULT NULL");
-    } catch (\Throwable $e) {
-        // มี column sIpAddress อยู่แล้ว
-    }
-
     $stmtIpCheck = $conn->prepare("
         SELECT COUNT(*) as cnt FROM TbEmailOtps 
         WHERE sIpAddress = :ip AND dtCreatedAt > DATE_SUB(NOW(), INTERVAL 10 MINUTE)

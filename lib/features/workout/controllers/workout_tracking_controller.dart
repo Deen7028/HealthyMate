@@ -24,6 +24,7 @@ class WorkoutTrackingController extends ChangeNotifier {
   Position? _lastPosition;
   final List<LatLng> _routePoints = [];
   int _secondsElapsed = 0;
+  final ValueNotifier<int> secondsElapsedNotifier = ValueNotifier<int>(0);
   double _distanceKm = 0.0;
   double _caloriesBurned = 0.0;
 
@@ -52,6 +53,8 @@ class WorkoutTrackingController extends ChangeNotifier {
   double get caloriesBurned => _caloriesBurned;
   int get userId => _userId;
   List<LatLng> get routePoints => List.unmodifiable(_routePoints);
+  LatLng? get currentLatLng =>
+      _lastPosition != null ? LatLng(_lastPosition!.latitude, _lastPosition!.longitude) : null;
   bool get isRunning => _status == WorkoutState.running;
   bool get isPaused => _status == WorkoutState.paused;
   bool get isAutoPaused => _isAutoPaused;
@@ -62,6 +65,7 @@ class WorkoutTrackingController extends ChangeNotifier {
     _timer?.cancel();
     _positionStreamSub?.cancel();
     _bgLocationSub?.cancel();
+    secondsElapsedNotifier.dispose();
     LocationBackgroundService.instance.stopTracking();
     super.dispose();
   }
@@ -118,6 +122,7 @@ class WorkoutTrackingController extends ChangeNotifier {
     _selectedCategory = category;
     _status = WorkoutState.initial;
     _secondsElapsed = 0;
+    secondsElapsedNotifier.value = 0;
     _accumulatedSeconds = 0;
     _workoutStartTime = null;
     _distanceKm = 0.0;
@@ -136,6 +141,7 @@ class WorkoutTrackingController extends ChangeNotifier {
     LocationBackgroundService.instance.stopTracking();
     _status = WorkoutState.selectingCategory;
     _secondsElapsed = 0;
+    secondsElapsedNotifier.value = 0;
     _distanceKm = 0.0;
     _caloriesBurned = 0.0;
     _zeroSpeedSeconds = 0;
@@ -177,13 +183,76 @@ class WorkoutTrackingController extends ChangeNotifier {
         if (_workoutStartTime != null) {
           _secondsElapsed = _accumulatedSeconds + DateTime.now().difference(_workoutStartTime!).inSeconds;
         }
+        secondsElapsedNotifier.value = _secondsElapsed;
+
+        // คำนวณแคลอรีตามสูตรมาตรฐานการกีฬาตามความเร็วไดนามิก (METs * 0.0175 * WeightKg * TimeMinutes)
+        final activeMet = _calculateCurrentMet();
+        final caloriesPerSecond = (activeMet * 0.0175 * _userWeightKg) / 60.0;
+        _caloriesBurned += caloriesPerSecond;
+
         _checkAutoPauseCondition();
-        _safeNotifyListeners();
       }
     });
 
     LocationBackgroundService.instance.startTracking();
     _startLocationUpdates();
+  }
+
+  /// คำนวณค่า METs ไดนามิกตามประเภทกิจกรรมและความเร็วปัจจุบัน (กม./ชม.)
+  double _calculateCurrentMet() {
+    // 1. กิจกรรมไม่อยู่กับที่ (ทำสมาธิ / โยคะ)
+    if (_selectedCategory.id == 'meditation') {
+      return 1.0;
+    }
+    if (_selectedCategory.id == 'yoga') {
+      return 3.3;
+    }
+
+    // 2. กิจกรรมเคลื่อนที่ หากหยุดนิ่งอยู่กับที่ (_zeroSpeedSeconds > 0) คิดเป็น Resting MET = 1.0
+    if (_zeroSpeedSeconds > 0) {
+      return 1.0;
+    }
+
+    // คำนวณความเร็ว (กม./ชม.) จากพิกัดล่าสุด หรือความเร็วเฉลี่ยสะสม
+    double speedKmh = 0.0;
+    if (_lastPosition != null && _lastPosition!.speed > 0) {
+      speedKmh = _lastPosition!.speed * 3.6;
+    } else if (_secondsElapsed > 0 && _distanceKm > 0) {
+      speedKmh = (_distanceKm / (_secondsElapsed / 3600.0));
+    }
+
+    // หากความเร็วเหลือน้อยมาก (< 0.5 กม./ชม.) ถือว่าเป็น Resting MET
+    if (speedKmh <= 0.5) {
+      return 1.0;
+    }
+
+    switch (_selectedCategory.id) {
+      case 'walking':
+        // เดิน (Walking)
+        if (speedKmh <= 4.0) return 2.5;
+        if (speedKmh <= 6.0) return 4.1;
+        if (speedKmh <= 7.0) return 6.2;
+        return 9.6;
+
+      case 'running':
+        // วิ่ง (Running)
+        if (speedKmh <= 7.0) return 7.5;
+        if (speedKmh <= 10.0) return 9.6;
+        if (speedKmh <= 13.0) return 11.5;
+        return 14.0;
+
+      case 'cycling':
+        // ปั่นจักรยาน (Cycling)
+        if (speedKmh < 16.0) return 4.0;
+        if (speedKmh <= 19.0) return 6.0;
+        if (speedKmh <= 22.0) return 8.0;
+        if (speedKmh <= 25.0) return 10.0;
+        if (speedKmh <= 30.0) return 12.0;
+        return 16.0;
+
+      default:
+        return _selectedCategory.metValue;
+    }
   }
 
   void _checkAutoPauseCondition() {
@@ -202,15 +271,11 @@ class WorkoutTrackingController extends ChangeNotifier {
       locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
     ).then((pos) {
       _lastPosition = pos;
-      if (_routePoints.isEmpty) {
-        _routePoints.add(LatLng(pos.latitude, pos.longitude));
-        _safeNotifyListeners();
-      }
     }).catchError((_) {});
 
     const locationSettings = LocationSettings(
       accuracy: LocationAccuracy.high,
-      distanceFilter: 3,
+      distanceFilter: 6,
     );
 
     _positionStreamSub = Geolocator.getPositionStream(
@@ -232,6 +297,11 @@ class WorkoutTrackingController extends ChangeNotifier {
     required double speedMs,
     required double accuracy,
   }) {
+    // 0. หากเป็นกิจกรรมที่ไม่เกี่ยวกับการเคลื่อนที่ (ทำสมาธิ/โยคะ) ไม่ต้องบันทึกระยะทางและเส้นทาง GPS
+    if (!_selectedCategory.isMoving) {
+      return;
+    }
+
     // 1. ตรวจสอบความเร็วสำหรับ Auto-Pause (ความเร็วน้อยกว่า 0.3 m/s หรือ 1 km/h ถือว่าหยุดนิ่ง)
     if (speedMs < 0.3) {
       _zeroSpeedSeconds++;
@@ -253,14 +323,27 @@ class WorkoutTrackingController extends ChangeNotifier {
         longitude,
       );
 
-      if (distanceInMeters >= 2.5 && distanceInMeters < 150 && accuracy < 35 && speedMs < 25.0) {
+      // กรอง GPS Drift เข้มงวด:
+      // 1. ความแม่นยำสัญญาณ GPS (accuracy) ต้องดีกว่า 15 เมตร
+      // 2. ความเร็วต้อง >= 0.7 m/s (~2.5 km/h ขึ้นไป ซึ่งเป็นความเร็วเดินจริง)
+      //    หรือหากเซนเซอร์ไม่ส่งความเร็ว ระยะทางขยับต้องเกิน 12 เมตร และต้องไกลกว่ารัศมีคลาดเคลื่อน (1.2 * accuracy)
+      final hasSpeed = speedMs >= 0.7;
+      final hasDisplacement = distanceInMeters >= 12.0 && distanceInMeters >= (accuracy * 1.2);
+      
+      final isRealMovement = accuracy <= 15.0 &&
+          (hasSpeed || hasDisplacement) &&
+          distanceInMeters >= 10.0 &&
+          distanceInMeters < 150.0 &&
+          speedMs < 25.0;
+
+      if (isRealMovement) {
         final addedKm = distanceInMeters / 1000.0;
         _distanceKm += addedKm;
 
-        final calorieFactorPerKm = _selectedCategory.id == 'walking'
-            ? 0.75
-            : (_selectedCategory.id == 'cycling' ? 0.35 : 1.03);
-        _caloriesBurned += addedKm * _userWeightKg * calorieFactorPerKm;
+        // หากยังไม่มีจุดในเส้นทาง ให้เพิ่มจุดเริ่มต้นก่อน
+        if (_routePoints.isEmpty) {
+          _routePoints.add(LatLng(_lastPosition!.latitude, _lastPosition!.longitude));
+        }
 
         _lastPosition = Position(
           longitude: longitude,
@@ -276,6 +359,7 @@ class WorkoutTrackingController extends ChangeNotifier {
         );
 
         _routePoints.add(LatLng(latitude, longitude));
+        _safeNotifyListeners();
 
         // 2. Voice Feedback: ทุกๆ 1 กิโลเมตร ให้ ขานบอกระยะทาง เวลา และ Pace
         final currentKmFloor = _distanceKm.floor();

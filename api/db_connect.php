@@ -90,6 +90,23 @@ function getAuthenticatedUserId() {
     return null;
 }
 
+/**
+ * บังคับ Authentication ผ่าน Bearer Token หากพบปัญหาให้ Return 401 Unauthorized ทันที
+ * ป้องกันช่องโหว่ IDOR และ Token Bypass
+ */
+function requireAuth(): int {
+    $userId = getAuthenticatedUserId();
+    if ($userId === null) {
+        http_response_code(401);
+        echo json_encode([
+            "status" => "error",
+            "message" => "Unauthenticated: Token ไม่ถูกต้อง หรือหมดอายุ (Access Denied)"
+        ], JSON_UNESCAPED_UNICODE);
+        exit();
+    }
+    return $userId;
+}
+
 
 $host = getenv('DB_HOST') ?: "127.0.0.1";   
 $port = getenv('DB_PORT') ?: "3306";

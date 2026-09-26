@@ -64,7 +64,9 @@ class _MainAppShellState extends State<MainAppShell> {
             onNavigateToWorkout: (category) => _onTabTapped(1, category),
           ),
           // 4: Profile (โปรไฟล์)
-          const ProfilePage(),
+          ProfilePage(
+            onNavigateToPractice: () => _onTabTapped(3),
+          ),
         ],
       ),
       // ปุ่มลอยกลาง (Center Docked FAB) ไอคอนกล้องถ่ายรูปสำหรับ AI Food Recognition

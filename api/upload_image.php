@@ -12,6 +12,8 @@ if ($method !== 'POST') {
     exit();
 }
 
+$userId = requireAuth();
+
 // 1. กำหนดโฟลเดอร์สำหรับเก็บไฟล์รูปภาพ (เทียบจากตำแหน่งไฟล์นี้)
 $uploadBaseDir = __DIR__ . "/uploads/";
 if (!file_exists($uploadBaseDir)) {
@@ -153,7 +155,7 @@ echo json_encode([
 /**
  * ย่อขนาดและบีบอัดรูปภาพด้วย GD Library ให้ไม่เกิน 800x800 px เพื่อประหยัดพื้นที่และแบนด์วิดท์
  */
-function optimizeAndSaveImage($sourcePath, $destPath, $mimeType, $maxWidth = 800, $maxHeight = 800, $quality = 82) {
+function optimizeAndSaveImage(string $sourcePath, string $destPath, string $mimeType, int $maxWidth = 800, int $maxHeight = 800, int $quality = 82): bool {
     if (!extension_loaded('gd')) {
         return move_uploaded_file($sourcePath, $destPath) || @copy($sourcePath, $destPath);
     }

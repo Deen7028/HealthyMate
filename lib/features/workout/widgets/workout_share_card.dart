@@ -57,46 +57,47 @@ class WorkoutShareCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const SizedBox(height: 20),
-            Text(
-              'ระยะทาง',
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                shadows: textShadows,
+            if (distance > 0.05) ...[
+              Text(
+                'ระยะทาง',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  shadows: textShadows,
+                ),
               ),
-            ),
-            Text(
-              '${distance.toStringAsFixed(2)} กม.',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 32,
-                fontWeight: FontWeight.w900,
-                letterSpacing: -0.5,
-                shadows: textShadows,
+              Text(
+                '${distance.toStringAsFixed(2)} กม.',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 32,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.5,
+                  shadows: textShadows,
+                ),
               ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              'เพซ',
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                shadows: textShadows,
+              const SizedBox(height: 14),
+              Text(
+                'เพซ',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  shadows: textShadows,
+                ),
               ),
-            ),
-            Text(
-              '${_calculatePace()} /กม.',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 26,
-                fontWeight: FontWeight.w900,
-                shadows: textShadows,
+              Text(
+                '${_calculatePace()} /กม.',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                  shadows: textShadows,
+                ),
               ),
-            ),
-            const SizedBox(height: 14),
+              const SizedBox(height: 14),
+            ],
             Text(
               'เวลา',
               style: TextStyle(
@@ -110,7 +111,7 @@ class WorkoutShareCard extends StatelessWidget {
               _formatDuration(duration),
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 26,
+                fontSize: 32,
                 fontWeight: FontWeight.w900,
                 shadows: textShadows,
               ),

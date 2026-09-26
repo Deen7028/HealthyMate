@@ -6,7 +6,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 switch ($method) {
     // 1. GET: ดึงประวัติการบันทึกอาหาร
     case 'GET':
-        $userId = isset($_GET['nUserId']) ? intval($_GET['nUserId']) : 1;
+        $userId = requireAuth();
 
         try {
             $stmt = $conn->prepare("SELECT * FROM TbNutritionLogs WHERE nUserId = :userId ORDER BY dtLoggedAt DESC");
@@ -33,7 +33,7 @@ switch ($method) {
             $data = $_POST;
         }
 
-        $userId = isset($data['nUserId']) ? intval($data['nUserId']) : 1;
+        $userId = requireAuth();
         $mealType = isset($data['sMealType']) ? trim($data['sMealType']) : 'breakfast';
         $foodName = isset($data['sFoodName']) ? trim($data['sFoodName']) : 'อาหารทั่วไป';
         $calories = isset($data['nCalories']) ? intval($data['nCalories']) : 0;

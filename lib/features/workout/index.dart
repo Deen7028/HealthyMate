@@ -1,3 +1,4 @@
+export 'controllers/workout_history_controller.dart';
 export 'controllers/workout_tracking_controller.dart';
 export 'models/workout_models.dart';
 export 'pages/workout_history_page.dart';

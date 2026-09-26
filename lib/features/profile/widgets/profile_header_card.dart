@@ -10,7 +10,8 @@ class ProfileHeaderCard extends StatelessWidget {
   final String goalRemainingText;
   final VoidCallback onAvatarTap;
   final VoidCallback onEditProfileTap;
-  final VoidCallback? onEditGoalTap;
+  final VoidCallback? onGoalTap;
+  final bool isUploadingImage;
 
   const ProfileHeaderCard({
     super.key,
@@ -22,7 +23,8 @@ class ProfileHeaderCard extends StatelessWidget {
     required this.goalRemainingText,
     required this.onAvatarTap,
     required this.onEditProfileTap,
-    this.onEditGoalTap,
+    this.onGoalTap,
+    this.isUploadingImage = false,
   });
 
   @override
@@ -48,12 +50,13 @@ class ProfileHeaderCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Big Circular Avatar with Edit Badge
+          // Big Circular Avatar with Edit Badge & Loading Indicator
           Center(
             child: Stack(
+              alignment: Alignment.center,
               children: [
                 GestureDetector(
-                  onTap: onAvatarTap,
+                  onTap: isUploadingImage ? null : onAvatarTap,
                   child: Container(
                     width: 104,
                     height: 104,
@@ -80,11 +83,30 @@ class ProfileHeaderCard extends StatelessWidget {
                         : null,
                   ),
                 ),
+                if (isUploadingImage)
+                  Container(
+                    width: 104,
+                    height: 104,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.black.withValues(alpha: 0.5),
+                    ),
+                    child: const Center(
+                      child: SizedBox(
+                        width: 32,
+                        height: 32,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 3,
+                        ),
+                      ),
+                    ),
+                  ),
                 Positioned(
                   bottom: 2,
                   right: 2,
                   child: GestureDetector(
-                    onTap: onAvatarTap,
+                    onTap: isUploadingImage ? null : onAvatarTap,
                     child: Container(
                       width: 32,
                       height: 32,
@@ -149,9 +171,9 @@ class ProfileHeaderCard extends StatelessWidget {
 
           const SizedBox(height: 20),
 
-          // เป้าหมายหลัก (Main Goal Card - แสดงข้อมูล)
+          // เป้าหมายหลัก (Main Goal Card - แสดงข้อมูลกระจกเงา Read-only แตะเพื่อไปหน้ากิจวัตร)
           InkWell(
-            onTap: onEditGoalTap,
+            onTap: onGoalTap,
             borderRadius: BorderRadius.circular(18),
             child: Container(
               width: double.infinity,
@@ -195,10 +217,10 @@ class ProfileHeaderCard extends StatelessWidget {
                           ),
                         ],
                       ),
-                      if (onEditGoalTap != null)
+                      if (onGoalTap != null)
                         Icon(
-                          Icons.edit_outlined,
-                          size: 16,
+                          Icons.chevron_right_rounded,
+                          size: 20,
                           color: isDark ? Colors.grey.shade400 : const Color(0xFF6F7A72),
                         ),
                     ],

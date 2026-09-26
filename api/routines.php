@@ -7,8 +7,7 @@ switch ($method) {
 
     // 1. GET: ดึงกิจวัตรทั้งหมดของ user + สถานะ log ของวันนี้
     case 'GET':
-        $authUserId = getAuthenticatedUserId();
-        $userId = $authUserId !== null ? $authUserId : (isset($_GET['nUserId']) ? intval($_GET['nUserId']) : 1);
+        $userId = requireAuth();
         $date = isset($_GET['date']) ? trim($_GET['date']) : date('Y-m-d');
 
         try {
@@ -18,11 +17,6 @@ switch ($method) {
             $routines = $stmt->fetchAll();
 
             // ดึง log ของวันที่ระบุสำหรับแต่ละ routine (รวม nProgressValue)
-            try {
-                $conn->exec("ALTER TABLE TbRoutineLogs ADD COLUMN nProgressValue INT DEFAULT 0");
-            } catch (\Throwable $e) {
-            }
-
             $stmtLog = $conn->prepare("
                 SELECT nRoutineId, isCompleted, COALESCE(nProgressValue, 0) as nProgressValue FROM TbRoutineLogs 
                 WHERE nRoutineId = :routineId AND dtLogDate = :logDate
@@ -71,7 +65,7 @@ switch ($method) {
         $data = json_decode(file_get_contents("php://input"), true);
         if (!$data) $data = $_POST;
 
-        $authUserId = getAuthenticatedUserId();
+        $authUserId = requireAuth();
         $action = isset($data['action']) ? $data['action'] : 'insert';
 
         if ($action === 'toggle_log' || $action === 'update_progress') {
@@ -82,20 +76,12 @@ switch ($method) {
 
             try {
                 // ตรวจสอบ Ownership ของ Routine
-                if ($authUserId !== null) {
-                    $stmtCheckOwner = $conn->prepare("SELECT nUserId FROM TbRoutines WHERE nRoutineId = :rid LIMIT 1");
-                    $stmtCheckOwner->execute([':rid' => $routineId]);
-                    $owner = $stmtCheckOwner->fetch();
-                    if ($owner && intval($owner['nUserId']) !== $authUserId) {
-                        echo json_encode(["status" => "error", "message" => "ไม่อนุญาตให้แก้ไขข้อมูลผู้อื่น (Access Denied)"]);
-                        exit();
-                    }
-                }
-
-                // การันตี UNIQUE CONSTRAINT ป้องกัน Race Condition
-                try {
-                    $conn->exec("ALTER TABLE TbRoutineLogs ADD CONSTRAINT uk_routine_date UNIQUE (nRoutineId, dtLogDate)");
-                } catch (\Throwable $e) {
+                $stmtCheckOwner = $conn->prepare("SELECT nUserId FROM TbRoutines WHERE nRoutineId = :rid LIMIT 1");
+                $stmtCheckOwner->execute([':rid' => $routineId]);
+                $owner = $stmtCheckOwner->fetch();
+                if ($owner && intval($owner['nUserId']) !== $authUserId) {
+                    echo json_encode(["status" => "error", "message" => "ไม่อนุญาตให้แก้ไขข้อมูลผู้อื่น (Access Denied)"]);
+                    exit();
                 }
 
                 // อ่านสถานะเดิมกรณี toggle
@@ -138,7 +124,7 @@ switch ($method) {
             }
         } else {
             // เพิ่มกิจวัตรใหม่
-            $userId = $authUserId !== null ? $authUserId : (isset($data['nUserId']) ? intval($data['nUserId']) : 1);
+            $userId = $authUserId;
             $title = isset($data['sTitle']) ? trim($data['sTitle']) : '';
             $time = isset($data['sTime']) ? trim($data['sTime']) : '';
             $isNotif = isset($data['isNotificationActive']) ? intval($data['isNotificationActive']) : 1;
@@ -176,7 +162,7 @@ switch ($method) {
     // 3. PUT: แก้ไขกิจวัตร
     case 'PUT':
         $data = json_decode(file_get_contents("php://input"), true);
-        $authUserId = getAuthenticatedUserId();
+        $authUserId = requireAuth();
 
         $routineId = isset($data['nRoutineId']) ? intval($data['nRoutineId']) : 0;
         $title = isset($data['sTitle']) ? trim($data['sTitle']) : '';
@@ -189,14 +175,12 @@ switch ($method) {
         }
 
         try {
-            if ($authUserId !== null) {
-                $stmtCheckOwner = $conn->prepare("SELECT nUserId FROM TbRoutines WHERE nRoutineId = :rid LIMIT 1");
-                $stmtCheckOwner->execute([':rid' => $routineId]);
-                $owner = $stmtCheckOwner->fetch();
-                if ($owner && intval($owner['nUserId']) !== $authUserId) {
-                    echo json_encode(["status" => "error", "message" => "ไม่อนุญาตให้แก้ไขข้อมูลผู้อื่น (Access Denied)"]);
-                    exit();
-                }
+            $stmtCheckOwner = $conn->prepare("SELECT nUserId FROM TbRoutines WHERE nRoutineId = :rid LIMIT 1");
+            $stmtCheckOwner->execute([':rid' => $routineId]);
+            $owner = $stmtCheckOwner->fetch();
+            if ($owner && intval($owner['nUserId']) !== $authUserId) {
+                echo json_encode(["status" => "error", "message" => "ไม่อนุญาตให้แก้ไขข้อมูลผู้อื่น (Access Denied)"]);
+                exit();
             }
 
             $stmt = $conn->prepare("
@@ -222,7 +206,7 @@ switch ($method) {
     // 4. DELETE: ลบกิจวัตร
     case 'DELETE':
         $data = json_decode(file_get_contents("php://input"), true);
-        $authUserId = getAuthenticatedUserId();
+        $authUserId = requireAuth();
         $routineId = isset($data['nRoutineId']) ? intval($data['nRoutineId']) : 0;
 
         if ($routineId <= 0) {
@@ -231,14 +215,12 @@ switch ($method) {
         }
 
         try {
-            if ($authUserId !== null) {
-                $stmtCheckOwner = $conn->prepare("SELECT nUserId FROM TbRoutines WHERE nRoutineId = :rid LIMIT 1");
-                $stmtCheckOwner->execute([':rid' => $routineId]);
-                $owner = $stmtCheckOwner->fetch();
-                if ($owner && intval($owner['nUserId']) !== $authUserId) {
-                    echo json_encode(["status" => "error", "message" => "ไม่อนุญาตให้ลบข้อมูลผู้อื่น (Access Denied)"]);
-                    exit();
-                }
+            $stmtCheckOwner = $conn->prepare("SELECT nUserId FROM TbRoutines WHERE nRoutineId = :rid LIMIT 1");
+            $stmtCheckOwner->execute([':rid' => $routineId]);
+            $owner = $stmtCheckOwner->fetch();
+            if ($owner && intval($owner['nUserId']) !== $authUserId) {
+                echo json_encode(["status" => "error", "message" => "ไม่อนุญาตให้ลบข้อมูลผู้อื่น (Access Denied)"]);
+                exit();
             }
 
             // ลบ logs ก่อน
