@@ -6,21 +6,21 @@ import 'package:healthymate/core/theme/app_theme.dart';
 import 'package:healthymate/features/auth/widgets/otp_verification_dialog.dart';
 import '../widgets/index.dart';
 
-class RegisterScreen extends StatefulWidget {
+class RegisterPage extends StatefulWidget {
   final VoidCallback? onRegisterSuccess;
   final VoidCallback? onLoginTap;
 
-  const RegisterScreen({
+  const RegisterPage({
     super.key,
     this.onRegisterSuccess,
     this.onLoginTap,
   });
 
   @override
-  State<RegisterScreen> createState() => _RegisterScreenState();
+  State<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
+class _RegisterPageState extends State<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
 
   // Form Controllers

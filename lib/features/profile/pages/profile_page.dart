@@ -20,14 +20,14 @@ import 'package:healthymate/features/food_recognition/widgets/gemini_api_key_dia
 import 'package:healthymate/shared/dialogs/edit_goal_dialog.dart';
 
 /// หน้าโปรไฟล์และการตั้งค่า HealthyMate
-class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+class ProfilePage extends StatefulWidget {
+  const ProfilePage({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  State<ProfilePage> createState() => _ProfilePageState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserver {
+class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
   bool _isLocationEnabled = true;
   bool _isLoading = true;
   TbUser? _currentUser;
@@ -86,7 +86,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
 
       // ป้องกันช่องโหว่ Data Leak: หาก Authentication ผิดพลาดหรือไม่พบบัญชี ให้ logout ทันที ห้าม fallback userId: 1
       if (user == null) {
-        debugPrint('ProfileScreen: No valid authenticated user found, forcing logout.');
+        debugPrint('ProfilePage: No valid authenticated user found, forcing logout.');
         if (mounted) {
           await AuthService.instance.logout();
         }

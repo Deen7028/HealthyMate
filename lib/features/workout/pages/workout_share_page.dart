@@ -8,14 +8,14 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../widgets/index.dart';
 
-class WorkoutShareScreen extends StatefulWidget {
+class WorkoutSharePage extends StatefulWidget {
   final String sType;
   final double nDistance;
   final int nDuration;
   final double nCalories;
   final List<LatLng> routePoints;
 
-  const WorkoutShareScreen({
+  const WorkoutSharePage({
     super.key,
     required this.sType,
     required this.nDistance,
@@ -25,10 +25,10 @@ class WorkoutShareScreen extends StatefulWidget {
   });
 
   @override
-  State<WorkoutShareScreen> createState() => _WorkoutShareScreenState();
+  State<WorkoutSharePage> createState() => _WorkoutSharePageState();
 }
 
-class _WorkoutShareScreenState extends State<WorkoutShareScreen> {
+class _WorkoutSharePageState extends State<WorkoutSharePage> {
   final GlobalKey _globalKey = GlobalKey();
   bool _isTransparent = true;
   bool _isProcessing = false;

@@ -6,25 +6,25 @@ import 'package:healthymate/core/services/biometric_apple_auth_service.dart';
 import 'package:healthymate/core/services/sync_service.dart';
 import 'package:healthymate/core/theme/app_theme.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
-import 'package:healthymate/features/register/pages/register_screen.dart';
+import 'package:healthymate/features/register/pages/register_page.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../widgets/index.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginPage extends StatefulWidget {
   final VoidCallback? onClose;
   final VoidCallback? onLoginSuccess;
 
-  const LoginScreen({
+  const LoginPage({
     super.key,
     this.onClose,
     this.onLoginSuccess,
   });
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -239,7 +239,7 @@ class _LoginScreenState extends State<LoginScreen> {
         Navigator.of(context).pop();
       }
     } catch (e, stack) {
-      debugPrint('LoginScreen: Exception during _handleLogin: $e\n$stack');
+      debugPrint('LoginPage: Exception during _handleLogin: $e\n$stack');
       if (!mounted) return;
       setState(() {
         _isLoading = false;
@@ -443,7 +443,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   onRegisterTap: () {
                                     Navigator.of(context).push(
                                       MaterialPageRoute(
-                                        builder: (context) => RegisterScreen(
+                                        builder: (context) => RegisterPage(
                                           onLoginTap: () {
                                             Navigator.of(context).pop();
                                           },

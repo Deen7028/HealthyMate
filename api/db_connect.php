@@ -50,7 +50,7 @@ if ($appKey !== $expectedAppKey) {
 /**
  * สร้าง Auth Token สำหรับยืนยันตัวตน User
  */
-function generateAuthToken($userId) {
+function generateAuthToken(int|string $userId) {
     global $expectedAppKey;
     $payload = $userId . ':' . time();
     $sig = hash_hmac('sha256', $payload, $expectedAppKey);

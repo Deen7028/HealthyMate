@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:healthymate/features/workout/pages/workout_share_screen.dart';
+import 'package:healthymate/features/workout/pages/workout_share_page.dart';
 import 'history_route_painter.dart';
 
 class WorkoutHistoryItemCard extends StatelessWidget {
@@ -308,7 +308,7 @@ class WorkoutHistoryItemCard extends StatelessWidget {
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (context) => WorkoutShareScreen(
+                      builder: (context) => WorkoutSharePage(
                         sType: type,
                         nDistance: distance,
                         nDuration: duration,

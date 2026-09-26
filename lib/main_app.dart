@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/features/dashboard/pages/dashboard_page.dart';
-import 'package:healthymate/features/health_calculator/pages/health_calculator_screen.dart';
-import 'package:healthymate/features/health_calculator/controllers/health_calculator_state.dart';
+import 'package:healthymate/features/health_calculator/pages/health_calculator_page.dart';
+import 'package:healthymate/features/health_calculator/controllers/health_calculator_controller.dart';
 import 'package:healthymate/features/practice/pages/routine_notification_page.dart';
-import 'package:healthymate/features/profile/pages/profile_screen.dart';
-import 'package:healthymate/features/workout/pages/workout_tracking_screen.dart';
-import 'package:healthymate/features/food_recognition/widgets/food_source_bottom_sheet.dart';
+import 'package:healthymate/features/profile/pages/profile_page.dart';
+import 'package:healthymate/features/workout/pages/workout_tracking_page.dart';
+import 'package:healthymate/shared/bottom_sheets/food_source_bottom_sheet.dart';
 import 'package:healthymate/shared/widgets/vitality_bottom_nav_bar.dart';
 
 class MainAppShell extends StatefulWidget {
@@ -17,7 +17,7 @@ class MainAppShell extends StatefulWidget {
 
 class _MainAppShellState extends State<MainAppShell> {
   int _currentIndex = 0; // Default to Dashboard (หน้าหลัก, index 0)
-  final HealthCalculatorState _healthState = HealthCalculatorState();
+  final HealthCalculatorController _healthState = HealthCalculatorController();
 
   @override
   void dispose() {
@@ -52,19 +52,19 @@ class _MainAppShellState extends State<MainAppShell> {
             onNavigateToWorkout: () => _onTabTapped(1),
           ),
           // 1: Workout (ออกกำลังกาย)
-          WorkoutTrackingScreen(
+          WorkoutTrackingPage(
             onBackToDashboard: () => _onTabTapped(0),
             initialCategory: _selectedWorkoutCategory,
           ),
           // 2: Health Calculator (สุขภาพ)
-          HealthCalculatorScreen(state: _healthState),
+          HealthCalculatorPage(state: _healthState),
           // 3: Routine (กิจวัตร)
           MyRoutinesPage(
             isActive: _currentIndex == 3,
             onNavigateToWorkout: (category) => _onTabTapped(1, category),
           ),
           // 4: Profile (โปรไฟล์)
-          const ProfileScreen(),
+          const ProfilePage(),
         ],
       ),
       // ปุ่มลอยกลาง (Center Docked FAB) ไอคอนกล้องถ่ายรูปสำหรับ AI Food Recognition

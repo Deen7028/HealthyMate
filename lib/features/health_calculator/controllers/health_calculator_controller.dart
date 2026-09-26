@@ -8,7 +8,7 @@ import 'package:healthymate/features/health_calculator/models/activity_level.dar
 import 'package:healthymate/features/health_calculator/models/health_record_model.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
 
-class HealthCalculatorState extends ChangeNotifier {
+class HealthCalculatorController extends ChangeNotifier {
   final AppDatabase _db = AppDatabase.instance;
   bool _isDisposed = false;
 
@@ -42,7 +42,7 @@ class HealthCalculatorState extends ChangeNotifier {
   bool _isLoading = true;
   String _dataSource = "Database Server";
 
-  HealthCalculatorState() {
+  HealthCalculatorController() {
     _bmiCategory = HealthCalculator.getBMICategory(0.0);
     loadData();
   }

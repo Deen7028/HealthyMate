@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/theme/app_theme.dart';
-import 'package:healthymate/features/health_calculator/controllers/health_calculator_state.dart';
+import 'package:healthymate/features/health_calculator/controllers/health_calculator_controller.dart';
 import 'package:healthymate/features/health_calculator/widgets/index.dart';
 
-class HealthCalculatorScreen extends StatefulWidget {
-  final HealthCalculatorState state;
+class HealthCalculatorPage extends StatefulWidget {
+  final HealthCalculatorController state;
 
-  const HealthCalculatorScreen({super.key, required this.state});
+  const HealthCalculatorPage({super.key, required this.state});
 
   @override
-  State<HealthCalculatorScreen> createState() => _HealthCalculatorScreenState();
+  State<HealthCalculatorPage> createState() => _HealthCalculatorPageState();
 }
 
-class _HealthCalculatorScreenState extends State<HealthCalculatorScreen> {
+class _HealthCalculatorPageState extends State<HealthCalculatorPage> {
   late TextEditingController _ageController;
   late TextEditingController _heightController;
   late TextEditingController _weightController;

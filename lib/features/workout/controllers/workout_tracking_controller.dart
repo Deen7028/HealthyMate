@@ -11,7 +11,7 @@ import 'package:healthymate/core/services/sync_service.dart';
 import 'package:healthymate/core/services/tts_service.dart';
 import '../models/workout_models.dart';
 
-class WorkoutTrackingState extends ChangeNotifier {
+class WorkoutTrackingController extends ChangeNotifier {
   WorkoutState _status = WorkoutState.selectingCategory;
   WorkoutCategory _selectedCategory = WorkoutCategory.categories.first;
   AppMapType _currentMapType = AppMapType.standard;
@@ -36,7 +36,7 @@ class WorkoutTrackingState extends ChangeNotifier {
   bool _isAutoPaused = false;
   int _lastAnnouncedKm = 0;
 
-  WorkoutTrackingState() {
+  WorkoutTrackingController() {
     _loadUserData();
     _listenBackgroundLocation();
   }

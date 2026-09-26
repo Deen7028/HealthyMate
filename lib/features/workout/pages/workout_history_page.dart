@@ -5,16 +5,16 @@ import 'package:healthymate/core/theme/app_theme.dart';
 import '../widgets/index.dart';
 
 /// หน้าแสดงประวัติการออกกำลังกายจากตาราง TbWorkouts
-class WorkoutHistoryScreen extends StatefulWidget {
+class WorkoutHistoryPage extends StatefulWidget {
   final int userId;
 
-  const WorkoutHistoryScreen({super.key, required this.userId});
+  const WorkoutHistoryPage({super.key, required this.userId});
 
   @override
-  State<WorkoutHistoryScreen> createState() => _WorkoutHistoryScreenState();
+  State<WorkoutHistoryPage> createState() => _WorkoutHistoryPageState();
 }
 
-class _WorkoutHistoryScreenState extends State<WorkoutHistoryScreen> {
+class _WorkoutHistoryPageState extends State<WorkoutHistoryPage> {
   bool _isLoading = true;
   bool _isPulling = false;
   List<Map<String, dynamic>> _workouts = [];

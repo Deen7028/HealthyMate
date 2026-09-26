@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/theme/app_theme.dart';
-import 'package:healthymate/features/auth/pages/forgot_password_screen.dart';
+import 'package:healthymate/features/auth/pages/forgot_password_page.dart';
 
 class LoginFormFields extends StatelessWidget {
   final TextEditingController emailController;
@@ -100,7 +100,7 @@ class LoginFormFields extends StatelessWidget {
               onTap: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (context) => const ForgotPasswordScreen(),
+                    builder: (context) => const ForgotPasswordPage(),
                   ),
                 );
               },

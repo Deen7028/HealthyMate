@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/theme/app_theme.dart';
-import 'package:healthymate/features/health_calculator/controllers/health_calculator_state.dart';
+import 'package:healthymate/features/health_calculator/controllers/health_calculator_controller.dart';
 import 'bmi_indicator_bar.dart';
 import 'calorie_target_card.dart';
 import 'result_card.dart';
 
 class HealthCalculatorResultSection extends StatelessWidget {
-  final HealthCalculatorState state;
+  final HealthCalculatorController state;
 
   const HealthCalculatorResultSection({
     super.key,

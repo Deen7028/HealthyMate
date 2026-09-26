@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:healthymate/features/workout/models/workout_models.dart';
-import 'package:healthymate/features/workout/controllers/workout_tracking_state.dart';
+import 'package:healthymate/features/workout/controllers/workout_tracking_controller.dart';
 import 'package:healthymate/features/workout/widgets/workout_dialog_utils.dart';
 import 'package:healthymate/features/workout/widgets/category_selection_view.dart';
 import 'package:healthymate/features/workout/widgets/workout_top_stats_card.dart';
@@ -11,24 +11,24 @@ import 'package:healthymate/features/workout/widgets/map_floating_buttons.dart';
 import 'package:healthymate/features/workout/widgets/workout_map_view.dart';
 
 /// หน้าจอ Workout Tracking 
-/// Logic การคำนวณและ State ทั้งหมดจะถูก Delegate ไปยัง [WorkoutTrackingState]
-class WorkoutTrackingScreen extends StatefulWidget {
+/// Logic การคำนวณและ State ทั้งหมดจะถูก Delegate ไปยัง [WorkoutTrackingController]
+class WorkoutTrackingPage extends StatefulWidget {
   final VoidCallback? onBackToDashboard;
   final String? initialCategory;
 
-  const WorkoutTrackingScreen({
+  const WorkoutTrackingPage({
     super.key,
     this.onBackToDashboard,
     this.initialCategory,
   });
 
   @override
-  State<WorkoutTrackingScreen> createState() => _WorkoutTrackingScreenState();
+  State<WorkoutTrackingPage> createState() => _WorkoutTrackingPageState();
 }
 
-class _WorkoutTrackingScreenState extends State<WorkoutTrackingScreen>
+class _WorkoutTrackingPageState extends State<WorkoutTrackingPage>
     with SingleTickerProviderStateMixin {
-  late final WorkoutTrackingState _state;
+  late final WorkoutTrackingController _state;
   late final AnimationController _pulseController;
   
   // Controller สำหรับควบคุม Google Maps
@@ -38,7 +38,7 @@ class _WorkoutTrackingScreenState extends State<WorkoutTrackingScreen>
   @override
   void initState() {
     super.initState();
-    _state = WorkoutTrackingState();
+    _state = WorkoutTrackingController();
     if (widget.initialCategory != null && widget.initialCategory!.isNotEmpty) {
       _state.selectCategoryByName(widget.initialCategory);
     }
@@ -52,7 +52,7 @@ class _WorkoutTrackingScreenState extends State<WorkoutTrackingScreen>
   }
 
   @override
-  void didUpdateWidget(covariant WorkoutTrackingScreen oldWidget) {
+  void didUpdateWidget(covariant WorkoutTrackingPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.initialCategory != oldWidget.initialCategory &&
         widget.initialCategory != null &&
