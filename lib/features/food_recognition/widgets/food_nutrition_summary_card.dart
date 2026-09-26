@@ -38,27 +38,34 @@ class FoodNutritionSummaryCard extends StatelessWidget {
                   color: Color(0xFF5A6559),
                 ),
               ),
-              RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(
-                      text: '$totalCalories',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w900,
-                        color: primaryColor,
-                      ),
+              TweenAnimationBuilder<int>(
+                tween: IntTween(begin: 0, end: totalCalories),
+                duration: const Duration(milliseconds: 1500),
+                curve: Curves.easeOutCubic,
+                builder: (context, val, _) {
+                  return RichText(
+                    text: TextSpan(
+                      children: [
+                        TextSpan(
+                          text: '$val',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w900,
+                            color: primaryColor,
+                          ),
+                        ),
+                        const TextSpan(
+                          text: ' kcal',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF7A867E),
+                          ),
+                        ),
+                      ],
                     ),
-                    const TextSpan(
-                      text: ' kcal',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF7A867E),
-                      ),
-                    ),
-                  ],
-                ),
+                  );
+                },
               ),
             ],
           ),
@@ -70,21 +77,24 @@ class FoodNutritionSummaryCard extends StatelessWidget {
             children: [
               _buildMacroItem(
                 label: 'โปรตีน (P)',
-                value: '${totalProtein.toStringAsFixed(1)}g',
+                doubleValue: totalProtein,
+                unit: 'g',
                 color: const Color(0xFF2E6339),
                 icon: Icons.egg_alt_outlined,
               ),
               Container(width: 1, height: 32, color: const Color(0xFFE2EBE5)),
               _buildMacroItem(
                 label: 'คาร์โบไฮเดรต (C)',
-                value: '${totalCarbs.toStringAsFixed(1)}g',
+                doubleValue: totalCarbs,
+                unit: 'g',
                 color: const Color(0xFFD48220),
                 icon: Icons.grain_rounded,
               ),
               Container(width: 1, height: 32, color: const Color(0xFFE2EBE5)),
               _buildMacroItem(
                 label: 'ไขมัน (F)',
-                value: '${totalFat.toStringAsFixed(1)}g',
+                doubleValue: totalFat,
+                unit: 'g',
                 color: const Color(0xFFC74848),
                 icon: Icons.water_drop_outlined,
               ),
@@ -97,7 +107,8 @@ class FoodNutritionSummaryCard extends StatelessWidget {
 
   Widget _buildMacroItem({
     required String label,
-    required String value,
+    required double doubleValue,
+    required String unit,
     required Color color,
     required IconData icon,
   }) {
@@ -119,13 +130,20 @@ class FoodNutritionSummaryCard extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 2),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w800,
-            color: color,
-          ),
+        TweenAnimationBuilder<double>(
+          tween: Tween<double>(begin: 0.0, end: doubleValue),
+          duration: const Duration(milliseconds: 1500),
+          curve: Curves.easeOutCubic,
+          builder: (context, val, _) {
+            return Text(
+              '${val.toStringAsFixed(1)}$unit',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: color,
+              ),
+            );
+          },
         ),
       ],
     );

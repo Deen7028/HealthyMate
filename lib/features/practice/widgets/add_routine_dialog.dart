@@ -1,3 +1,4 @@
+// ignore_for_file: non_const_argument_for_const_parameter
 import 'package:flutter/material.dart';
 import '../models/routine_item.dart';
 import 'routine_step_category.dart';
@@ -73,21 +74,69 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
     _selectedColor = _selectedCategory.defaultColor;
 
     if (widget.initialRoutine != null) {
-      _titleController.text =
-          widget.initialRoutine!['sTitle']?.toString() ?? '';
+      final r = widget.initialRoutine!;
+      _titleController.text = (r['sTitle'] ?? r['title'])?.toString() ?? '';
       _notificationTimeController.text =
-          widget.initialRoutine!['sTime']?.toString() ?? '';
+          (r['sTime'] ?? r['time'] ?? r['notificationTime'])?.toString() ?? '';
 
-      final isNotif = widget.initialRoutine!['isNotificationActive'];
-      if (isNotif != null) {
-        _isNotificationEnabled = (isNotif as num).toInt() == 1;
+      final targetVal = (r['targetValue'] as num?)?.toDouble() ??
+          (r['nTargetValue'] as num?)?.toDouble();
+      if (targetVal != null && targetVal > 0) {
+        _targetController.text = targetVal == targetVal.toInt()
+            ? targetVal.toInt().toString()
+            : targetVal.toString();
       }
 
-      final linked = widget.initialRoutine!['sLinkedWorkout']?.toString();
+      final unitStr = (r['unit'] ?? r['sUnit'])?.toString();
+      if (unitStr != null && unitStr.isNotEmpty) {
+        _unitController.text = unitStr;
+      }
+
+      final isNotif = r['isNotificationActive'] ?? r['isNotificationEnabled'];
+      if (isNotif != null) {
+        _isNotificationEnabled =
+            isNotif is bool ? isNotif : (isNotif as num).toInt() == 1;
+      }
+
+      final linked =
+          (r['sLinkedWorkout'] ?? r['linkedWorkoutType'])?.toString();
       if (linked != null &&
           linked.isNotEmpty &&
           _workoutTypes.contains(linked)) {
         _selectedLinkedWorkout = linked;
+      }
+
+      final unitLower = (_unitController.text).toLowerCase();
+      final titleLower = (_titleController.text).toLowerCase();
+      if (unitLower.contains('มล') || titleLower.contains('ดื่มน้ำ')) {
+        _selectedCategory = RoutineCategory.water;
+      } else if (unitLower.contains('ก้าว') ||
+          titleLower.contains('วิ่ง') ||
+          titleLower.contains('เดิน') ||
+          titleLower.contains('ปั่น')) {
+        _selectedCategory = RoutineCategory.fitness;
+      } else if (unitLower.contains('มื้อ') ||
+          titleLower.contains('ทาน') ||
+          titleLower.contains('กิน')) {
+        _selectedCategory = RoutineCategory.nutrition;
+      } else if (titleLower.contains('สมาธิ') || titleLower.contains('นอน')) {
+        _selectedCategory = RoutineCategory.mindfulness;
+      }
+
+      final iconCode =
+          (r['iconData'] as num?)?.toInt() ?? (r['nIconData'] as num?)?.toInt();
+      if (iconCode != null && iconCode > 0) {
+        _selectedIcon = IconData(iconCode, fontFamily: 'MaterialIcons');
+      } else {
+        _selectedIcon = _selectedCategory.icon;
+      }
+
+      final colorVal =
+          (r['color'] as num?)?.toInt() ?? (r['nColor'] as num?)?.toInt();
+      if (colorVal != null && colorVal != 0) {
+        _selectedColor = Color(colorVal);
+      } else {
+        _selectedColor = _selectedCategory.defaultColor;
       }
     }
   }
@@ -109,31 +158,33 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
       _selectedIcon = category.icon;
       _selectedColor = category.defaultColor;
 
-      switch (category) {
-        case RoutineCategory.water:
-          _targetController.text = '2000';
-          _unitController.text = 'มล.';
-          _notificationTimeController.text = 'ทุก 2 ชั่วโมง';
-          break;
-        case RoutineCategory.fitness:
-          _targetController.text = '10000';
-          _unitController.text = 'ก้าว';
-          _notificationTimeController.text = '12:00 & 18:00';
-          break;
-        case RoutineCategory.mindfulness:
-          _targetController.text = '15';
-          _unitController.text = 'นาที';
-          _notificationTimeController.text = '21:30 น.';
-          break;
-        case RoutineCategory.nutrition:
-          _targetController.text = '3';
-          _unitController.text = 'มื้อ';
-          _notificationTimeController.text = '08:00, 12:30, 18:30';
-          break;
-        default:
-          _targetController.text = '1';
-          _unitController.text = 'ครั้ง';
-          _notificationTimeController.text = '09:00 น.';
+      if (widget.initialRoutine == null) {
+        switch (category) {
+          case RoutineCategory.water:
+            _targetController.text = '2000';
+            _unitController.text = 'มล.';
+            _notificationTimeController.text = 'ทุก 2 ชั่วโมง';
+            break;
+          case RoutineCategory.fitness:
+            _targetController.text = '10000';
+            _unitController.text = 'ก้าว';
+            _notificationTimeController.text = '12:00 & 18:00';
+            break;
+          case RoutineCategory.mindfulness:
+            _targetController.text = '15';
+            _unitController.text = 'นาที';
+            _notificationTimeController.text = '21:30 น.';
+            break;
+          case RoutineCategory.nutrition:
+            _targetController.text = '3';
+            _unitController.text = 'มื้อ';
+            _notificationTimeController.text = '08:00, 12:30, 18:30';
+            break;
+          default:
+            _targetController.text = '1';
+            _unitController.text = 'ครั้ง';
+            _notificationTimeController.text = '09:00 น.';
+        }
       }
     });
   }
@@ -212,7 +263,10 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
       final autoLinkedWorkout = _detectLinkedWorkout(title, _selectedCategory);
 
       final newItem = RoutineItem(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: widget.initialRoutine != null
+            ? (widget.initialRoutine!['nRoutineId']?.toString() ??
+                DateTime.now().millisecondsSinceEpoch.toString())
+            : DateTime.now().millisecondsSinceEpoch.toString(),
         title: title,
         category: _selectedCategory,
         iconData: finalIcon,

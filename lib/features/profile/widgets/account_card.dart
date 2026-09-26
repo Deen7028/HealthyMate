@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:healthymate/core/services/theme_service.dart';
+import 'package:healthymate/shared/theme/index.dart';
 
 class AccountCard extends StatelessWidget {
   final int activeDeviceCount;
   final VoidCallback onPersonalInfoTap;
   final VoidCallback onConnectedDevicesTap;
-  final VoidCallback onExportCsvTap;
   final VoidCallback onExportPdfTap;
   final VoidCallback onDeleteAccountTap;
   final VoidCallback onLogoutTap;
@@ -15,7 +14,6 @@ class AccountCard extends StatelessWidget {
     required this.activeDeviceCount,
     required this.onPersonalInfoTap,
     required this.onConnectedDevicesTap,
-    required this.onExportCsvTap,
     required this.onExportPdfTap,
     required this.onDeleteAccountTap,
     required this.onLogoutTap,
@@ -29,7 +27,7 @@ class AccountCard extends StatelessWidget {
       width: double.infinity,
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E2822) : Colors.white,
+        color: AppTheme.getBackgroundColor(isDark),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -45,110 +43,71 @@ class AccountCard extends StatelessWidget {
           _buildActionRow(
             isDark: isDark,
             icon: Icons.badge_outlined,
-            iconBgColor: const Color(0xFFD7E5F5),
-            iconColor: const Color(0xFF3F77B0),
+            iconBgColor: AppTheme.infoBlueBg,
+            iconColor: AppTheme.infoBlue,
             title: 'ข้อมูลส่วนตัว',
-            trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFF8C968E), size: 20),
+            trailing: const Icon(Icons.chevron_right_rounded, color: AppTheme.textTertiaryDark, size: 20),
             onTap: onPersonalInfoTap,
           ),
           Divider(
             height: 1,
             indent: 68,
             endIndent: 20,
-            color: isDark ? const Color(0xFF2E3D34) : const Color(0xFFF0F2EE),
+            color: AppTheme.getBorderColor(isDark),
           ),
 
           // 2. อุปกรณ์ที่เชื่อมต่อ
           _buildActionRow(
             isDark: isDark,
             icon: Icons.devices_rounded,
-            iconBgColor: const Color(0xFFDCEAF7),
-            iconColor: const Color(0xFF4587CA),
+            iconBgColor: AppTheme.infoBlueBg,
+            iconColor: AppTheme.infoBlue,
             title: 'อุปกรณ์ที่เชื่อมต่อ (HealthKit/Connect)',
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE2E7DF),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '$activeDeviceCount Active',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF5A6559),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                const Icon(Icons.chevron_right_rounded, color: Color(0xFF8C968E), size: 20),
-              ],
-            ),
+            trailing: const Icon(Icons.chevron_right_rounded, color: AppTheme.textTertiaryDark, size: 20),
             onTap: onConnectedDevicesTap,
           ),
           Divider(
             height: 1,
             indent: 68,
             endIndent: 20,
-            color: isDark ? const Color(0xFF2E3D34) : const Color(0xFFF0F2EE),
-          ),
-
-          // 3. ส่งออกข้อมูล CSV
-          _buildActionRow(
-            isDark: isDark,
-            icon: Icons.table_chart_outlined,
-            iconBgColor: const Color(0xFFE2F0D9),
-            iconColor: const Color(0xFF388E3C),
-            title: 'ส่งออกประวัติสุขภาพ (CSV)',
-            subtitle: 'ดาวน์โหลดไฟล์ประวัติการออกกำลังกายและน้ำหนัก',
-            trailing: const Icon(Icons.file_download_outlined, color: Color(0xFF8C968E), size: 20),
-            onTap: onExportCsvTap,
-          ),
-          Divider(
-            height: 1,
-            indent: 68,
-            endIndent: 20,
-            color: isDark ? const Color(0xFF2E3D34) : const Color(0xFFF0F2EE),
+            color: AppTheme.getBorderColor(isDark),
           ),
 
           // 4. ส่งออกข้อมูล PDF
           _buildActionRow(
             isDark: isDark,
             icon: Icons.picture_as_pdf_outlined,
-            iconBgColor: const Color(0xFFFFF3E0),
-            iconColor: const Color(0xFFF57C00),
+            iconBgColor: AppTheme.warningOrangeBg,
+            iconColor: AppTheme.warningOrange,
             title: 'ส่งออกรายงานสรุปสุขภาพ (PDF)',
             subtitle: 'สร้างรายงานรูปแบบเอกสารสวยงาม',
-            trailing: const Icon(Icons.file_download_outlined, color: Color(0xFF8C968E), size: 20),
+            trailing: const Icon(Icons.file_download_outlined, color: AppTheme.textTertiaryDark, size: 20),
             onTap: onExportPdfTap,
           ),
           Divider(
             height: 1,
             indent: 68,
             endIndent: 20,
-            color: isDark ? const Color(0xFF2E3D34) : const Color(0xFFF0F2EE),
+            color: AppTheme.getBorderColor(isDark),
           ),
 
           // 5. ลบบัญชีและข้อมูลทั้งหมด (PDPA/GDPR)
           _buildActionRow(
             isDark: isDark,
             icon: Icons.delete_forever_rounded,
-            iconBgColor: const Color(0xFFFFEBEE),
-            iconColor: const Color(0xFFD93838),
+            iconBgColor: AppTheme.deleteRedBg,
+            iconColor: AppTheme.deleteRed,
             title: 'ลบบัญชีและข้อมูลทั้งหมด',
             subtitle: 'ทำลายข้อมูลส่วนบุคคลตามกฎหมาย PDPA/GDPR',
-            titleColor: const Color(0xFFD93838),
-            trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFFD93838), size: 20),
+            titleColor: AppTheme.deleteRed,
+            trailing: const Icon(Icons.chevron_right_rounded, color: AppTheme.deleteRed, size: 20),
             onTap: onDeleteAccountTap,
           ),
           Divider(
             height: 1,
             indent: 68,
             endIndent: 20,
-            color: isDark ? const Color(0xFF2E3D34) : const Color(0xFFF0F2EE),
+            color: AppTheme.getBorderColor(isDark),
           ),
 
           // 6. ออกจากระบบ

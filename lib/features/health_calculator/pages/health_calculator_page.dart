@@ -4,9 +4,14 @@ import 'package:healthymate/features/health_calculator/controllers/health_calcul
 import 'package:healthymate/features/health_calculator/widgets/index.dart';
 
 class HealthCalculatorPage extends StatefulWidget {
+  final bool isActive;
   final HealthCalculatorController state;
 
-  const HealthCalculatorPage({super.key, required this.state});
+  const HealthCalculatorPage({
+    super.key,
+    this.isActive = true,
+    required this.state,
+  });
 
   @override
   State<HealthCalculatorPage> createState() => _HealthCalculatorPageState();
@@ -217,9 +222,9 @@ class _HealthCalculatorPageState extends State<HealthCalculatorPage> {
     return Scaffold(
       body: SafeArea(
         child: RefreshIndicator(
-          color: AppTheme.primaryGreen,
-          onRefresh: () => widget.state.loadData(),
-          child: SingleChildScrollView(
+            color: AppTheme.primaryGreen,
+            onRefresh: () => widget.state.loadData(),
+            child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.symmetric(
               horizontal: 20,
@@ -414,11 +419,14 @@ class _HealthCalculatorPageState extends State<HealthCalculatorPage> {
                   child: ElevatedButton.icon(
                     onPressed: _onCalculate,
                     icon: const Icon(Icons.calculate_outlined, size: 22),
-                    label: const Text(
-                      'คำนวณค่า BMR, TDEE & BMI',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
+                    label: const FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        'คำนวณค่า BMR, TDEE & BMI',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                     style: ElevatedButton.styleFrom(
@@ -434,37 +442,51 @@ class _HealthCalculatorPageState extends State<HealthCalculatorPage> {
 
                 const SizedBox(height: 32),
 
-                // Results Section (ครอบด้วย ListenableBuilder เฉพาะส่วนนี้เพื่อลด Over-Rebuilding UI)
+                // Results Section (Smart Reveal: ซ่อนไว้หากยังไม่มีการคำนวณ)
                 ListenableBuilder(
                   listenable: widget.state,
-                  builder: (context, _) => HealthCalculatorResultSection(state: widget.state),
-                ),
+                  builder: (context, _) {
+                    final hasResult = widget.state.bmi > 0;
 
-                const SizedBox(height: 20),
-
-                // Save to Dashboard Button
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton.icon(
-                    onPressed: _onSaveToDashboard,
-                    icon: const Icon(Icons.cloud_upload_outlined, size: 22),
-                    label: const Text(
-                      'บันทึกและอัปเดตข้อมูลเข้า Dashboard',
-                      style: TextStyle(
-                        fontSize: 15.5,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1E3A24),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 1,
-                    ),
-                  ),
+                    return AnimatedSize(
+                      duration: const Duration(milliseconds: 500),
+                      curve: Curves.easeOutCubic,
+                      child: hasResult
+                          ? Column(
+                              children: [
+                                HealthCalculatorResultSection(state: widget.state),
+                                const SizedBox(height: 20),
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 52,
+                                  child: ElevatedButton.icon(
+                                    onPressed: _onSaveToDashboard,
+                                    icon: const Icon(Icons.cloud_upload_outlined, size: 22),
+                                    label: const FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        'บันทึกข้อมูลสุขภาพเข้า Dashboard',
+                                        style: TextStyle(
+                                          fontSize: 15.5,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF1E3A24),
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      elevation: 1,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            )
+                          : const SizedBox.shrink(),
+                    );
+                  },
                 ),
 
                 const SizedBox(height: 30),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:healthymate/core/services/health_kit_connect_service.dart';
+import 'package:healthymate/core/services/theme_service.dart';
 
-class ConnectedDevicesBottomSheet extends StatefulWidget {
+class ConnectedDevicesBottomSheet extends StatelessWidget {
   final List<Map<String, dynamic>> connectedDevices;
   final Future<void> Function(String providerName) onAddDevice;
   final Future<void> Function(int integrationId, bool isActive) onToggleDevice;
@@ -16,293 +16,94 @@ class ConnectedDevicesBottomSheet extends StatefulWidget {
   });
 
   @override
-  State<ConnectedDevicesBottomSheet> createState() =>
-      _ConnectedDevicesBottomSheetState();
-}
-
-class _ConnectedDevicesBottomSheetState
-    extends State<ConnectedDevicesBottomSheet> {
-  final TextEditingController _deviceCtrl = TextEditingController();
-
-  @override
-  void dispose() {
-    _deviceCtrl.dispose();
-    super.dispose();
-  }
-
-  void _showAddDeviceDialog() {
-    _deviceCtrl.clear();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'เพิ่มอุปกรณ์ที่เชื่อมต่อ',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1E2822)),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'ระบุชื่ออุปกรณ์สุขภาพ เช่น Smart Watch หรือเครื่องชั่งน้ำหนักอัจฉริยะ',
-              style: TextStyle(fontSize: 13, color: Color(0xFF5A6559)),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _deviceCtrl,
-              decoration: InputDecoration(
-                hintText: 'เช่น Apple Watch Series 8 หรือ Garmin Forerunner',
-                labelText: 'ชื่ออุปกรณ์',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('ยกเลิก', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            onPressed: () async {
-              final name = _deviceCtrl.text.trim();
-              if (name.isNotEmpty) {
-                await widget.onAddDevice(name);
-                if (ctx.mounted) Navigator.pop(ctx);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('เพิ่ม $name เชื่อมต่อกับระบบแล้ว'),
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
-              }
-            },
-            child: const Text('บันทึก', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  IconData _getDeviceIcon(String name) {
-    final lower = name.toLowerCase();
-    if (lower.contains('watch') || lower.contains('band') || lower.contains('fitbit') || lower.contains('garmin')) {
-      return Icons.watch_rounded;
-    } else if (lower.contains('scale') || lower.contains('weight') || lower.contains('ชั่ง')) {
-      return Icons.monitor_weight_rounded;
-    } else if (lower.contains('heart') || lower.contains('polar') || lower.contains('pulse')) {
-      return Icons.favorite_rounded;
-    }
-    return Icons.devices_rounded;
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final displayDevices = widget.connectedDevices
-        .where((d) => d['sProviderName'] != 'workout_sync_timestamp')
-        .toList();
-    final activeCount = displayDevices.where((d) => (d['isSynced'] as num?)?.toInt() == 1).length;
+    final isDark = ThemeService.instance.isDarkMode;
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'อุปกรณ์ที่เชื่อมต่อ',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E2822),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE2E7DF),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    '$activeCount Active',
-                    style: const TextStyle(
-                      fontSize: 12,
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E2822) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'อุปกรณ์ที่เชื่อมต่อ',
+                    style: TextStyle(
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF5A6559),
+                      color: isDark ? Colors.white : const Color(0xFF1E2822),
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            if (displayDevices.isEmpty)
+                  IconButton(
+                    icon: Icon(Icons.close_rounded, color: isDark ? Colors.white70 : Colors.grey),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
               Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF3F6F2),
-                  borderRadius: BorderRadius.circular(16),
+                  color: isDark ? const Color(0xFF2E3D34) : const Color(0xFFF3F6F2),
+                  shape: BoxShape.circle,
                 ),
-                child: Column(
-                  children: const [
-                    Icon(Icons.devices_other_rounded, size: 40, color: Color(0xFF8C968E)),
-                    SizedBox(height: 10),
-                    Text(
-                      'ยังไม่มีอุปกรณ์ที่เชื่อมต่อในระบบ',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF5A6559),
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'แตะปุ่มด้านล่างเพื่อผูกอุปกรณ์สุขภาพเข้ากับบัญชีของคุณ',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF8C968E),
-                      ),
-                    ),
-                  ],
+                child: Icon(
+                  Icons.watch_rounded,
+                  size: 48,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
-              )
-            else
-              ...displayDevices.map((device) {
-                final int id = (device['nIntegrationId'] as num?)?.toInt() ?? 0;
-                final bool isActive = (device['isSynced'] as num?)?.toInt() == 1;
-                final String name = device['sProviderName']?.toString() ?? 'อุปกรณ์';
-                final String? lastSynced = device['dtLastSyncedAt']?.toString();
-
-                return Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF3F6F2),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                              _getDeviceIcon(name),
-                              color: Theme.of(context).colorScheme.primary,
-                              size: 24,
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  name,
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF1E2822),
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  isActive
-                                      ? (lastSynced != null ? 'เชื่อมต่อแล้ว' : 'เปิดใช้งาน')
-                                      : 'ปิดการเชื่อมต่อ',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: isActive
-                                        ? const Color(0xFF6F7A72)
-                                        : Colors.grey.shade400,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Switch(
-                            value: isActive,
-                            activeTrackColor: Theme.of(context).colorScheme.primary,
-                            activeThumbColor: Colors.white,
-                            onChanged: (val) async {
-                              await widget.onToggleDevice(id, val);
-                            },
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline_rounded, size: 20, color: Colors.redAccent),
-                            onPressed: () async {
-                              await widget.onDeleteDevice(id);
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Divider(height: 1),
-                  ],
-                );
-              }),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                onPressed: () async {
-                  final result = await HealthKitConnectService.instance.fetchTodayHealthData(1);
-                  if (context.mounted) {
-                    final steps = result['steps'];
-                    final hr = (result['heartRate'] as num?)?.toStringAsFixed(0);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('ซิงค์ HealthKit / Health Connect สำเร็จ: ก้าวเดิน $steps ก้าว, HR $hr bpm'),
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                    Navigator.pop(context);
-                  }
-                },
-                icon: const Icon(Icons.favorite_rounded, color: Colors.white),
-                label: const Text('ซิงค์ข้อมูลก้าวเดินและหัวใจ (HealthKit / Health Connect)'),
               ),
-            ),
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Theme.of(context).colorScheme.primary,
-                  side: BorderSide(color: Theme.of(context).colorScheme.primary),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+              const SizedBox(height: 16),
+              Text(
+                'ระบบเชื่อมต่ออุปกรณ์ภายนอก\n(จะเปิดให้บริการในเร็วๆ นี้)',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : const Color(0xFF1E2822),
+                  height: 1.4,
                 ),
-                onPressed: _showAddDeviceDialog,
-                icon: const Icon(Icons.add_rounded),
-                label: const Text('เพิ่มชื่ออุปกรณ์แบบระบุเอง'),
               ),
-            ),
-          ],
+              const SizedBox(height: 8),
+              Text(
+                'ทีมงานกำลังพัฒนาระบบซิงค์ข้อมูลก้าวเดิน อัตราการเต้นของหัวใจ จาก Apple HealthKit, Health Connect และ Smart Watch ยี่ห้อชั้นนำ',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: isDark ? const Color(0xFFA0ACA0) : const Color(0xFF6F7A72),
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isDark ? const Color(0xFF2E3D34) : Colors.grey.shade300,
+                    foregroundColor: isDark ? Colors.white70 : Colors.grey.shade700,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  onPressed: null, // ปิดการใช้งานปุ่มตามข้อกำหนด
+                  child: const Text(
+                    'ฟีเจอร์นี้อยู่ระหว่างการพัฒนา',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

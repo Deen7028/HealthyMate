@@ -68,13 +68,20 @@ class CalendarStripWidget extends StatelessWidget {
                         color: Colors.orange.shade400,
                       ),
                     ),
-                    Text(
-                      '$workoutCount ครั้งออกกำลังกาย',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Colors.orange.shade800,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    TweenAnimationBuilder<int>(
+                      tween: IntTween(begin: 0, end: workoutCount),
+                      duration: const Duration(milliseconds: 2500),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, val, _) {
+                        return Text(
+                          '$val ครั้งออกกำลังกาย',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.orange.shade800,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -115,23 +122,44 @@ class CalendarStripWidget extends StatelessWidget {
                     color: Colors.teal,
                   ),
                   const SizedBox(width: 4),
-                  Text(
-                    'ออกกำลังกายแล้ว $workoutCount ครั้ง | ${totalDistanceKm.toStringAsFixed(1)} กม.',
+                  TweenAnimationBuilder<double>(
+                    tween: Tween<double>(begin: 0, end: totalDistanceKm),
+                    duration: const Duration(milliseconds: 2500),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, distVal, _) {
+                      return TweenAnimationBuilder<int>(
+                        tween: IntTween(begin: 0, end: workoutCount),
+                        duration: const Duration(milliseconds: 2500),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, countVal, _) {
+                          return Text(
+                            'ออกกำลังกายแล้ว $countVal ครั้ง | ${distVal.toStringAsFixed(1)} กม.',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.teal,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ],
+              ),
+              TweenAnimationBuilder<double>(
+                tween: Tween<double>(begin: 0, end: totalCaloriesBurned),
+                duration: const Duration(milliseconds: 2500),
+                curve: Curves.easeOutCubic,
+                builder: (context, calVal, _) {
+                  return Text(
+                    '${calVal.toStringAsFixed(0)} kcal',
                     style: const TextStyle(
                       fontSize: 12,
                       color: Colors.teal,
                       fontWeight: FontWeight.bold,
                     ),
-                  ),
-                ],
-              ),
-              Text(
-                '${totalCaloriesBurned.toStringAsFixed(0)} kcal',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.teal,
-                  fontWeight: FontWeight.bold,
-                ),
+                  );
+                },
               ),
             ],
           ),

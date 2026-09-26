@@ -192,69 +192,84 @@ class _RegisterPageState extends State<RegisterPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const RegisterHeader(),
+                    const FadeSlideEntrance(
+                      delayIndex: 1,
+                      child: RegisterHeader(),
+                    ),
                     const SizedBox(height: 28),
 
-                    RegisterFormFields(
-                      firstNameController: _firstNameController,
-                      lastNameController: _lastNameController,
-                      emailController: _emailController,
-                      passwordController: _passwordController,
-                      confirmPasswordController: _confirmPasswordController,
-                      lastNameFocusNode: _lastNameFocusNode,
-                      emailFocusNode: _emailFocusNode,
-                      passwordFocusNode: _passwordFocusNode,
-                      confirmPasswordFocusNode: _confirmPasswordFocusNode,
-                      obscurePassword: _obscurePassword,
-                      obscureConfirmPassword: _obscureConfirmPassword,
-                      onToggleObscurePassword: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
-                      onToggleObscureConfirmPassword: () {
-                        setState(() {
-                          _obscureConfirmPassword = !_obscureConfirmPassword;
-                        });
-                      },
-                      onPasswordChanged: (_) => setState(() {}),
-                      hasMinLength: _hasMinLength,
-                      hasUppercase: _hasUppercase,
-                      hasLowercase: _hasLowercase,
-                      hasDigits: _hasDigits,
-                      onSubmit: _handleRegister,
+                    FadeSlideEntrance(
+                      delayIndex: 2,
+                      child: RegisterFormFields(
+                        firstNameController: _firstNameController,
+                        lastNameController: _lastNameController,
+                        emailController: _emailController,
+                        passwordController: _passwordController,
+                        confirmPasswordController: _confirmPasswordController,
+                        lastNameFocusNode: _lastNameFocusNode,
+                        emailFocusNode: _emailFocusNode,
+                        passwordFocusNode: _passwordFocusNode,
+                        confirmPasswordFocusNode: _confirmPasswordFocusNode,
+                        obscurePassword: _obscurePassword,
+                        obscureConfirmPassword: _obscureConfirmPassword,
+                        onToggleObscurePassword: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                        onToggleObscureConfirmPassword: () {
+                          setState(() {
+                            _obscureConfirmPassword = !_obscureConfirmPassword;
+                          });
+                        },
+                        onPasswordChanged: (_) => setState(() {}),
+                        hasMinLength: _hasMinLength,
+                        hasUppercase: _hasUppercase,
+                        hasLowercase: _hasLowercase,
+                        hasDigits: _hasDigits,
+                        onSubmit: _handleRegister,
+                      ),
                     ),
 
                     const SizedBox(height: 20),
 
-                    RegisterConsentSection(
-                      acceptTerms: _acceptTerms,
-                      acceptPrivacy: _acceptPrivacy,
-                      onTermsChanged: (val) => setState(() => _acceptTerms = val),
-                      onPrivacyChanged: (val) => setState(() => _acceptPrivacy = val),
-                      onShowTerms: _showTermsBottomSheet,
-                      onShowPrivacy: _showPrivacyBottomSheet,
+                    FadeSlideEntrance(
+                      delayIndex: 3,
+                      child: RegisterConsentSection(
+                        acceptTerms: _acceptTerms,
+                        acceptPrivacy: _acceptPrivacy,
+                        onTermsChanged: (val) => setState(() => _acceptTerms = val),
+                        onPrivacyChanged: (val) => setState(() => _acceptPrivacy = val),
+                        onShowTerms: _showTermsBottomSheet,
+                        onShowPrivacy: _showPrivacyBottomSheet,
+                      ),
                     ),
 
                     const SizedBox(height: 28),
 
-                    RegisterSubmitButton(
-                      canSubmit: _acceptTerms && _acceptPrivacy && !_controller.isLoading,
-                      isLoading: _controller.isLoading,
-                      onSubmit: _handleRegister,
-                      onDisabledTap: _handleDisabledTap,
+                    FadeSlideEntrance(
+                      delayIndex: 4,
+                      child: RegisterSubmitButton(
+                        canSubmit: _acceptTerms && _acceptPrivacy && !_controller.isLoading,
+                        isLoading: _controller.isLoading,
+                        onSubmit: _handleRegister,
+                        onDisabledTap: _handleDisabledTap,
+                      ),
                     ),
 
                     const SizedBox(height: 24),
 
-                    RegisterFooterLink(
-                      onLoginTap: () {
-                        if (widget.onLoginTap != null) {
-                          widget.onLoginTap!();
-                        } else {
-                          Navigator.of(context).maybePop();
-                        }
-                      },
+                    FadeSlideEntrance(
+                      delayIndex: 5,
+                      child: RegisterFooterLink(
+                        onLoginTap: () {
+                          if (widget.onLoginTap != null) {
+                            widget.onLoginTap!();
+                          } else {
+                            Navigator.of(context).maybePop();
+                          }
+                        },
+                      ),
                     ),
 
                     const SizedBox(height: 24),
@@ -265,6 +280,37 @@ class _RegisterPageState extends State<RegisterPage> {
           ),
         );
       },
+    );
+  }
+}
+
+/// Widget สำหรับทำแอนิเมชัน Fade & Slide ขึ้นแบบ Staggered เมื่อเปิดหน้าจอ
+class FadeSlideEntrance extends StatelessWidget {
+  final Widget child;
+  final int delayIndex;
+
+  const FadeSlideEntrance({
+    super.key,
+    required this.child,
+    required this.delayIndex,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0.0, end: 1.0),
+      duration: Duration(milliseconds: 500 + (delayIndex * 120)),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 30 * (1 - value)),
+            child: child,
+          ),
+        );
+      },
+      child: child,
     );
   }
 }

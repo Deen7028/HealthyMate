@@ -4,6 +4,7 @@ import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/sync_service.dart';
 import 'package:healthymate/core/theme/app_theme.dart';
 import 'package:healthymate/features/food_recognition/models/food_recognition_models.dart';
+import 'package:healthymate/shared/widgets/fade_slide_entrance.dart';
 import 'index.dart';
 
 class FoodRecognitionResultSheet extends StatefulWidget {
@@ -374,10 +375,13 @@ class _FoodRecognitionResultSheetState extends State<FoodRecognitionResultSheet>
                     ..._result.items.asMap().entries.map((entry) {
                       final index = entry.key;
                       final item = entry.value;
-                      return DetectedFoodItemCard(
-                        item: item,
-                        onEdit: () => _editItem(index),
-                        onDelete: () => _removeItem(index),
+                      return FadeSlideEntrance(
+                        delayIndex: index,
+                        child: DetectedFoodItemCard(
+                          item: item,
+                          onEdit: () => _editItem(index),
+                          onDelete: () => _removeItem(index),
+                        ),
                       );
                     }),
                 ],

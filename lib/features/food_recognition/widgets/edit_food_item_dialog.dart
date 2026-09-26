@@ -32,10 +32,17 @@ class _EditFoodItemDialogState extends State<EditFoodItemDialog> {
     _proteinCtrl = TextEditingController(text: widget.item.protein.toStringAsFixed(1));
     _carbsCtrl = TextEditingController(text: widget.item.carbs.toStringAsFixed(1));
     _fatCtrl = TextEditingController(text: widget.item.fat.toStringAsFixed(1));
+
+    _calCtrl.addListener(_onCaloriesChanged);
+  }
+
+  void _onCaloriesChanged() {
+    setState(() {});
   }
 
   @override
   void dispose() {
+    _calCtrl.removeListener(_onCaloriesChanged);
     _nameCtrl.dispose();
     _servingCtrl.dispose();
     _calCtrl.dispose();
@@ -48,6 +55,10 @@ class _EditFoodItemDialogState extends State<EditFoodItemDialog> {
   @override
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).colorScheme.primary;
+
+    final enteredCalories = int.tryParse(_calCtrl.text.trim()) ?? 0;
+    final aiCalories = widget.item.calories;
+    final isHighCalorieWarning = aiCalories > 0 && enteredCalories >= (aiCalories * 2);
 
     return Dialog(
       backgroundColor: Colors.white,
@@ -131,9 +142,47 @@ class _EditFoodItemDialogState extends State<EditFoodItemDialog> {
                 controller: _calCtrl,
                 hint: '0',
                 suffixText: 'kcal',
-                prefixIcon: Icons.local_fire_department_rounded,
+                prefixIcon: isHighCalorieWarning
+                    ? Icons.warning_amber_rounded
+                    : Icons.local_fire_department_rounded,
                 keyboardType: TextInputType.number,
-                primaryColor: const Color(0xFFE06D53),
+                primaryColor: isHighCalorieWarning
+                    ? Colors.orange.shade800
+                    : const Color(0xFFE06D53),
+                fillColor: isHighCalorieWarning
+                    ? Colors.orange.shade50.withValues(alpha: 0.6)
+                    : const Color(0xFFF7F9F8),
+              ),
+
+              // Visual Warning Banner (Smart Guardrails)
+              AnimatedSize(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutCubic,
+                child: isHighCalorieWarning
+                    ? Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.warning_amber_rounded,
+                              size: 14,
+                              color: Colors.orange.shade800,
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                'ค่าพลังงานนี้สูงกว่าที่ AI ประเมินไว้มาก ($aiCalories kcal) คุณแน่ใจหรือไม่?',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.orange.shade800,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : const SizedBox.shrink(),
               ),
 
               const SizedBox(height: 14),
@@ -201,7 +250,9 @@ class _EditFoodItemDialogState extends State<EditFoodItemDialog> {
                   Expanded(
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
+                        backgroundColor: isHighCalorieWarning
+                            ? Colors.orange.shade800
+                            : primaryColor,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         elevation: 0,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -214,10 +265,10 @@ class _EditFoodItemDialogState extends State<EditFoodItemDialog> {
                           servingSize: _servingCtrl.text.trim().isNotEmpty
                               ? _servingCtrl.text.trim()
                               : widget.item.servingSize,
-                          calories: int.tryParse(_calCtrl.text) ?? widget.item.calories,
-                          protein: double.tryParse(_proteinCtrl.text) ?? widget.item.protein,
-                          carbs: double.tryParse(_carbsCtrl.text) ?? widget.item.carbs,
-                          fat: double.tryParse(_fatCtrl.text) ?? widget.item.fat,
+                          calories: int.tryParse(_calCtrl.text.trim()) ?? 0,
+                          protein: double.tryParse(_proteinCtrl.text.trim()) ?? 0.0,
+                          carbs: double.tryParse(_carbsCtrl.text.trim()) ?? 0.0,
+                          fat: double.tryParse(_fatCtrl.text.trim()) ?? 0.0,
                         );
                         widget.onSave(updated);
                         Navigator.pop(context);
@@ -252,29 +303,35 @@ class _EditFoodItemDialogState extends State<EditFoodItemDialog> {
     required Color primaryColor,
     String? label,
     String? suffixText,
+    Color fillColor = const Color(0xFFF7F9F8),
     TextInputType keyboardType = TextInputType.text,
   }) {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 13.5,
         fontWeight: FontWeight.w600,
-        color: Color(0xFF1E2822),
+        color: primaryColor == Colors.orange.shade800 ? Colors.orange.shade900 : const Color(0xFF1E2822),
       ),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
         hintStyle: const TextStyle(color: Color(0xFFA5AEA8), fontSize: 12),
-        prefixIcon: Icon(prefixIcon, size: 18, color: const Color(0xFF8A958E)),
+        prefixIcon: Icon(prefixIcon, size: 18, color: primaryColor),
         suffixText: suffixText,
         suffixStyle: const TextStyle(fontSize: 11, color: Color(0xFF8A958E), fontWeight: FontWeight.w500),
         filled: true,
-        fillColor: const Color(0xFFF7F9F8),
+        fillColor: fillColor,
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE4E9E6), width: 1.1),
+          borderSide: BorderSide(
+            color: primaryColor == Colors.orange.shade800
+                ? Colors.orange.shade300
+                : const Color(0xFFE4E9E6),
+            width: 1.1,
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),

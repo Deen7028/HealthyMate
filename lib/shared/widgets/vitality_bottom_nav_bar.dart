@@ -141,7 +141,7 @@ class _VitalityStandardNavItemWidgetState extends State<_VitalityStandardNavItem
       onTapDown: (_) => setState(() => _isPressed = true),
       onTapUp: (_) {
         setState(() => _isPressed = false);
-        widget.onTap();
+        Future.microtask(widget.onTap);
       },
       onTapCancel: () => setState(() => _isPressed = false),
       behavior: HitTestBehavior.opaque,

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:healthymate/core/config/app_config.dart';
+import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/features/health_calculator/models/health_record_model.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
 
@@ -15,6 +16,17 @@ class HealthApiService {
     'Content-Type': 'application/json; charset=utf-8',
     'X-App-Key': AppConfig.appKey,
   };
+
+  /// ดึง Headers พร้อม Authorization Bearer Token
+  static Future<Map<String, String>> getAuthHeaders() async {
+    final headers = Map<String, String>.from(defaultHeaders);
+    final token = await AppDatabase.instance.getAuthToken();
+    debugPrint('[API] getAuthHeaders: token=${token != null && token.isNotEmpty ? "${token.substring(0, 10)}..." : "NULL/EMPTY"}');
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+    return headers;
+  }
 
   /// 0. ยืนยันตัวตนกับ Remote Server (`login.php`) เมื่อติดตั้งใหม่หรือไม่มีข้อมูลในเครื่อง
   /// คืนค่าเป็น Map พร้อม status ('success', 'not_found', 'invalid_password', 'offline_or_error') และข้อมูล user
@@ -137,8 +149,9 @@ class HealthApiService {
   }) async {
     try {
       final uri = Uri.parse('$baseUrl/health_records.php?nUserId=$userId');
+      final headers = await getAuthHeaders();
       final response = await http
-          .get(uri, headers: defaultHeaders)
+          .get(uri, headers: headers)
           .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
@@ -163,10 +176,11 @@ class HealthApiService {
   static Future<bool> saveHealthRecord(TbHealthRecord record) async {
     try {
       final uri = Uri.parse('$baseUrl/health_records.php');
+      final headers = await getAuthHeaders();
       final response = await http
           .post(
             uri,
-            headers: defaultHeaders,
+            headers: headers,
             body: jsonEncode(record.toMap()),
           )
           .timeout(const Duration(seconds: 5));
@@ -197,10 +211,11 @@ class HealthApiService {
         payload = {};
       }
 
+      final headers = await getAuthHeaders();
       final response = await http
           .post(
             uri,
-            headers: defaultHeaders,
+            headers: headers,
             body: jsonEncode(payload),
           )
           .timeout(const Duration(seconds: 5));
@@ -229,8 +244,9 @@ class HealthApiService {
         urlStr += '&since=${Uri.encodeComponent(since)}';
       }
       final uri = Uri.parse(urlStr);
+      final headers = await getAuthHeaders();
       final response = await http
-          .get(uri, headers: defaultHeaders)
+          .get(uri, headers: headers)
           .timeout(const Duration(seconds: 8));
 
       if (response.statusCode == 200) {
@@ -253,10 +269,11 @@ class HealthApiService {
   static Future<bool> saveWorkout(Map<String, dynamic> workout) async {
     try {
       final uri = Uri.parse('$baseUrl/workouts.php');
+      final headers = await getAuthHeaders();
       final response = await http
           .post(
             uri,
-            headers: defaultHeaders,
+            headers: headers,
             body: jsonEncode(workout),
           )
           .timeout(const Duration(seconds: 5));
@@ -277,10 +294,11 @@ class HealthApiService {
   static Future<bool> saveNutritionLog(Map<String, dynamic> log) async {
     try {
       final uri = Uri.parse('$baseUrl/nutrition_logs.php');
+      final headers = await getAuthHeaders();
       final response = await http
           .post(
             uri,
-            headers: defaultHeaders,
+            headers: headers,
             body: jsonEncode(log),
           )
           .timeout(const Duration(seconds: 5));
@@ -304,11 +322,9 @@ class HealthApiService {
   }) async {
     try {
       final uri = Uri.parse('$baseUrl/upload_image.php');
+      final headers = await getAuthHeaders();
       final request = http.MultipartRequest('POST', uri)
-        ..headers.addAll({
-          'Host': AppConfig.hostHeader,
-          'X-App-Key': AppConfig.appKey,
-        })
+        ..headers.addAll(headers)
         ..fields['type'] = type
         ..files.add(await http.MultipartFile.fromPath('image', localFilePath));
 
@@ -341,8 +357,9 @@ class HealthApiService {
   }) async {
     try {
       final uri = Uri.parse('$baseUrl/dashboard.php?nUserId=$userId');
+      final headers = await getAuthHeaders();
       final response = await http
-          .get(uri, headers: defaultHeaders)
+          .get(uri, headers: headers)
           .timeout(const Duration(seconds: 8));
 
       debugPrint('[API] fetchDashboardData HTTP ${response.statusCode}');
@@ -375,8 +392,9 @@ class HealthApiService {
     try {
       final dateStr = date ?? _todayDateStr();
       final uri = Uri.parse('$baseUrl/routines.php?nUserId=$userId&date=$dateStr');
+      final headers = await getAuthHeaders();
       final response = await http
-          .get(uri, headers: defaultHeaders)
+          .get(uri, headers: headers)
           .timeout(const Duration(seconds: 8));
 
       debugPrint('[API] fetchRoutines HTTP ${response.statusCode}');
@@ -404,10 +422,11 @@ class HealthApiService {
   }) async {
     try {
       final uri = Uri.parse('$baseUrl/routines.php');
+      final headers = await getAuthHeaders();
       final response = await http
           .post(
             uri,
-            headers: defaultHeaders,
+            headers: headers,
             body: jsonEncode({
               'action': 'insert',
               'nUserId': userId,
@@ -441,10 +460,11 @@ class HealthApiService {
   }) async {
     try {
       final uri = Uri.parse('$baseUrl/routines.php');
+      final headers = await getAuthHeaders();
       final response = await http
           .put(
             uri,
-            headers: defaultHeaders,
+            headers: headers,
             body: jsonEncode({
               'nRoutineId': routineId,
               'sTitle': title,
@@ -468,10 +488,11 @@ class HealthApiService {
   static Future<bool> deleteRoutineRemote(int routineId) async {
     try {
       final uri = Uri.parse('$baseUrl/routines.php');
+      final headers = await getAuthHeaders();
       final response = await http
           .delete(
             uri,
-            headers: defaultHeaders,
+            headers: headers,
             body: jsonEncode({'nRoutineId': routineId}),
           )
           .timeout(const Duration(seconds: 5));
@@ -494,10 +515,11 @@ class HealthApiService {
     try {
       final dateStr = date ?? _todayDateStr();
       final uri = Uri.parse('$baseUrl/routines.php');
+      final headers = await getAuthHeaders();
       final response = await http
           .post(
             uri,
-            headers: defaultHeaders,
+            headers: headers,
             body: jsonEncode({
               'action': 'toggle_log',
               'nRoutineId': routineId,
@@ -522,15 +544,16 @@ class HealthApiService {
   static Future<bool> updateRoutineProgressRemote({
     required int routineId,
     required String date,
-    required int progressValue,
+    required num progressValue,
     required bool isCompleted,
   }) async {
     try {
       final uri = Uri.parse('$baseUrl/routines.php');
+      final headers = await getAuthHeaders();
       final response = await http
           .post(
             uri,
-            headers: defaultHeaders,
+            headers: headers,
             body: jsonEncode({
               'action': 'update_progress',
               'nRoutineId': routineId,
@@ -555,10 +578,11 @@ class HealthApiService {
   static Future<bool> clearMainGoalRemote(int userId) async {
     try {
       final uri = Uri.parse('$baseUrl/goals.php');
+      final headers = await getAuthHeaders();
       final response = await http
           .delete(
             uri,
-            headers: defaultHeaders,
+            headers: headers,
             body: jsonEncode({
               'action': 'clear_goal',
               'nUserId': userId,

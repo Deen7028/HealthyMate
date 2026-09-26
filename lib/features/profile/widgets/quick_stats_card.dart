@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:healthymate/core/services/theme_service.dart';
+import 'package:healthymate/shared/theme/index.dart';
 
 class QuickStatsCard extends StatelessWidget {
   final int workoutCount;
@@ -20,7 +20,7 @@ class QuickStatsCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E2822) : Colors.white,
+        color: AppTheme.getBackgroundColor(isDark),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -33,12 +33,12 @@ class QuickStatsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'สถิติย่อ',
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF5A6559),
+              color: AppTheme.getTextSecondaryColor(isDark),
             ),
           ),
           const SizedBox(height: 14),
@@ -52,18 +52,25 @@ class QuickStatsCard extends StatelessWidget {
                       'ครั้ง',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF8C968E),
+                        color: AppTheme.textTertiaryDark,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      '$workoutCount',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                        color: isDark ? Colors.white : const Color(0xFF1E2822),
-                      ),
+                    TweenAnimationBuilder<int>(
+                      tween: IntTween(begin: 0, end: workoutCount),
+                      duration: const Duration(milliseconds: 2500),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, val, _) {
+                        return Text(
+                          '$val',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.getTextPrimaryColor(isDark),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -71,7 +78,7 @@ class QuickStatsCard extends StatelessWidget {
               Container(
                 width: 1,
                 height: 40,
-                color: isDark ? const Color(0xFF3B4D41) : const Color(0xFFE2E7DF),
+                color: AppTheme.getBorderColor(isDark),
               ),
               Expanded(
                 child: Padding(
@@ -83,18 +90,25 @@ class QuickStatsCard extends StatelessWidget {
                         'วัน',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF8C968E),
+                          color: AppTheme.textTertiaryDark,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        '$activeDays',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w800,
-                          color: isDark ? Colors.white : const Color(0xFF1E2822),
-                        ),
+                      TweenAnimationBuilder<int>(
+                        tween: IntTween(begin: 0, end: activeDays),
+                        duration: const Duration(milliseconds: 2500),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, val, _) {
+                          return Text(
+                            '$val',
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.getTextPrimaryColor(isDark),
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),

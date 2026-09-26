@@ -277,10 +277,10 @@ class HealthCalculatorController extends ChangeNotifier {
   }
 
   Future<void> deleteHistoryItem(int recordId) async {
-    _historyList.removeWhere((item) => item.nRecordId == recordId);
-    notifyListeners();
     try {
       await _db.deleteHealthRecord(recordId);
+      _historyList.removeWhere((item) => item.nRecordId == recordId);
+      _safeNotifyListeners();
     } catch (e) {
       debugPrint('Error deleting health record from db: $e');
     }

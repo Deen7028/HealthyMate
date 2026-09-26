@@ -56,11 +56,16 @@ class RoutineController extends ChangeNotifier {
 
       for (final r in routines) {
         final routineId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
-        final targetVal = (r['targetValue'] as num?)?.toDouble() ?? 1.0;
+        final targetVal = (r['targetValue'] as num?)?.toDouble() ??
+            (r['nTargetValue'] as num?)?.toDouble() ??
+            1.0;
         final log = logsMap[routineId];
         final isDone = (log?['isCompleted'] as num?)?.toInt() == 1;
+        final logProgress = (log?['nProgressValue'] as num?)?.toDouble() ??
+            (log?['progressValue'] as num?)?.toDouble();
+
         todayCompletionMap[routineId] = isDone;
-        todayProgressValues[routineId] = isDone ? targetVal : 0.0;
+        todayProgressValues[routineId] = logProgress ?? (isDone ? targetVal : 0.0);
       }
 
       userGoal = await db.getUserGoal(userId);
@@ -92,9 +97,11 @@ class RoutineController extends ChangeNotifier {
       // Auto-GPS Sync: ประเมินความสำเร็จของกิจวัตรประเภทการออกกำลังกายจากสถิติ GPS วันนี้
       for (final r in routines) {
         final routineId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
-        final targetVal = (r['targetValue'] as num?)?.toDouble() ?? 1.0;
+        final targetVal = (r['targetValue'] as num?)?.toDouble() ??
+            (r['nTargetValue'] as num?)?.toDouble() ??
+            1.0;
         final title = (r['sTitle'] as String? ?? '').toLowerCase();
-        final unit = (r['unit'] as String? ?? '').toLowerCase();
+        final unit = (r['unit'] as String? ?? (r['sUnit'] as String? ?? '')).toLowerCase();
 
         String matchedType = r['sLinkedWorkout']?.toString() ?? '';
         if (matchedType.isEmpty) {
@@ -147,17 +154,23 @@ class RoutineController extends ChangeNotifier {
         if (serverRoutines.isNotEmpty) {
           for (final r in serverRoutines) {
             final routineId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
+            if (routineId == 0) continue;
+
             if (r.containsKey('todayCompleted') && r['todayCompleted'] != null) {
-              todayCompletionMap[routineId] =
-                  (r['todayCompleted'] as num?)?.toInt() == 1;
+              final isDone = (r['todayCompleted'] as num?)?.toInt() == 1;
+              if (isDone) {
+                todayCompletionMap[routineId] = true;
+              }
             }
             if (r.containsKey('todayProgressValue') &&
                 r['todayProgressValue'] != null) {
-              todayProgressValues[routineId] =
-                  (r['todayProgressValue'] as num?)?.toDouble() ?? 0.0;
+              final serverVal = (r['todayProgressValue'] as num?)?.toDouble() ?? 0.0;
+              final currentLocal = todayProgressValues[routineId] ?? 0.0;
+              if (serverVal > currentLocal) {
+                todayProgressValues[routineId] = serverVal;
+              }
             }
           }
-          routines = serverRoutines;
           completedCount = todayCompletionMap.values.where((v) => v).length;
           notifyListeners();
         }
@@ -198,9 +211,11 @@ class RoutineController extends ChangeNotifier {
 
     final r = routines.firstWhere(
       (element) => (element['nRoutineId'] as num?)?.toInt() == routineId,
-      orElse: () => {},
+      orElse: () => <String, dynamic>{},
     );
-    final targetVal = (r['targetValue'] as num?)?.toDouble() ?? 1.0;
+    final targetVal = (r['targetValue'] as num?)?.toDouble() ??
+        (r['nTargetValue'] as num?)?.toDouble() ??
+        1.0;
     todayProgressValues[routineId] = newStatus ? targetVal : 0.0;
     completedCount = todayCompletionMap.values.where((v) => v).length;
     notifyListeners();
@@ -221,11 +236,13 @@ class RoutineController extends ChangeNotifier {
   Future<void> incrementRoutineValue(int routineId, double step) async {
     final r = routines.firstWhere(
       (element) => (element['nRoutineId'] as num?)?.toInt() == routineId,
-      orElse: () => {},
+      orElse: () => <String, dynamic>{},
     );
     if (r.isEmpty) return;
 
-    final targetVal = (r['targetValue'] as num?)?.toDouble() ?? 1.0;
+    final targetVal = (r['targetValue'] as num?)?.toDouble() ??
+        (r['nTargetValue'] as num?)?.toDouble() ??
+        1.0;
     final currentVal = todayProgressValues[routineId] ?? 0.0;
     final newVal = (currentVal + step).clamp(0.0, targetVal * 2);
 
@@ -239,14 +256,14 @@ class RoutineController extends ChangeNotifier {
       await AppDatabase.instance.insertOrUpdateRoutineLog(
         routineId: routineId,
         dateStr: todayStr,
-        progressValue: newVal.toInt(),
+        progressValue: newVal,
         isCompleted: isDone,
       );
 
       HealthApiService.updateRoutineProgressRemote(
         routineId: routineId,
         date: todayStr,
-        progressValue: newVal.toInt(),
+        progressValue: newVal,
         isCompleted: isDone,
       );
     }

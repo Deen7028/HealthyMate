@@ -105,26 +105,33 @@ class HealthCalculatorResultSection extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  RichText(
-                    text: TextSpan(
-                      text: state.bmi.toStringAsFixed(1),
-                      style: const TextStyle(
-                        fontSize: 34,
-                        fontWeight: FontWeight.w900,
-                        color: AppTheme.textPrimary,
-                        letterSpacing: -1,
-                      ),
-                      children: const [
-                        TextSpan(
-                          text: ' kg/m²',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.textSecondary,
+                  TweenAnimationBuilder<double>(
+                    tween: Tween<double>(begin: 0.0, end: state.bmi),
+                    duration: const Duration(milliseconds: 2500),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, val, _) {
+                      return RichText(
+                        text: TextSpan(
+                          text: val.toStringAsFixed(1),
+                          style: const TextStyle(
+                            fontSize: 34,
+                            fontWeight: FontWeight.w900,
+                            color: AppTheme.textPrimary,
+                            letterSpacing: -1,
                           ),
+                          children: const [
+                            TextSpan(
+                              text: ' kg/m²',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.textSecondary,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -167,7 +174,7 @@ class HealthCalculatorResultSection extends StatelessWidget {
                 child: EnergyMetricCard(
                   icon: Icons.hotel_outlined,
                   title: 'BMR (ขณะพัก)',
-                  value: state.bmr.toInt().toString(),
+                  numericValue: state.bmr,
                   unit: 'kcal',
                   description: 'พลังงานต่ำสุดที่ร่างกายต้องการ',
                 ),
@@ -177,7 +184,7 @@ class HealthCalculatorResultSection extends StatelessWidget {
                 child: EnergyMetricCard(
                   icon: Icons.local_fire_department_outlined,
                   title: 'TDEE (ใช้จริง/วัน)',
-                  value: state.tdee.toInt().toString(),
+                  numericValue: state.tdee,
                   unit: 'kcal',
                   description: 'พลังงานรวมที่เผาผลาญต่อวัน',
                 ),

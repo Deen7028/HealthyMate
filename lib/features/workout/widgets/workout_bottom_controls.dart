@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class WorkoutBottomControls extends StatelessWidget {
+class WorkoutBottomControls extends StatefulWidget {
   final bool isRunning;
   final bool isPaused;
   final bool canStop;
@@ -17,6 +17,43 @@ class WorkoutBottomControls extends StatelessWidget {
     required this.onPause,
     required this.onStop,
   });
+
+  @override
+  State<WorkoutBottomControls> createState() => _WorkoutBottomControlsState();
+}
+
+class _WorkoutBottomControlsState extends State<WorkoutBottomControls>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulseRippleController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseRippleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    );
+    if (widget.isPaused) {
+      _pulseRippleController.repeat();
+    }
+  }
+
+  @override
+  void didUpdateWidget(WorkoutBottomControls oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isPaused && !oldWidget.isPaused) {
+      _pulseRippleController.repeat();
+    } else if (!widget.isPaused && oldWidget.isPaused) {
+      _pulseRippleController.stop();
+      _pulseRippleController.reset();
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulseRippleController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,8 +82,8 @@ class WorkoutBottomControls extends StatelessWidget {
             iconColor: const Color(0xFFD32F2F),
             size: 58,
             iconSize: 28,
-            enabled: canStop,
-            onTap: canStop ? onStop : null,
+            enabled: widget.canStop,
+            onTap: widget.canStop ? widget.onStop : null,
           ),
           _buildMainCenterButton(),
           _buildActionButton(
@@ -56,8 +93,8 @@ class WorkoutBottomControls extends StatelessWidget {
             iconColor: const Color(0xFF5A665A),
             size: 58,
             iconSize: 28,
-            enabled: isRunning,
-            onTap: isRunning ? onPause : null,
+            enabled: widget.isRunning,
+            onTap: widget.isRunning ? widget.onPause : null,
           ),
         ],
       ),
@@ -70,36 +107,69 @@ class WorkoutBottomControls extends StatelessWidget {
       children: [
         GestureDetector(
           onTap: () {
-            if (isRunning) {
-              onPause();
+            if (widget.isRunning) {
+              widget.onPause();
             } else {
-              onStartOrResume();
+              widget.onStartOrResume();
             }
           },
-          child: Container(
-            width: 82,
-            height: 82,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0xFF2E5327),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF2E5327).withValues(alpha: 0.35),
-                  blurRadius: 18,
-                  offset: const Offset(0, 6),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // 4. แอนิเมชันคลื่นน้ำเรียกร้องความสนใจ (Pulse / Ripple Effect) เมื่ออยู่ในสถานะ พักชั่วคราว (Pause)
+              if (widget.isPaused)
+                AnimatedBuilder(
+                  animation: _pulseRippleController,
+                  builder: (context, child) {
+                    final wave = _pulseRippleController.value;
+                    return Container(
+                      width: 82 + (wave * 34),
+                      height: 82 + (wave * 34),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: const Color(0xFF2E5327).withValues(alpha: (1.0 - wave) * 0.45),
+                      ),
+                    );
+                  },
                 ),
-              ],
-            ),
-            child: Icon(
-              isRunning ? Icons.pause_rounded : Icons.play_arrow_rounded,
-              color: Colors.white,
-              size: 44,
-            ),
+              Container(
+                width: 82,
+                height: 82,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFF2E5327),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF2E5327).withValues(alpha: 0.35),
+                      blurRadius: 18,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  transitionBuilder: (Widget child, Animation<double> animation) {
+                    return RotationTransition(
+                      turns: child.key == const ValueKey('pause')
+                          ? Tween<double>(begin: 0.5, end: 1.0).animate(animation)
+                          : Tween<double>(begin: 0.0, end: 0.5).animate(animation),
+                      child: ScaleTransition(scale: animation, child: child),
+                    );
+                  },
+                  child: Icon(
+                    widget.isRunning ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                    key: ValueKey(widget.isRunning ? 'pause' : 'play'),
+                    color: Colors.white,
+                    size: 44,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 8),
         Text(
-          isRunning ? 'พักชั่วคราว' : (isPaused ? 'ทำต่อ' : 'เริ่ม'),
+          widget.isRunning ? 'พักชั่วคราว' : (widget.isPaused ? 'ทำต่อ' : 'เริ่ม'),
           style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w800,

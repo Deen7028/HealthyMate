@@ -167,26 +167,33 @@ class WorkoutTopStatsCard extends StatelessWidget {
                         color: isDarkModeMap ? const Color(0xFFA0ACA0) : const Color(0xFF677366),
                       ),
                     ),
-                    RichText(
-                      text: TextSpan(
-                        text: distanceKm.toStringAsFixed(2),
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.w900,
-                          color: isDarkModeMap ? const Color(0xFF90DB89) : const Color(0xFF2E5327),
-                          letterSpacing: -0.5,
-                        ),
-                        children: [
-                          TextSpan(
-                            text: ' km',
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0, end: distanceKm),
+                      duration: const Duration(milliseconds: 2500),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, val, _) {
+                        return RichText(
+                          text: TextSpan(
+                            text: val.toStringAsFixed(2),
                             style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: isDarkModeMap ? const Color(0xFFA0ACA0) : const Color(0xFF5A665A),
+                              fontSize: 26,
+                              fontWeight: FontWeight.w900,
+                              color: isDarkModeMap ? const Color(0xFF90DB89) : const Color(0xFF2E5327),
+                              letterSpacing: -0.5,
                             ),
+                            children: [
+                              TextSpan(
+                                text: ' km',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDarkModeMap ? const Color(0xFFA0ACA0) : const Color(0xFF5A665A),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -209,26 +216,33 @@ class WorkoutTopStatsCard extends StatelessWidget {
                         color: isDarkModeMap ? const Color(0xFFA0ACA0) : const Color(0xFF677366),
                       ),
                     ),
-                    RichText(
-                      text: TextSpan(
-                        text: caloriesBurned.toStringAsFixed(0),
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.w900,
-                          color: isDarkModeMap ? Colors.white : const Color(0xFF1E281F),
-                          letterSpacing: -0.5,
-                        ),
-                        children: [
-                          TextSpan(
-                            text: ' kcal',
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0, end: caloriesBurned),
+                      duration: const Duration(milliseconds: 2500),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, val, _) {
+                        return RichText(
+                          text: TextSpan(
+                            text: val.toStringAsFixed(0),
                             style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: isDarkModeMap ? const Color(0xFFA0ACA0) : const Color(0xFF5A665A),
+                              fontSize: 26,
+                              fontWeight: FontWeight.w900,
+                              color: isDarkModeMap ? Colors.white : const Color(0xFF1E281F),
+                              letterSpacing: -0.5,
                             ),
+                            children: [
+                              TextSpan(
+                                text: ' kcal',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDarkModeMap ? const Color(0xFFA0ACA0) : const Color(0xFF5A665A),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
                   ],
                 ),

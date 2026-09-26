@@ -1,5 +1,5 @@
 name: healthymate
-description: "A new Flutter project."
+description: "แอปออกกำลังกายและสุขภาพ"
 publish_to: 'none'
 version: 0.1.0+1
 
@@ -47,6 +47,7 @@ flutter:
   assets:
     - HM.svg
     - assets/logo.png
+    - assets/fonts/
     - .env
 
 flutter_launcher_icons:

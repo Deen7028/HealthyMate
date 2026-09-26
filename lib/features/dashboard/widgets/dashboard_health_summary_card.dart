@@ -26,7 +26,6 @@ class DashboardHealthSummaryCard extends StatelessWidget {
 
   String _formatNumber(double val) =>
       val >= 1000 ? val.toStringAsFixed(0) : val.toStringAsFixed(val.truncateToDouble() == val ? 0 : 1);
-  String _formatInt(int val) => val.toString();
 
   @override
   Widget build(BuildContext context) {
@@ -93,43 +92,66 @@ class DashboardHealthSummaryCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Icon(Icons.health_and_safety, color: darkGreen),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'ข้อมูลสุขภาพส่วนบุคคล',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(Icons.health_and_safety, color: darkGreen),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'ข้อมูลสุขภาพส่วนบุคคล',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            lastRecordText,
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              color: Colors.grey,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
-                      Text(
-                        lastRecordText,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              ElevatedButton.icon(
-                onPressed: onNavigateToCalculator,
-                icon: const Icon(Icons.sync, size: 16, color: Colors.blue),
-                label: const Text(
-                  'อัปเดตข้อมูล',
-                  style: TextStyle(color: Colors.blue, fontSize: 12),
+                    ),
+                  ],
                 ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue.shade50,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
+              ),
+              const SizedBox(width: 8),
+              Material(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(20),
+                child: InkWell(
+                  onTap: onNavigateToCalculator,
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(Icons.sync, size: 15, color: Colors.blue),
+                        SizedBox(width: 4),
+                        Text(
+                          'อัปเดตข้อมูล',
+                          style: TextStyle(
+                            color: Colors.blue,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -163,17 +185,41 @@ class DashboardHealthSummaryCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: _buildStatItem(
+                child: _buildStatItemWithWidget(
                   'BMR พลังงานพื้นฐาน',
-                  bmr > 0 ? '${_formatInt(bmr.round())} kcal' : '- kcal',
+                  TweenAnimationBuilder<double>(
+                    tween: Tween<double>(begin: 0, end: bmr),
+                    duration: const Duration(milliseconds: 2500),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, val, _) => Text(
+                      bmr > 0 ? '${val.round()} kcal' : '- kcal',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
                   icon: Icons.bolt,
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: _buildStatItem(
+                child: _buildStatItemWithWidget(
                   'TDEE ต้องการต่อวัน',
-                  tdee > 0 ? '${_formatInt(tdee.round())} kcal' : '- kcal',
+                  TweenAnimationBuilder<double>(
+                    tween: Tween<double>(begin: 0, end: tdee),
+                    duration: const Duration(milliseconds: 2500),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, val, _) => Text(
+                      tdee > 0 ? '${val.round()} kcal' : '- kcal',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
                   icon: Icons.local_fire_department,
                 ),
               ),
@@ -202,11 +248,16 @@ class DashboardHealthSummaryCard extends StatelessWidget {
                           color: Colors.black87,
                         ),
                       ),
-                      Text(
-                        'เผาผลาญแล้ววันนี้ ${totalCaloriesBurned.toStringAsFixed(0)} kcal',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: Colors.black54,
+                      TweenAnimationBuilder<double>(
+                        tween: Tween<double>(begin: 0, end: totalCaloriesBurned),
+                        duration: const Duration(milliseconds: 2500),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, val, _) => Text(
+                          'เผาผลาญแล้ววันนี้ ${val.toStringAsFixed(0)} kcal',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Colors.black54,
+                          ),
                         ),
                       ),
                     ],
@@ -224,6 +275,38 @@ class DashboardHealthSummaryCard extends StatelessWidget {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItemWithWidget(String title, Widget valueWidget, {IconData? icon}) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7F9FB),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 14, color: Colors.grey),
+                const SizedBox(width: 4),
+              ],
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          valueWidget,
         ],
       ),
     );
@@ -289,7 +372,10 @@ class DashboardHealthSummaryCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 4),
-          Row(
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 6,
+            runSpacing: 2,
             children: [
               Text(
                 value,
@@ -299,7 +385,6 @@ class DashboardHealthSummaryCard extends StatelessWidget {
                   color: Colors.black87,
                 ),
               ),
-              const SizedBox(width: 6),
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 6,

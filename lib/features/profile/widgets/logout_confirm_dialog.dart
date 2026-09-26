@@ -1,20 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:healthymate/core/services/theme_service.dart';
 
 class LogoutConfirmDialog extends StatelessWidget {
   const LogoutConfirmDialog({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final isDark = ThemeService.instance.isDarkMode;
+
     return AlertDialog(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? const Color(0xFF1E2822) : Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: const Text(
+      title: Text(
         'ออกจากระบบ',
-        style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1E2822)),
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          color: isDark ? Colors.white : const Color(0xFF1E2822),
+        ),
       ),
-      content: const Text(
+      content: Text(
         'คุณแน่ใจหรือไม่ว่าต้องการออกจากระบบ HealthyMate?',
-        style: TextStyle(color: Color(0xFF6F7A72)),
+        style: TextStyle(
+          color: isDark ? const Color(0xFFA0ACA0) : const Color(0xFF6F7A72),
+        ),
       ),
       actions: [
         TextButton(

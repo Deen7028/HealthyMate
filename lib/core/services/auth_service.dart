@@ -44,9 +44,21 @@ class AuthService extends ChangeNotifier {
     if (isLocalUserExists) {
       final isPasswordCorrect = await AppDatabase.instance.authenticateUser(cleanEmail, password);
       if (isPasswordCorrect) {
+        // ยิง loginRemote ใน Background เพื่อรับ Token ล่าสุดจาก Server (ถ้ามีเน็ต)
+        String? token;
+        try {
+          final remoteRes = await HealthApiService.loginRemote(
+            email: cleanEmail,
+            password: password,
+          );
+          if (remoteRes['status'] == 'success') {
+            token = remoteRes['token']?.toString();
+          }
+        } catch (_) {}
+
         _isLoggedIn = true;
         _currentUserEmail = cleanEmail;
-        await AppDatabase.instance.setLoginStatus(true, email: cleanEmail);
+        await AppDatabase.instance.setLoginStatus(true, email: cleanEmail, token: token);
         final localUser = await AppDatabase.instance.getUserByEmail(cleanEmail);
         notifyListeners();
         return {
@@ -81,7 +93,8 @@ class AuthService extends ChangeNotifier {
 
       _isLoggedIn = true;
       _currentUserEmail = cleanEmail;
-      await AppDatabase.instance.setLoginStatus(true, email: cleanEmail);
+      final String? token = remoteRes['token']?.toString();
+      await AppDatabase.instance.setLoginStatus(true, email: cleanEmail, token: token);
       notifyListeners();
 
       return {
@@ -111,11 +124,11 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  Future<void> setLoginSession(String email) async {
+  Future<void> setLoginSession(String email, {String? token}) async {
     final cleanEmail = email.trim().toLowerCase();
     _isLoggedIn = true;
     _currentUserEmail = cleanEmail;
-    await AppDatabase.instance.setLoginStatus(true, email: cleanEmail);
+    await AppDatabase.instance.setLoginStatus(true, email: cleanEmail, token: token);
     notifyListeners();
   }
 

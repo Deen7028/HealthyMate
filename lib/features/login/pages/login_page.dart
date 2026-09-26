@@ -24,7 +24,7 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -32,10 +32,35 @@ class _LoginPageState extends State<LoginPage> {
   final FocusNode _passwordFocusNode = FocusNode();
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
 
+  late final AnimationController _shakeController;
+  late final Animation<double> _shakeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _shakeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _shakeAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: -12.0), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: -12.0, end: 12.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 12.0, end: -8.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -8.0, end: 8.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 8.0, end: -4.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -4.0, end: 0.0), weight: 1),
+    ]).animate(CurvedAnimation(parent: _shakeController, curve: Curves.easeInOut));
+  }
+
+  void _triggerShake() {
+    _shakeController.forward(from: 0.0);
+  }
+
   void _showError(String message) {
     setState(() {
       _errorMessage = message;
     });
+    _triggerShake();
   }
 
   Future<void> _handleGoogleSignIn() async {
@@ -64,8 +89,9 @@ class _LoginPageState extends State<LoginPage> {
 
       if (result['status'] == 'success') {
         final userData = result['user'];
+        final String? token = result['token']?.toString();
         final tbUser = await AppDatabase.instance.upsertUserFromServer(userData);
-        await AuthService.instance.setLoginSession(tbUser.sEmail);
+        await AuthService.instance.setLoginSession(tbUser.sEmail, token: token);
 
         if (!mounted) return;
         setState(() => _isLoading = false);
@@ -112,6 +138,7 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   void dispose() {
+    _shakeController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _emailFocusNode.dispose();
@@ -136,6 +163,7 @@ class _LoginPageState extends State<LoginPage> {
       setState(() {
         _errorMessage = 'คุณพยายามเข้าสู่ระบบผิดบ่อยเกินไป กรุณารอ $waitSeconds วินาที';
       });
+      _triggerShake();
       return;
     }
 
@@ -147,6 +175,7 @@ class _LoginPageState extends State<LoginPage> {
       setState(() {
         _errorMessage = 'กรุณากรอกอีเมลของคุณ';
       });
+      _triggerShake();
       _emailFocusNode.requestFocus();
       return;
     }
@@ -156,6 +185,7 @@ class _LoginPageState extends State<LoginPage> {
       setState(() {
         _errorMessage = 'รูปแบบอีเมลไม่ถูกต้อง (เช่น example@domain.com)';
       });
+      _triggerShake();
       _emailFocusNode.requestFocus();
       return;
     }
@@ -165,6 +195,7 @@ class _LoginPageState extends State<LoginPage> {
       setState(() {
         _errorMessage = 'กรุณากรอกรหัสผ่าน';
       });
+      _triggerShake();
       _passwordFocusNode.requestFocus();
       return;
     }
@@ -173,6 +204,7 @@ class _LoginPageState extends State<LoginPage> {
       setState(() {
         _errorMessage = 'รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร';
       });
+      _triggerShake();
       _passwordFocusNode.requestFocus();
       return;
     }
@@ -196,6 +228,7 @@ class _LoginPageState extends State<LoginPage> {
           _isLoading = false; // สิ้นสุดกระบวนการตรวจสอบทั้งหมด ค่อยหยุดหมุนและแจ้ง Error
           _errorMessage = loginResult['message']?.toString() ?? 'เข้าสู่ระบบไม่สำเร็จ';
         });
+        _triggerShake();
         return;
       }
 
@@ -382,23 +415,37 @@ class _LoginPageState extends State<LoginPage> {
                       Expanded(
                         child: SingleChildScrollView(
                           padding: const EdgeInsets.all(28.0),
-                          child: Form(
-                            key: _formKey,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                const SizedBox(height: 12),
+                          child: AnimatedBuilder(
+                            animation: _shakeAnimation,
+                            builder: (context, child) {
+                              return Transform.translate(
+                                offset: Offset(_shakeAnimation.value, 0.0),
+                                child: child,
+                              );
+                            },
+                            child: Form(
+                              key: _formKey,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  const SizedBox(height: 12),
 
-                                // Heading Text
-                                const LoginHeader(),
+                                  // Heading Text
+                                  const LoginHeader(),
 
-                                const SizedBox(height: 32),
+                                  const SizedBox(height: 32),
 
-                                // Error Message Banner if any
-                                if (_errorMessage != null) ...[
-                                  LoginErrorBanner(errorMessage: _errorMessage!),
-                                  const SizedBox(height: 20),
-                                ],
+                                  // Error Message Banner if any (Smooth Dropdown)
+                                  AnimatedSize(
+                                    duration: const Duration(milliseconds: 300),
+                                    curve: Curves.easeOutCubic,
+                                    child: _errorMessage != null
+                                        ? Padding(
+                                            padding: const EdgeInsets.only(bottom: 20),
+                                            child: LoginErrorBanner(errorMessage: _errorMessage!),
+                                          )
+                                        : const SizedBox.shrink(),
+                                  ),
 
                                 // Login Input Fields
                                 LoginFormFields(
@@ -461,6 +508,7 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                       ),
+                    ),
                     ],
                   ),
                 ),

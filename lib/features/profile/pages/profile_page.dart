@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:healthymate/core/services/auth_service.dart';
 import 'package:healthymate/core/services/theme_service.dart';
@@ -12,9 +13,14 @@ import 'package:healthymate/features/food_recognition/widgets/gemini_api_key_dia
 
 /// หน้าโปรไฟล์และการตั้งค่า HealthyMate
 class ProfilePage extends StatefulWidget {
+  final bool isActive;
   final VoidCallback? onNavigateToPractice;
 
-  const ProfilePage({super.key, this.onNavigateToPractice});
+  const ProfilePage({
+    super.key,
+    this.isActive = true,
+    this.onNavigateToPractice,
+  });
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -43,6 +49,14 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
     if (!hasValidUser && mounted) {
       debugPrint('ProfilePage: No valid authenticated user found, forcing logout.');
       await AuthService.instance.logout();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant ProfilePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive && !oldWidget.isActive) {
+      _controller.loadUserData();
     }
   }
 
@@ -187,7 +201,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
             ),
             onPressed: () async {
               Navigator.pop(ctx);
-              await _controller.handleLocationTap();
+              await Geolocator.openAppSettings();
             },
             child: const Text('ไปที่การตั้งค่า', style: TextStyle(color: Colors.white)),
           ),
@@ -306,19 +320,6 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
         );
       },
     );
-  }
-
-  Future<void> _handleExportCsv() async {
-    final path = await _controller.exportCsv();
-    if (path != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('ส่งออกไฟล์ CSV สำเร็จเรียบร้อยแล้ว'),
-          backgroundColor: AppTheme.primaryGreen,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
   }
 
   Future<void> _handleExportPdf() async {
@@ -521,7 +522,6 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                 activeDeviceCount: activeDeviceCount,
                 onPersonalInfoTap: _showPersonalInfoBottomSheet,
                 onConnectedDevicesTap: _showConnectedDevicesBottomSheet,
-                onExportCsvTap: _handleExportCsv,
                 onExportPdfTap: _handleExportPdf,
                 onDeleteAccountTap: _handleDeleteAccount,
                 onLogoutTap: _handleLogout,

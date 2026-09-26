@@ -4,7 +4,7 @@ import 'package:healthymate/core/theme/app_theme.dart';
 class EnergyMetricCard extends StatelessWidget {
   final IconData icon;
   final String title;
-  final String value;
+  final double numericValue;
   final String unit;
   final String description;
 
@@ -12,7 +12,7 @@ class EnergyMetricCard extends StatelessWidget {
     super.key,
     required this.icon,
     required this.title,
-    required this.value,
+    required this.numericValue,
     required this.unit,
     required this.description,
   });
@@ -54,26 +54,33 @@ class EnergyMetricCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          RichText(
-            text: TextSpan(
-              text: value,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: AppTheme.primaryGreen,
-                letterSpacing: -0.5,
-              ),
-              children: [
-                TextSpan(
-                  text: ' $unit',
+          TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 0, end: numericValue),
+            duration: const Duration(milliseconds: 2500),
+            curve: Curves.easeOutCubic,
+            builder: (context, val, _) {
+              return RichText(
+                text: TextSpan(
+                  text: val.toInt().toString(),
                   style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
                     color: AppTheme.primaryGreen,
+                    letterSpacing: -0.5,
                   ),
+                  children: [
+                    TextSpan(
+                      text: ' $unit',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.primaryGreen,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              );
+            },
           ),
           const SizedBox(height: 6),
           Text(

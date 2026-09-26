@@ -13,11 +13,13 @@ import 'package:healthymate/features/workout/widgets/workout_map_view.dart';
 /// หน้าจอ Workout Tracking 
 /// Logic การคำนวณและ State ทั้งหมดจะถูก Delegate ไปยัง [WorkoutTrackingController]
 class WorkoutTrackingPage extends StatefulWidget {
+  final bool isActive;
   final VoidCallback? onBackToDashboard;
   final String? initialCategory;
 
   const WorkoutTrackingPage({
     super.key,
+    this.isActive = true,
     this.onBackToDashboard,
     this.initialCategory,
   });
@@ -339,11 +341,19 @@ class _WorkoutTrackingPageState extends State<WorkoutTrackingPage>
                 ),
               ),
 
-              // 3. กล่องแสดงสถิติด้านบน (แยก Rebuild ด้วย ValueListenableBuilder เฉพาะตัวเลขเวลา ป้องกันการ Rebuild Google Maps ทุก 1 วินาที)
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
+              // 3. กล่องแสดงสถิติด้านบน (แอนิเมชัน Slide-in เลื่อนลงมาจากด้านบน)
+              TweenAnimationBuilder<double>(
+                tween: Tween<double>(begin: -150.0, end: 0.0),
+                duration: const Duration(milliseconds: 550),
+                curve: Curves.easeOutCubic,
+                builder: (context, topOffset, child) {
+                  return Positioned(
+                    top: topOffset,
+                    left: 0,
+                    right: 0,
+                    child: child!,
+                  );
+                },
                 child: SafeArea(
                   child: ValueListenableBuilder<int>(
                     valueListenable: _state.secondsElapsedNotifier,
@@ -365,11 +375,19 @@ class _WorkoutTrackingPageState extends State<WorkoutTrackingPage>
                 ),
               ),
 
-              // 4. แผงควบคุมปุ่มด้านล่าง
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
+              // 4. แผงควบคุมปุ่มด้านล่าง (แอนิเมชัน Slide-in เลื่อนขึ้นมาจากด้านล่าง)
+              TweenAnimationBuilder<double>(
+                tween: Tween<double>(begin: 150.0, end: 0.0),
+                duration: const Duration(milliseconds: 550),
+                curve: Curves.easeOutCubic,
+                builder: (context, bottomOffset, child) {
+                  return Positioned(
+                    bottom: bottomOffset,
+                    left: 0,
+                    right: 0,
+                    child: child!,
+                  );
+                },
                 child: WorkoutBottomControls(
                   isRunning: _state.isRunning,
                   isPaused: _state.isPaused,

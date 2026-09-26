@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:healthymate/core/services/theme_service.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
 
 class EditProfileDialog extends StatefulWidget {
@@ -65,9 +66,10 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
   @override
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).colorScheme.primary;
+    final isDark = ThemeService.instance.isDarkMode;
 
     return Dialog(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? const Color(0xFF1E2822) : Colors.white,
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: ConstrainedBox(
@@ -90,7 +92,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                     child: Icon(Icons.person_rounded, color: primaryColor, size: 24),
                   ),
                   const SizedBox(width: 14),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -99,7 +101,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                           style: TextStyle(
                             fontSize: 19,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF1E2822),
+                            color: isDark ? Colors.white : const Color(0xFF1E2822),
                           ),
                         ),
                         SizedBox(height: 2),

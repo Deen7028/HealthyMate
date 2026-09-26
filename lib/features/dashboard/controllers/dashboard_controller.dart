@@ -57,7 +57,7 @@ class DashboardController extends ChangeNotifier {
       }
 
       routines = await db.getRoutines(userId: userId);
-      final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+      final todayStr = DateFormat('yyyy-MM-dd').format(now);
       todayCompletionMap.clear();
       for (final r in routines) {
         final rId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
@@ -83,6 +83,7 @@ class DashboardController extends ChangeNotifier {
       notifyListeners();
       _syncFromServer(userId);
     } catch (e) {
+      debugPrint('loadDashboardData error: $e');
       isLoading = false;
       notifyListeners();
     }
@@ -111,7 +112,9 @@ class DashboardController extends ChangeNotifier {
 
         notifyListeners();
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Sync Error: $e');
+    }
   }
 
   String formatNumber(double val) => val >= 1000 ? NumberFormat('#,##0', 'th').format(val.round()) : val.toStringAsFixed(val.truncateToDouble() == val ? 0 : 1);
@@ -135,16 +138,4 @@ class DashboardController extends ChangeNotifier {
   int get weekOfMonth => ((now.day + DateTime(now.year, now.month, 1).weekday - 2) / 7).ceil();
   String get thaiDayName => ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'][now.weekday - 1];
   String get thaiMonthName => ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'][now.month - 1];
-
-  Future<void> toggleRoutineCompletion(int routineId, bool isDone) async {
-    todayCompletionMap[routineId] = isDone;
-    notifyListeners();
-    try {
-      final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-      await AppDatabase.instance.toggleRoutineLog(
-        routineId: routineId,
-        dateStr: todayStr,
-      );
-    } catch (_) {}
-  }
 }

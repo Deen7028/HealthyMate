@@ -53,11 +53,15 @@ class _MainAppShellState extends State<MainAppShell> {
           ),
           // 1: Workout (ออกกำลังกาย)
           WorkoutTrackingPage(
+            isActive: _currentIndex == 1,
             onBackToDashboard: () => _onTabTapped(0),
             initialCategory: _selectedWorkoutCategory,
           ),
           // 2: Health Calculator (สุขภาพ)
-          HealthCalculatorPage(state: _healthState),
+          HealthCalculatorPage(
+            isActive: _currentIndex == 2,
+            state: _healthState,
+          ),
           // 3: Routine (กิจวัตร)
           MyRoutinesPage(
             isActive: _currentIndex == 3,
@@ -65,6 +69,7 @@ class _MainAppShellState extends State<MainAppShell> {
           ),
           // 4: Profile (โปรไฟล์)
           ProfilePage(
+            isActive: _currentIndex == 4,
             onNavigateToPractice: () => _onTabTapped(3),
           ),
         ],
@@ -105,7 +110,7 @@ class _CameraDockedFabState extends State<_CameraDockedFab> {
       onTapDown: (_) => setState(() => _isPressed = true),
       onTapUp: (_) {
         setState(() => _isPressed = false);
-        widget.onTap();
+        Future.microtask(widget.onTap);
       },
       onTapCancel: () => setState(() => _isPressed = false),
       child: AnimatedScale(

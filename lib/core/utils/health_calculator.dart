@@ -4,15 +4,20 @@ import 'package:healthymate/core/theme/app_theme.dart';
 enum Gender { male, female }
 
 class HealthCalculator {
-  /// Calculate Body Mass Index (BMI)
-  /// BMI = weight (kg) / (height (m) ^ 2)
+  /// 1. Calculate Body Mass Index (BMI) - Metric: weight (kg) / (height (m) ^ 2)
   static double calculateBMI({required double weightKg, required double heightCm}) {
     if (heightCm <= 0 || weightKg <= 0) return 0.0;
     final heightM = heightCm / 100.0;
     return weightKg / (heightM * heightM);
   }
 
-  /// Get BMI Category name and color
+  /// Calculate Body Mass Index (BMI) - Imperial: (weight (lbs) / (height (in) ^ 2)) * 703
+  static double calculateBMIImperial({required double weightLbs, required double heightInches}) {
+    if (heightInches <= 0 || weightLbs <= 0) return 0.0;
+    return (weightLbs / (heightInches * heightInches)) * 703.0;
+  }
+
+  /// Get BMI Category name, badge, range text, and color according to WHO / Asian standard
   static BMICategory getBMICategory(double bmi) {
     if (bmi < 18.5) {
       return const BMICategory(
@@ -57,7 +62,7 @@ class HealthCalculator {
     }
   }
 
-  /// Calculate Basal Metabolic Rate (BMR) using Mifflin-St Jeor equation:
+  /// 2. Calculate Basal Metabolic Rate (BMR) using Mifflin-St Jeor equation:
   /// Male: (10 x weight in kg) + (6.25 x height in cm) - (5 x age in years) + 5
   /// Female: (10 x weight in kg) + (6.25 x height in cm) - (5 x age in years) - 161
   static double calculateBMR({
@@ -67,14 +72,39 @@ class HealthCalculator {
     required int age,
   }) {
     if (weightKg <= 0 || heightCm <= 0 || age <= 0) return 0.0;
-    final base = (10 * weightKg) + (6.25 * heightCm) - (5 * age);
-    return gender == Gender.male ? (base + 5) : (base - 161);
+    final base = (10.0 * weightKg) + (6.25 * heightCm) - (5.0 * age);
+    return gender == Gender.male ? (base + 5.0) : (base - 161.0);
   }
 
-  /// Calculate Total Daily Energy Expenditure (TDEE)
+  /// 3. Calculate Total Daily Energy Expenditure (TDEE)
   /// TDEE = BMR * activityMultiplier
+  /// Multipliers:
+  /// 1.2    - Sedentary
+  /// 1.375  - Lightly Active (1-3 days/week)
+  /// 1.55   - Moderately Active (3-5 days/week)
+  /// 1.725  - Very Active (6-7 days/week)
+  /// 1.9    - Extremely Active (2x/day or heavy labor)
   static double calculateTDEE({required double bmr, required double activityMultiplier}) {
     return bmr * activityMultiplier;
+  }
+
+  /// 4. Other Body Ratios
+  /// Waist-to-Height Ratio (WHtR) = Waist / Height
+  static double calculateWaistToHeightRatio({required double waistCm, required double heightCm}) {
+    if (heightCm <= 0 || waistCm <= 0) return 0.0;
+    return waistCm / heightCm;
+  }
+
+  /// Waist-to-Hip Ratio (WHR) = Waist / Hip
+  static double calculateWaistToHipRatio({required double waistCm, required double hipCm}) {
+    if (hipCm <= 0 || waistCm <= 0) return 0.0;
+    return waistCm / hipCm;
+  }
+
+  /// BMI Prime = Actual BMI / Upper Cutoff (default 23.0 for Asian standard, 25.0 for WHO)
+  static double calculateBMIPrime({required double bmi, double upperCutoff = 23.0}) {
+    if (upperCutoff <= 0 || bmi <= 0) return 0.0;
+    return bmi / upperCutoff;
   }
 
   /// Calorie targets calculation

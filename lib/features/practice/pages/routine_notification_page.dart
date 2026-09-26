@@ -316,12 +316,28 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
           );
         }
 
+        final pinnedRoutineId = (_controller.userGoal?['nRoutineId'] as num?)?.toInt() ?? 0;
+        final pinnedTitle = _controller.userGoal?['sTitle']?.toString() ?? '';
+
+        final displayRoutines = _controller.routines.where((r) {
+          final rId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
+          final rTitle = r['sTitle']?.toString() ?? '';
+          if (pinnedRoutineId > 0 && rId == pinnedRoutineId) return false;
+          if (pinnedRoutineId == 0 && pinnedTitle.isNotEmpty && rTitle == pinnedTitle) return false;
+          return true;
+        }).toList();
+
+        final displayCompletedCount = displayRoutines.where((r) {
+          final rId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
+          return _controller.todayCompletionMap[rId] ?? false;
+        }).length;
+
         final morningRoutines = <Map<String, dynamic>>[];
         final afternoonRoutines = <Map<String, dynamic>>[];
         final nightRoutines = <Map<String, dynamic>>[];
         final otherRoutines = <Map<String, dynamic>>[];
 
-        for (final r in _controller.routines) {
+        for (final r in displayRoutines) {
           final time = r['sTime']?.toString() ?? '';
           switch (_getTimeBlock(time)) {
             case 'morning':
@@ -342,9 +358,9 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
           backgroundColor: lightBg,
           appBar: _buildAppBar(),
           body: RefreshIndicator(
-            color: primaryGreen,
-            onRefresh: _controller.loadData,
-            child: SingleChildScrollView(
+              color: primaryGreen,
+              onRefresh: _controller.loadData,
+              child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -352,16 +368,16 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     RoutineTopOverviewBanner(
-                      completedCount: _controller.completedCount,
-                      totalCount: _controller.routines.length,
+                      completedCount: displayCompletedCount,
+                      totalCount: displayRoutines.length,
                       todayWorkoutStats: _controller.todayWorkoutStats,
                     ),
                     const SizedBox(height: 20),
 
                     RoutineMainGoalCard(
                       userGoal: _controller.userGoal,
-                      completedCount: _controller.completedCount,
-                      totalRoutinesCount: _controller.routines.length,
+                      completedCount: displayCompletedCount,
+                      totalRoutinesCount: displayRoutines.length,
                       onUnpin: () async {
                         await _controller.unpinMainGoal();
                         _showSnackBar('ยกเลิกการปักหมุดเป้าหมายหลักแล้ว');
@@ -373,7 +389,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
 
                     _buildDailyRoutinesHeader(),
                     const SizedBox(height: 16),
-                    if (_controller.routines.isEmpty) _buildEmptyState(),
+                    if (displayRoutines.isEmpty) _buildEmptyState(),
 
                     if (morningRoutines.isNotEmpty) ...[
                       _buildTimeBlockHeader(
@@ -383,7 +399,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
                       ...morningRoutines.map(
                         (r) => Padding(
                           padding: const EdgeInsets.only(bottom: 12),
-                          child: _buildRoutineCardFromDb(r, _controller.routines.indexOf(r)),
+                          child: _buildRoutineCardFromDb(r, displayRoutines.indexOf(r)),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -397,7 +413,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
                       ...afternoonRoutines.map(
                         (r) => Padding(
                           padding: const EdgeInsets.only(bottom: 12),
-                          child: _buildRoutineCardFromDb(r, _controller.routines.indexOf(r)),
+                          child: _buildRoutineCardFromDb(r, displayRoutines.indexOf(r)),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -408,7 +424,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
                       ...nightRoutines.map(
                         (r) => Padding(
                           padding: const EdgeInsets.only(bottom: 12),
-                          child: _buildRoutineCardFromDb(r, _controller.routines.indexOf(r)),
+                          child: _buildRoutineCardFromDb(r, displayRoutines.indexOf(r)),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -419,7 +435,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
                       ...otherRoutines.map(
                         (r) => Padding(
                           padding: const EdgeInsets.only(bottom: 12),
-                          child: _buildRoutineCardFromDb(r, _controller.routines.indexOf(r)),
+                          child: _buildRoutineCardFromDb(r, displayRoutines.indexOf(r)),
                         ),
                       ),
                     ],

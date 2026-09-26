@@ -179,12 +179,18 @@ class RegisterFormFields extends StatelessWidget {
 
         const SizedBox(height: 8),
 
-        // Password Security Indicator & Requirement Text
-        PasswordRequirementsCard(
-          hasMinLength: hasMinLength,
-          hasUppercase: hasUppercase,
-          hasLowercase: hasLowercase,
-          hasDigits: hasDigits,
+        // ใช้ AnimatedSize ครอบไว้ให้กล่องความปลอดภัยยืดหดได้อย่างสมูท
+        AnimatedSize(
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeOutCubic,
+          child: passwordController.text.isEmpty
+              ? const SizedBox.shrink()
+              : PasswordRequirementsCard(
+                  hasMinLength: hasMinLength,
+                  hasUppercase: hasUppercase,
+                  hasLowercase: hasLowercase,
+                  hasDigits: hasDigits,
+                ),
         ),
 
         const SizedBox(height: 18),

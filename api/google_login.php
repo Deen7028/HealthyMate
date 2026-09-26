@@ -36,9 +36,13 @@ try {
             $user['sProfileImagePath'] = $profileImage;
         }
         
+        $authToken = generateAuthToken($user['nUserId']);
+        $user['token'] = $authToken;
+        
         echo json_encode([
             "status" => "success",
             "message" => "เข้าสู่ระบบด้วย Google สำเร็จ",
+            "token" => $authToken,
             "user" => $user
         ], JSON_UNESCAPED_UNICODE);
     } else {
@@ -62,10 +66,13 @@ try {
         // ดึงข้อมูลบัญชีที่เพิ่งสร้างส่งกลับไป
         $stmt->execute([':email' => $email]);
         $newUser = $stmt->fetch();
+        $authToken = generateAuthToken($newUser['nUserId']);
+        $newUser['token'] = $authToken;
 
         echo json_encode([
             "status" => "success",
             "message" => "สร้างบัญชีใหม่ด้วย Google สำเร็จ",
+            "token" => $authToken,
             "user" => $newUser
         ], JSON_UNESCAPED_UNICODE);
     }

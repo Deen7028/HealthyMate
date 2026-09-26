@@ -304,12 +304,6 @@ class ProfileController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// ส่งออก CSV
-  Future<String?> exportCsv() async {
-    final userId = currentUser?.nUserId ?? 1;
-    return await DataExportService.instance.exportDataToCsv(userId);
-  }
-
   /// ส่งออก PDF
   Future<String?> exportPdf() async {
     final userId = currentUser?.nUserId ?? 1;
@@ -323,6 +317,19 @@ class ProfileController extends ChangeNotifier {
 
     isLoading = true;
     notifyListeners();
+
+    // 0. ลบไฟล์รูปภาพโปรไฟล์จริงในเครื่อง (ถ้ามี)
+    final profilePath = user.sProfileImagePath;
+    if (profilePath.isNotEmpty && !profilePath.startsWith('http')) {
+      try {
+        final file = File(profilePath);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      } catch (e) {
+        debugPrint('Error deleting local profile picture file: $e');
+      }
+    }
 
     // 1. เรียก API ทำลายข้อมูลบน Server
     await HealthApiService.deleteAccount(userId: user.nUserId, email: user.sEmail);

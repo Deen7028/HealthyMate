@@ -241,31 +241,38 @@ class ProfileHeaderCard extends StatelessWidget {
                   if (hasGoal) ...[
                     const SizedBox(height: 10),
                     // Progress Bar & Percentage
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(6),
-                            child: LinearProgressIndicator(
-                              value: goalProgress.clamp(0.0, 1.0),
-                              minHeight: 7,
-                              backgroundColor: isDark ? Colors.black26 : const Color(0xFFE2E7DF),
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                primaryColor,
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0.0, end: goalProgress.clamp(0.0, 1.0)),
+                      duration: const Duration(milliseconds: 2500),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, animValue, _) {
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: LinearProgressIndicator(
+                                  value: animValue,
+                                  minHeight: 7,
+                                  backgroundColor: isDark ? Colors.black26 : const Color(0xFFE2E7DF),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    primaryColor,
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          '${(goalProgress * 100).toInt()}%',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: isDark ? const Color(0xFFB0BEB3) : const Color(0xFF5A6559),
-                          ),
-                        ),
-                      ],
+                            const SizedBox(width: 12),
+                            Text(
+                              '${(animValue * 100).toInt()}%',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: isDark ? const Color(0xFFB0BEB3) : const Color(0xFF5A6559),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                     if (goalRemainingText.isNotEmpty) ...[
                       const SizedBox(height: 8),

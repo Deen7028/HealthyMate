@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:healthymate/shared/widgets/fade_slide_entrance.dart';
 import '../widgets/index.dart';
 import '../controllers/dashboard_controller.dart';
 
@@ -94,9 +95,9 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
           backgroundColor: lightBg,
           body: SafeArea(
             child: RefreshIndicator(
-              color: primaryGreen,
-              onRefresh: _controller.loadDashboardData,
-              child: SingleChildScrollView(
+                color: primaryGreen,
+                onRefresh: _controller.loadDashboardData,
+                child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -104,70 +105,85 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // 1. Top Header
-                      DashboardHeader(
-                        userName: _controller.user?.sFirstName ?? 'ผู้ใช้งาน',
-                        profilePath: _controller.user?.sProfileImagePath ?? '',
-                        thaiDayName: _controller.thaiDayName,
-                        weekOfMonth: _controller.weekOfMonth,
-                        greetingText: _controller.getGreeting(),
-                        greetingEmoji: _controller.getGreetingEmoji(),
-                        primaryGreen: primaryGreen,
-                        darkGreen: darkGreen,
+                      FadeSlideEntrance(
+                        delayIndex: 0,
+                        child: DashboardHeader(
+                          userName: _controller.user?.sFirstName ?? 'ผู้ใช้งาน',
+                          profilePath: _controller.user?.sProfileImagePath ?? '',
+                          thaiDayName: _controller.thaiDayName,
+                          weekOfMonth: _controller.weekOfMonth,
+                          greetingText: _controller.getGreeting(),
+                          greetingEmoji: _controller.getGreetingEmoji(),
+                          primaryGreen: primaryGreen,
+                          darkGreen: darkGreen,
+                        ),
                       ),
                       const SizedBox(height: 24),
 
                       // 2. แถบปฏิทินกิจวัตรประจำสัปดาห์ (Calendar Strip)
-                      CalendarStripWidget(
-                        now: _controller.now,
-                        thaiMonthName: _controller.thaiMonthName,
-                        workoutCount: _controller.workoutCount,
-                        totalDistanceKm: _controller.totalDistanceKm,
-                        totalCaloriesBurned: _controller.totalCaloriesBurned,
-                        darkGreen: darkGreen,
+                      FadeSlideEntrance(
+                        delayIndex: 1,
+                        child: CalendarStripWidget(
+                          now: _controller.now,
+                          thaiMonthName: _controller.thaiMonthName,
+                          workoutCount: _controller.workoutCount,
+                          totalDistanceKm: _controller.totalDistanceKm,
+                          totalCaloriesBurned: _controller.totalCaloriesBurned,
+                          darkGreen: darkGreen,
+                        ),
                       ),
                       const SizedBox(height: 20),
 
                       // 3. ข้อมูลสุขภาพส่วนบุคคล (Health Summary Card)
-                      DashboardHealthSummaryCard(
-                        user: _controller.user,
-                        latestRecord: _controller.latestRecord,
-                        now: _controller.now,
-                        totalCaloriesBurned: _controller.totalCaloriesBurned,
-                        onNavigateToCalculator: widget.onNavigateToCalculator,
-                        primaryGreen: primaryGreen,
-                        darkGreen: darkGreen,
+                      FadeSlideEntrance(
+                        delayIndex: 2,
+                        child: DashboardHealthSummaryCard(
+                          user: _controller.user,
+                          latestRecord: _controller.latestRecord,
+                          now: _controller.now,
+                          totalCaloriesBurned: _controller.totalCaloriesBurned,
+                          onNavigateToCalculator: widget.onNavigateToCalculator,
+                          primaryGreen: primaryGreen,
+                          darkGreen: darkGreen,
+                        ),
                       ),
                       const SizedBox(height: 20),
 
                       // 4. เป้าหมายหลักของฉัน (Main Goal Card)
-                      MainGoalCard(
-                        controller: _controller,
-                        onNavigateToPractice: widget.onNavigateToPractice,
+                      FadeSlideEntrance(
+                        delayIndex: 3,
+                        child: MainGoalCard(
+                          controller: _controller,
+                          onNavigateToPractice: widget.onNavigateToPractice,
+                        ),
                       ),
                       const SizedBox(height: 20),
 
                       // 5. ปุ่มลัดเริ่มออกกำลังกาย
-                      DashboardActionButtons(
-                        userGoal: _controller.userGoal,
-                        onStartWorkout: _handleStartWorkout,
-                        onNavigateToWorkout: widget.onNavigateToWorkout,
-                        darkGreen: darkGreen,
+                      FadeSlideEntrance(
+                        delayIndex: 4,
+                        child: DashboardActionButtons(
+                          userGoal: _controller.userGoal,
+                          onStartWorkout: _handleStartWorkout,
+                          onNavigateToWorkout: widget.onNavigateToWorkout,
+                          darkGreen: darkGreen,
+                        ),
                       ),
                       const SizedBox(height: 20),
 
                       // 6. เป้าหมายอื่นๆ (Other Goals & Routines)
-                      DashboardOtherGoalsCard(
-                        userGoal: _controller.userGoal,
-                        routines: _controller.routines,
-                        todayCompletionMap: _controller.todayCompletionMap,
-                        todayWorkoutStats: _controller.todayWorkoutStats,
-                        now: _controller.now,
-                        darkGreen: darkGreen,
-                        lightBg: lightBg,
-                        onNavigateToPractice: widget.onNavigateToPractice,
-                        onRoutineToggled: (routineId, isDone) {
-                          _controller.toggleRoutineCompletion(routineId, isDone);
-                        },
+                      FadeSlideEntrance(
+                        delayIndex: 5,
+                        child: DashboardOtherGoalsCard(
+                          userGoal: _controller.userGoal,
+                          routines: _controller.routines,
+                          todayCompletionMap: _controller.todayCompletionMap,
+                          todayWorkoutStats: _controller.todayWorkoutStats,
+                          now: _controller.now,
+                          darkGreen: darkGreen,
+                          lightBg: lightBg,
+                          onNavigateToPractice: widget.onNavigateToPractice,
+                        ),
                       ),
                       const SizedBox(height: 40),
                     ],

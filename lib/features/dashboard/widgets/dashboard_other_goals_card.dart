@@ -1,6 +1,4 @@
-// ignore_for_file: non_const_argument_for_const_parameter
 import 'package:flutter/material.dart';
-import 'package:healthymate/core/database/app_database.dart';
 import '../utils/dashboard_ui_helpers.dart';
 
 class DashboardOtherGoalsCard extends StatelessWidget {
@@ -12,7 +10,6 @@ class DashboardOtherGoalsCard extends StatelessWidget {
   final Color darkGreen;
   final Color lightBg;
   final VoidCallback? onNavigateToPractice;
-  final Function(int routineId, bool isDone)? onRoutineToggled;
 
   const DashboardOtherGoalsCard({
     super.key,
@@ -24,7 +21,6 @@ class DashboardOtherGoalsCard extends StatelessWidget {
     required this.darkGreen,
     required this.lightBg,
     this.onNavigateToPractice,
-    this.onRoutineToggled,
   });
 
   String _formatNum(double val) =>
@@ -64,35 +60,39 @@ class DashboardOtherGoalsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  const Icon(
-                    Icons.format_list_bulleted_rounded,
-                    color: Colors.blueGrey,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    otherRoutines.isNotEmpty
-                        ? 'เป้าหมายอื่นๆ (${otherRoutines.length})'
-                        : 'เป้าหมายอื่นๆ',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+          InkWell(
+            onTap: onNavigateToPractice,
+            borderRadius: BorderRadius.circular(8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.format_list_bulleted_rounded,
+                      color: Colors.blueGrey,
                     ),
-                  ),
-                ],
-              ),
-              TextButton(
-                onPressed: onNavigateToPractice,
-                child: const Text(
-                  'ดูทั้งหมด >',
-                  style: TextStyle(fontSize: 12),
+                    const SizedBox(width: 8),
+                    Text(
+                      otherRoutines.isNotEmpty
+                          ? 'เป้าหมายอื่นๆ (${otherRoutines.length})'
+                          : 'เป้าหมายอื่นๆ',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
+                TextButton(
+                  onPressed: onNavigateToPractice,
+                  child: const Text(
+                    'ดูทั้งหมด >',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 8),
 
@@ -101,7 +101,7 @@ class DashboardOtherGoalsCard extends StatelessWidget {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: otherRoutines.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 12),
+              separatorBuilder: (context, index) => const Divider(height: 12, thickness: 0.5),
               itemBuilder: (context, index) {
                 final routine = otherRoutines[index];
                 final rId = (routine['nRoutineId'] as num?)?.toInt() ?? 0;
@@ -150,177 +150,80 @@ class DashboardOtherGoalsCard extends StatelessWidget {
                         ? targetVal
                         : ((routine['currentValue'] as num?)?.toDouble() ??
                             0.0));
-                final progress = targetVal > 0
-                    ? (currentVal / targetVal).clamp(0.0, 1.0)
-                    : 0.0;
 
-                return Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: isDone
-                        ? Colors.green.shade50.withValues(alpha: 0.5)
-                        : lightBg,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: isDone
-                          ? Colors.green.shade200
-                          : Colors.grey.shade200,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: isDone
-                                  ? Colors.green.withValues(alpha: 0.2)
-                                  : color.withValues(alpha: 0.15),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              isDone ? Icons.check_circle : icon,
-                              color: isDone ? Colors.green.shade700 : color,
-                              size: 18,
-                            ),
+                return InkWell(
+                  onTap: onNavigateToPractice,
+                  borderRadius: BorderRadius.circular(10),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                    child: Row(
+                      children: [
+                        // 1. ไอคอน
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: isDone
+                                ? Colors.green.withValues(alpha: 0.15)
+                                : color.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  title,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                    color: isDone
-                                        ? Colors.grey.shade600
-                                        : const Color(0xFF1E293B),
-                                    decoration: isDone
-                                        ? TextDecoration.lineThrough
-                                        : null,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '${_formatNum(currentVal)} / ${_formatNum(targetVal)} $unitText',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          InkWell(
-                            onTap: () async {
-                              final messenger = ScaffoldMessenger.of(context);
-                              final updatedState = await AppDatabase.instance
-                                  .toggleRoutineLog(
-                                routineId: rId,
-                                dateStr:
-                                    '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}',
-                              );
-                              if (onRoutineToggled != null) {
-                                onRoutineToggled!(rId, updatedState);
-                              }
-                              messenger.hideCurrentSnackBar();
-                              messenger.showSnackBar(
-                                SnackBar(
-                                  content: Row(
-                                    children: [
-                                      Icon(
-                                        updatedState
-                                            ? Icons.check_circle
-                                            : Icons.refresh,
-                                        color: Colors.white,
-                                        size: 18,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          updatedState
-                                              ? 'เช็คทำรายการ "$title" เรียบร้อยแล้ว! 🎉'
-                                              : 'ยกเลิกการเช็ค "$title" แล้ว',
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  backgroundColor: updatedState
-                                      ? darkGreen
-                                      : Colors.grey.shade800,
-                                  duration: const Duration(seconds: 2),
-                                  behavior: SnackBarBehavior.floating,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
-                              );
-                            },
-                            borderRadius: BorderRadius.circular(20),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 5,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isDone
-                                    ? Colors.green.shade100
-                                    : color.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: isDone
-                                      ? Colors.green.shade300
-                                      : color.withValues(alpha: 0.3),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    isDone
-                                        ? Icons.check_circle_rounded
-                                        : Icons.check_circle_outline_rounded,
-                                    size: 14,
-                                    color: isDone
-                                        ? Colors.green.shade800
-                                        : color,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    isDone ? 'สำเร็จแล้ว' : 'ทำรายการ',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: isDone
-                                          ? Colors.green.shade800
-                                          : color,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: progress,
-                          minHeight: 6,
-                          backgroundColor: Colors.grey.shade200,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            isDone ? Colors.green : color,
+                          child: Icon(
+                            isDone ? Icons.check_circle_rounded : icon,
+                            color: isDone ? Colors.green.shade700 : color,
+                            size: 20,
                           ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 14),
+
+                        // 2. ชื่อกิจวัตรและสถานะแบบตัวหนังสือ (คลีนๆ)
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                title,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                  color: isDone ? Colors.grey.shade500 : const Color(0xFF1E293B),
+                                  decoration: isDone ? TextDecoration.lineThrough : null,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                isDone
+                                    ? 'ทำสำเร็จแล้ววันนี้'
+                                    : 'ความคืบหน้า: ${_formatNum(currentVal)} / ${_formatNum(targetVal)} $unitText',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDone ? Colors.green.shade600 : Colors.grey.shade500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // 3. ป้ายกำกับสถานะ (Badge เล็กๆ แทนหลอด Progress ใหญ่ๆ)
+                        if (!isDone)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              'รอทำรายการ',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.orange.shade700,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 );
               },

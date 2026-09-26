@@ -109,13 +109,24 @@ class _OtpVerificationDialogState extends State<OtpVerificationDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryGreen.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.mark_email_read_outlined, color: AppTheme.primaryGreen, size: 36),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const SizedBox(width: 24),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryGreen.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.mark_email_read_outlined, color: AppTheme.primaryGreen, size: 36),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, color: AppTheme.textTertiary),
+                  onPressed: () => Navigator.of(context).pop(),
+                  tooltip: 'ปิดหน้านี้',
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             const Text(
@@ -166,6 +177,18 @@ class _OtpVerificationDialogState extends State<OtpVerificationDialog> {
                 style: TextStyle(
                   color: _nCountdown > 0 ? AppTheme.textTertiary : AppTheme.primaryGreen,
                   fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            TextButton.icon(
+              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(Icons.edit_note_rounded, size: 18, color: AppTheme.primaryGreen),
+              label: const Text(
+                'เปลี่ยนที่อยู่อีเมล (Change Email)',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.primaryGreen,
                 ),
               ),
             ),

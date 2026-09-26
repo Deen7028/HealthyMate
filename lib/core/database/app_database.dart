@@ -75,7 +75,7 @@ class AppDatabase {
 
     return await openDatabase(
       path,
-      version: 9,
+      version: 11,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -191,6 +191,20 @@ class AppDatabase {
         await db.execute('ALTER TABLE TbGoals ADD COLUMN nRoutineId INTEGER DEFAULT 0');
       } catch (_) {}
     }
+    if (oldVersion < 10) {
+      try {
+        await db.execute('ALTER TABLE $tableRoutineLogs ADD COLUMN nProgressValue REAL DEFAULT 0.0');
+      } catch (e) {
+        debugPrint('AppDatabase: Migration v10 (nProgressValue): $e');
+      }
+    }
+    if (oldVersion < 11) {
+      try {
+        await db.execute('ALTER TABLE $tableSession ADD COLUMN sAuthToken TEXT DEFAULT ""');
+      } catch (e) {
+        debugPrint('AppDatabase: Migration v11 (sAuthToken): $e');
+      }
+    }
   }
 
   /// สร้าง Table Schema ทั้งหมดตาม 6620310001_HealthMateDB.sql
@@ -241,6 +255,7 @@ class AppDatabase {
         nSessionId INTEGER PRIMARY KEY DEFAULT 1,
         isLoggedIn INTEGER DEFAULT 0,
         sEmail TEXT,
+        sAuthToken TEXT DEFAULT "",
         dtUpdatedAt TEXT
       );
     ''');
@@ -323,6 +338,7 @@ class AppDatabase {
         nLogId INTEGER PRIMARY KEY AUTOINCREMENT,
         nRoutineId INTEGER NOT NULL,
         isCompleted INTEGER DEFAULT 0,
+        nProgressValue REAL DEFAULT 0.0,
         dtLogDate TEXT NOT NULL,
         FOREIGN KEY (nRoutineId) REFERENCES $tableRoutines (nRoutineId) ON DELETE CASCADE
       );
@@ -855,12 +871,13 @@ class AppDatabase {
   }
 
   /// บันทึกสถานะการล็อกอิน
-  Future<void> setLoginStatus(bool isLoggedIn, {String? email}) async {
+  Future<void> setLoginStatus(bool isLoggedIn, {String? email, String? token}) async {
     if (kIsWeb) {
       _webSession = {
         'nSessionId': 1,
         'isLoggedIn': isLoggedIn,
         'sEmail': email ?? '',
+        'sAuthToken': token ?? _webSession?['sAuthToken'] ?? '',
         'dtUpdatedAt': DateTime.now().toIso8601String(),
       };
       return;
@@ -868,12 +885,40 @@ class AppDatabase {
 
     final db = await database;
     if (db == null) return;
-    await db.insert(tableSession, {
+    
+    final Map<String, dynamic> data = {
       'nSessionId': 1,
       'isLoggedIn': isLoggedIn ? 1 : 0,
       'sEmail': email ?? '',
       'dtUpdatedAt': DateTime.now().toIso8601String(),
-    }, conflictAlgorithm: ConflictAlgorithm.replace);
+    };
+    if (token != null) {
+      data['sAuthToken'] = token;
+    } else {
+      final existing = await getAuthToken();
+      if (existing != null && existing.isNotEmpty) {
+        data['sAuthToken'] = existing;
+      }
+    }
+
+    await db.insert(tableSession, data, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  /// ดึง Auth Token ล่าสุด
+  Future<String?> getAuthToken() async {
+    if (kIsWeb) {
+      return _webSession?['sAuthToken']?.toString();
+    }
+    final db = await database;
+    if (db == null) return null;
+    try {
+      final maps = await db.query(tableSession, where: 'nSessionId = 1');
+      if (maps.isNotEmpty) {
+        final token = maps.first['sAuthToken']?.toString();
+        if (token != null && token.isNotEmpty) return token;
+      }
+    } catch (_) {}
+    return null;
   }
 
   /// ตรวจสอบการเข้าสู่ระบบ (รองรับทั้ง Salted Hash ใหม่ และ Legacy SHA-256 เดิม)
@@ -1576,7 +1621,7 @@ class AppDatabase {
     required int routineId,
     required String dateStr,
     required bool isCompleted,
-    int? progressValue,
+    num? progressValue,
   }) async {
     if (kIsWeb) return;
     final db = await database;

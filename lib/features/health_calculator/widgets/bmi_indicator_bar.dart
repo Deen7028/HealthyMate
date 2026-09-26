@@ -30,12 +30,14 @@ class BMIIndicatorBar extends StatelessWidget {
             final isLast = index == 3;
 
             return Expanded(
-              child: Container(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 400),
+                curve: Curves.easeOutBack,
                 margin: EdgeInsets.only(
                   left: isFirst ? 0 : 2.5,
                   right: isLast ? 0 : 2.5,
                 ),
-                height: isActive ? 8 : 6,
+                height: isActive ? 10 : 6,
                 decoration: BoxDecoration(
                   color: segments[index].withValues(alpha: isActive ? 1.0 : 0.45),
                   borderRadius: BorderRadius.horizontal(
@@ -46,8 +48,8 @@ class BMIIndicatorBar extends StatelessWidget {
                       ? [
                           BoxShadow(
                             color: segments[index].withValues(alpha: 0.35),
-                            blurRadius: 4,
-                            offset: const Offset(0, 1),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
                           ),
                         ]
                       : null,
