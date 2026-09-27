@@ -10,8 +10,11 @@ class DashboardController extends ChangeNotifier {
   bool isLoading = true;
   TbUser? user;
   TbHealthRecord? latestRecord;
+  List<TbHealthRecord> healthRecords = [];
   int workoutCount = 0;
   double totalDistanceKm = 0.0;
+  double totalRunningDistanceKm = 0.0;
+  double totalCyclingDistanceKm = 0.0;
   double totalCaloriesBurned = 0.0;
   int totalWorkoutDurationSec = 0;
   int todayNutritionCalories = 0;
@@ -40,17 +43,31 @@ class DashboardController extends ChangeNotifier {
 
       final userId = user!.nUserId;
       final records = await db.getHealthRecords(userId: userId);
+      healthRecords = records;
       latestRecord = records.isNotEmpty ? records.first : null;
 
       final workouts = await db.getWorkouts(userId: userId);
       workoutCount = workouts.length;
       totalDistanceKm = 0.0;
+      totalRunningDistanceKm = 0.0;
+      totalCyclingDistanceKm = 0.0;
       totalCaloriesBurned = 0.0;
       totalWorkoutDurationSec = 0;
       for (final w in workouts) {
-        totalDistanceKm += (w['nDistance'] as num?)?.toDouble() ?? 0.0;
-        totalCaloriesBurned += (w['nCaloriesBurned'] as num?)?.toDouble() ?? 0.0;
-        totalWorkoutDurationSec += (w['nDuration'] as num?)?.toInt() ?? 0;
+        final dist = (w['nDistance'] as num?)?.toDouble() ?? 0.0;
+        final cals = (w['nCaloriesBurned'] as num?)?.toDouble() ?? 0.0;
+        final dur = (w['nDuration'] as num?)?.toInt() ?? 0;
+        final type = (w['sType']?.toString() ?? '').toLowerCase();
+
+        totalDistanceKm += dist;
+        totalCaloriesBurned += cals;
+        totalWorkoutDurationSec += dur;
+
+        if (type.contains('วิ่ง') || type.contains('running')) {
+          totalRunningDistanceKm += dist;
+        } else if (type.contains('ปั่น') || type.contains('จักรยาน') || type.contains('cycling')) {
+          totalCyclingDistanceKm += dist;
+        }
       }
 
       final nutritionToday = await db.getNutritionLogsToday(userId);

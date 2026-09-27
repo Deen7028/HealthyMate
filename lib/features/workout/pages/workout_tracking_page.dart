@@ -41,8 +41,14 @@ class _WorkoutTrackingPageState extends State<WorkoutTrackingPage>
   void initState() {
     super.initState();
     _state = WorkoutTrackingController();
-    if (widget.initialCategory != null && widget.initialCategory!.isNotEmpty) {
+    if (widget.initialCategory != null &&
+        widget.initialCategory!.isNotEmpty &&
+        widget.initialCategory != 'selectingCategory' &&
+        widget.initialCategory != 'all' &&
+        widget.initialCategory != 'selection') {
       _state.selectCategoryByName(widget.initialCategory);
+    } else {
+      _state.returnToCategorySelection();
     }
     _pulseController = AnimationController(
       vsync: this,
@@ -56,10 +62,19 @@ class _WorkoutTrackingPageState extends State<WorkoutTrackingPage>
   @override
   void didUpdateWidget(covariant WorkoutTrackingPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.initialCategory != oldWidget.initialCategory &&
-        widget.initialCategory != null &&
-        widget.initialCategory!.isNotEmpty) {
-      _state.selectCategoryByName(widget.initialCategory);
+    if (widget.initialCategory != oldWidget.initialCategory ||
+        (widget.isActive && !oldWidget.isActive)) {
+      if (widget.initialCategory != null &&
+          widget.initialCategory!.isNotEmpty &&
+          widget.initialCategory != 'selectingCategory' &&
+          widget.initialCategory != 'all' &&
+          widget.initialCategory != 'selection') {
+        _state.selectCategoryByName(widget.initialCategory);
+      } else if (widget.initialCategory == 'selectingCategory' ||
+          widget.initialCategory == 'all' ||
+          widget.initialCategory == 'selection') {
+        _state.returnToCategorySelection();
+      }
     }
   }
 

@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:healthymate/shared/widgets/sync_status_badge.dart';
 
@@ -8,6 +10,7 @@ class DashboardHeader extends StatelessWidget {
   final int weekOfMonth;
   final String greetingText;
   final String greetingEmoji;
+  final VoidCallback? onProfileTap;
   final Color primaryGreen;
   final Color darkGreen;
 
@@ -19,12 +22,33 @@ class DashboardHeader extends StatelessWidget {
     required this.weekOfMonth,
     required this.greetingText,
     required this.greetingEmoji,
+    this.onProfileTap,
     this.primaryGreen = const Color(0xFF0F9C58),
     this.darkGreen = const Color(0xFF006432),
   });
 
+  ImageProvider? _getImageProvider(String path) {
+    if (path.isEmpty) return null;
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return NetworkImage(path);
+    }
+    if (!kIsWeb) {
+      try {
+        final file = File(path);
+        if (file.existsSync()) {
+          return FileImage(file);
+        }
+      } catch (e) {
+        debugPrint('DashboardHeader image load error: $e');
+      }
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final imageProvider = _getImageProvider(profilePath);
+
     return Padding(
       padding: const EdgeInsets.only(top: 16.0),
       child: Column(
@@ -35,26 +59,25 @@ class DashboardHeader extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundColor: primaryGreen.withValues(alpha: 0.2),
-                    backgroundImage: profilePath.isNotEmpty
-                        ? (profilePath.startsWith('http')
-                              ? NetworkImage(profilePath)
-                              : null)
-                        : null,
-                    child: profilePath.isEmpty
-                        ? Text(
-                            userName.isNotEmpty
-                                ? userName[0].toUpperCase()
-                                : '?',
-                            style: TextStyle(
-                              color: darkGreen,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                            ),
-                          )
-                        : null,
+                  GestureDetector(
+                    onTap: onProfileTap,
+                    child: CircleAvatar(
+                      radius: 20,
+                      backgroundColor: primaryGreen.withValues(alpha: 0.2),
+                      backgroundImage: imageProvider,
+                      child: imageProvider == null
+                          ? Text(
+                              userName.isNotEmpty
+                                  ? userName[0].toUpperCase()
+                                  : '?',
+                              style: TextStyle(
+                                color: darkGreen,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                            )
+                          : null,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Column(

@@ -4,6 +4,7 @@ import 'package:healthymate/core/services/api_service.dart';
 import 'package:healthymate/core/services/auth_service.dart';
 import 'package:healthymate/core/services/sync_service.dart';
 import 'package:healthymate/core/utils/health_calculator.dart';
+import 'package:healthymate/core/services/routine_state_notifier.dart';
 import 'package:healthymate/features/health_calculator/models/activity_level.dart';
 import 'package:healthymate/features/health_calculator/models/health_record_model.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
@@ -273,6 +274,7 @@ class HealthCalculatorController extends ChangeNotifier {
     await calculate(recordHistory: true, syncToDb: true);
     _isSyncedToDashboard = true;
     _lastSyncedAt = DateTime.now();
+    RoutineStateNotifier.instance.loadData(userId: _currentUser?.nUserId);
     _safeNotifyListeners();
   }
 
@@ -280,6 +282,7 @@ class HealthCalculatorController extends ChangeNotifier {
     try {
       await _db.deleteHealthRecord(recordId);
       _historyList.removeWhere((item) => item.nRecordId == recordId);
+      RoutineStateNotifier.instance.loadData(userId: _currentUser?.nUserId);
       _safeNotifyListeners();
     } catch (e) {
       debugPrint('Error deleting health record from db: $e');

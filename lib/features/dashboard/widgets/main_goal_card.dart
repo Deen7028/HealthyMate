@@ -6,15 +6,16 @@ import 'package:healthymate/features/practice/widgets/add_main_goal_bottom_sheet
 import '../controllers/dashboard_controller.dart';
 import '../utils/dashboard_ui_helpers.dart';
 
-
 class MainGoalCard extends StatelessWidget {
   final DashboardController controller;
   final VoidCallback? onNavigateToPractice;
+  final VoidCallback? onNavigateToCalculator;
 
   const MainGoalCard({
     super.key,
     required this.controller,
     this.onNavigateToPractice,
+    this.onNavigateToCalculator,
   });
 
   DateTime? _getGoalDeadline(
@@ -34,8 +35,9 @@ class MainGoalCard extends StatelessWidget {
     }
 
     final remainingText = goal?['sRemainingText']?.toString() ?? '';
-    final match = RegExp(r'(\d{1,2})/(\d{1,2})/(\d{4})')
-        .firstMatch(remainingText);
+    final match = RegExp(
+      r'(\d{1,2})/(\d{1,2})/(\d{4})',
+    ).firstMatch(remainingText);
     if (match == null) return null;
 
     final day = int.parse(match.group(1)!);
@@ -167,17 +169,86 @@ class MainGoalCard extends StatelessWidget {
       displayDetail =
           'ความคืบหน้าวันนี้: ${controller.formatNum(currentVal)} / ${controller.formatNum(targetVal)} $unitText ($percent%)';
     } else if (hasPinnedGoal) {
-      progress =
-          (userGoal['nProgress'] as num?)?.toDouble().clamp(0.0, 1.0) ?? 0.0;
-      goalColor = const Color(0xFF0F9C58);
-      goalIcon = Icons.flag_rounded;
-      isCompleted = progress >= 1.0;
-
       displayTitle = userGoal['sTitle']?.toString() ?? 'เป้าหมายหลัก';
       final remaining = userGoal['sRemainingText']?.toString() ?? '';
-      displayDetail = remaining.isNotEmpty
-          ? remaining.replaceAll(RegExp(r'\s*\(\s*เหลือ[^)]*\)'), '').trim()
-          : 'ทำสำเร็จแล้ว ${(progress * 100).toInt()}%';
+      final lowerTitle = displayTitle.toLowerCase();
+
+      // ดึง targetVal จาก remainingText (เช่น 'เป้าหมาย: 0 / 3.0 กก.')
+      double targetVal = 0.0;
+      final targetMatch = RegExp(r'/\s*([\d.]+)\s*(\S+)?').firstMatch(remaining);
+      if (targetMatch != null) {
+        targetVal = double.tryParse(targetMatch.group(1) ?? '') ?? 0.0;
+      }
+      if (targetVal <= 0) {
+        targetVal = (userGoal['targetValue'] as num?)?.toDouble() ?? 1.0;
+      }
+
+      double currentVal = 0.0;
+      String unitText = '';
+
+      if (lowerTitle.contains('ลดน้ำหนัก') || lowerTitle.contains('น้ำหนัก')) {
+        goalColor = const Color(0xFF0F9C58);
+        goalIcon = Icons.monitor_weight_outlined;
+        unitText = 'กก.';
+
+        // คำนวณน้ำหนักที่ลดได้จากประวัติสุขภาพ TbHealthRecords
+        if (controller.healthRecords.length >= 2) {
+          final startWeight = controller.healthRecords.last.nWeight;
+          final currentWeight = controller.healthRecords.first.nWeight;
+          final diff = startWeight - currentWeight;
+          currentVal = diff > 0 ? diff : 0.0;
+        } else if (controller.healthRecords.isNotEmpty && controller.user != null) {
+          final currentWeight = controller.healthRecords.first.nWeight;
+          final userWeight = controller.user?.nWeight ?? 0.0;
+          final diff = (userWeight > currentWeight && userWeight > 0)
+              ? (userWeight - currentWeight)
+              : 0.0;
+          currentVal = diff;
+        } else {
+          currentVal = 0.0;
+        }
+
+        progress = targetVal > 0 ? (currentVal / targetVal).clamp(0.0, 1.0) : 0.0;
+        final percent = (progress * 100).toInt();
+        isCompleted = progress >= 1.0;
+        displayDetail = 'ลดน้ำหนักได้: ${controller.formatNum(currentVal)} / ${controller.formatNum(targetVal)} $unitText ($percent%)';
+      } else if (lowerTitle.contains('แคลอรี') || lowerTitle.contains('เผาผลาญ')) {
+        goalColor = const Color(0xFFFF9800);
+        goalIcon = Icons.local_fire_department_rounded;
+        unitText = 'แคล';
+        currentVal = controller.totalCaloriesBurned;
+        progress = targetVal > 0 ? (currentVal / targetVal).clamp(0.0, 1.0) : 0.0;
+        final percent = (progress * 100).toInt();
+        isCompleted = progress >= 1.0;
+        displayDetail = 'เผาผลาญสะสม: ${controller.formatNum(currentVal)} / ${controller.formatNum(targetVal)} $unitText ($percent%)';
+      } else if (lowerTitle.contains('ปั่น') || lowerTitle.contains('จักรยาน')) {
+        goalColor = const Color(0xFF0288D1);
+        goalIcon = Icons.directions_bike;
+        unitText = 'กม.';
+        currentVal = controller.totalCyclingDistanceKm > 0 ? controller.totalCyclingDistanceKm : controller.totalDistanceKm;
+        progress = targetVal > 0 ? (currentVal / targetVal).clamp(0.0, 1.0) : 0.0;
+        final percent = (progress * 100).toInt();
+        isCompleted = progress >= 1.0;
+        displayDetail = 'ปั่นสะสม: ${controller.formatNum(currentVal)} / ${controller.formatNum(targetVal)} $unitText ($percent%)';
+      } else if (lowerTitle.contains('วิ่ง')) {
+        goalColor = const Color(0xFF4CAF50);
+        goalIcon = Icons.directions_run;
+        unitText = 'กม.';
+        currentVal = controller.totalRunningDistanceKm > 0 ? controller.totalRunningDistanceKm : controller.totalDistanceKm;
+        progress = targetVal > 0 ? (currentVal / targetVal).clamp(0.0, 1.0) : 0.0;
+        final percent = (progress * 100).toInt();
+        isCompleted = progress >= 1.0;
+        displayDetail = 'วิ่งสะสม: ${controller.formatNum(currentVal)} / ${controller.formatNum(targetVal)} $unitText ($percent%)';
+      } else {
+        progress =
+            (userGoal['nProgress'] as num?)?.toDouble().clamp(0.0, 1.0) ?? 0.0;
+        goalColor = const Color(0xFF0F9C58);
+        goalIcon = Icons.flag_rounded;
+        isCompleted = progress >= 1.0;
+        displayDetail = remaining.isNotEmpty
+            ? remaining.replaceAll(RegExp(r'\s*\(\s*เหลือ[^)]*\)'), '').trim()
+            : 'ทำสำเร็จแล้ว ${(progress * 100).toInt()}%';
+      }
     } else {
       progress = 0.0;
       goalColor = const Color(0xFF0F9C58);
@@ -187,7 +258,9 @@ class MainGoalCard extends StatelessWidget {
           'เลือกปักหมุดกิจวัตรสำคัญจากหน้ากิจวัตรเพื่อติดตามความคืบหน้า';
     }
 
-    displayDetail = displayDetail.replaceAll(RegExp(r'\s*\(\s*เหลือ[^)]*\)'), '').trim();
+    displayDetail = displayDetail
+        .replaceAll(RegExp(r'\s*\(\s*เหลือ[^)]*\)'), '')
+        .trim();
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -208,18 +281,18 @@ class MainGoalCard extends StatelessWidget {
           ),
         ],
       ),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: goalColor.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(goalIcon, color: goalColor, size: 22),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: goalColor.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
                 ),
+                child: Icon(goalIcon, color: goalColor, size: 22),
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -273,24 +346,35 @@ class MainGoalCard extends StatelessWidget {
               height: 46,
               child: ElevatedButton.icon(
                 onPressed: () async {
-                  final result = await showModalBottomSheet<Map<String, dynamic>>(
-                    context: context,
-                    isScrollControlled: true,
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-                    ),
-                    builder: (context) => const AddMainGoalBottomSheet(),
-                  );
+                  final result =
+                      await showModalBottomSheet<Map<String, dynamic>>(
+                        context: context,
+                        isScrollControlled: true,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(28),
+                          ),
+                        ),
+                        builder: (context) => const AddMainGoalBottomSheet(),
+                      );
                   if (result != null && controller.user != null) {
                     final title = result['title']?.toString() ?? '';
                     final icon = result['icon']?.toString() ?? '🚩';
                     final unit = result['unit']?.toString() ?? '';
-                    final targetVal = (result['targetValue'] as num?)?.toDouble() ?? 1.0;
-                    final deadlineDate = result['deadlineDate'] as DateTime? ?? DateTime.now().add(const Duration(days: 30));
+                    final targetVal =
+                        (result['targetValue'] as num?)?.toDouble() ?? 1.0;
+                    final deadlineDate =
+                        result['deadlineDate'] as DateTime? ??
+                        DateTime.now().add(const Duration(days: 30));
                     final now = DateTime.now();
-                    final remainingDays = deadlineDate.difference(now).inDays.clamp(1, 9999);
-                    final deadlineStr = '${deadlineDate.day.toString().padLeft(2, '0')}/${deadlineDate.month.toString().padLeft(2, '0')}/${deadlineDate.year + 543}';
-                    final remainingText = 'เป้าหมาย: 0 / ${targetVal == targetVal.toInt() ? targetVal.toInt() : targetVal.toStringAsFixed(1)} $unit (เหลือ $remainingDays วัน • สิ้นสุด $deadlineStr)';
+                    final remainingDays = deadlineDate
+                        .difference(now)
+                        .inDays
+                        .clamp(1, 9999);
+                    final deadlineStr =
+                        '${deadlineDate.day.toString().padLeft(2, '0')}/${deadlineDate.month.toString().padLeft(2, '0')}/${deadlineDate.year + 543}';
+                    final remainingText =
+                        'เป้าหมาย: 0 / ${targetVal == targetVal.toInt() ? targetVal.toInt() : targetVal.toStringAsFixed(1)} $unit (เหลือ $remainingDays วัน • สิ้นสุด $deadlineStr)';
 
                     await AppDatabase.instance.saveUserGoal(
                       userId: controller.user!.nUserId,
@@ -299,10 +383,16 @@ class MainGoalCard extends StatelessWidget {
                       progress: 0.0,
                       remainingText: remainingText,
                     );
-                    RoutineStateNotifier.instance.loadData(userId: controller.user!.nUserId);
+                    RoutineStateNotifier.instance.loadData(
+                      userId: controller.user!.nUserId,
+                    );
                   }
                 },
-                icon: const Icon(Icons.add_circle_outline, size: 20, color: Colors.white),
+                icon: const Icon(
+                  Icons.add_circle_outline,
+                  size: 20,
+                  color: Colors.white,
+                ),
                 label: const Text(
                   '+ ตั้งเป้าหมายหลัก (Set Main Goal)',
                   style: TextStyle(
@@ -356,7 +446,6 @@ class MainGoalCard extends StatelessWidget {
               animation: true,
             ),
           ],
-
 
           if (isCompleted) ...[
             const SizedBox(height: 12),

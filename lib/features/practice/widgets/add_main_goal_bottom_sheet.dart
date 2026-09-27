@@ -57,7 +57,7 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
 
   int _selectedTemplateIndex = 0;
   late TextEditingController _targetController;
-  
+
   // Deadline selection: '1_week', '1_month', 'custom'
   String _deadlineType = '1_month';
   DateTime _customDeadlineDate = DateTime.now().add(const Duration(days: 30));
@@ -201,7 +201,11 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
                     color: const Color(0xFFE8F5E9),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.flag_rounded, color: Color(0xFF0F9C58), size: 24),
+                  child: const Icon(
+                    Icons.flag_rounded,
+                    color: Color(0xFF0F9C58),
+                    size: 24,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 const Column(
@@ -228,7 +232,11 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
             // Section 1: Goal Type Selection
             const Text(
               'ส่วนที่ 1: เลือกประเภทความท้าทาย (Goal Type)',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF006432)),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF006432),
+              ),
             ),
             const SizedBox(height: 10),
             GridView.builder(
@@ -250,12 +258,19 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
                   borderRadius: BorderRadius.circular(14),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFFE8F5E9) : Colors.grey.shade50,
+                      color: isSelected
+                          ? const Color(0xFFE8F5E9)
+                          : Colors.grey.shade50,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: isSelected ? const Color(0xFF0F9C58) : Colors.grey.shade200,
+                        color: isSelected
+                            ? const Color(0xFF0F9C58)
+                            : Colors.grey.shade200,
                         width: isSelected ? 2.0 : 1.0,
                       ),
                     ),
@@ -268,8 +283,12 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
                             t.title,
                             style: TextStyle(
                               fontSize: 12,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                              color: isSelected ? const Color(0xFF006432) : Colors.black87,
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                              color: isSelected
+                                  ? const Color(0xFF006432)
+                                  : Colors.black87,
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -286,7 +305,11 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
             // Section 2: Target & Unit
             const Text(
               'ส่วนที่ 2: กำหนดเส้นชัย (Target & Unit)',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF006432)),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF006432),
+              ),
             ),
             const SizedBox(height: 10),
             Row(
@@ -294,11 +317,16 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
                 Expanded(
                   child: TextField(
                     controller: _targetController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     decoration: InputDecoration(
                       labelText: 'ตัวเลขเป้าหมาย',
                       hintText: 'เช่น 50',
-                      prefixIcon: const Icon(Icons.track_changes, color: Color(0xFF0F9C58)),
+                      prefixIcon: const Icon(
+                        Icons.track_changes,
+                        color: Color(0xFF0F9C58),
+                      ),
                       filled: true,
                       fillColor: Colors.grey.shade50,
                       border: OutlineInputBorder(
@@ -311,18 +339,26 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: Color(0xFF0F9C58), width: 2),
+                        borderSide: const BorderSide(
+                          color: Color(0xFF0F9C58),
+                          width: 2,
+                        ),
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFE8F5E9),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFF0F9C58).withValues(alpha: 0.3)),
+                    border: Border.all(
+                      color: const Color(0xFF0F9C58).withValues(alpha: 0.3),
+                    ),
                   ),
                   child: Text(
                     selectedTemplate.defaultUnit,
@@ -340,7 +376,11 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
             // Section 3: Deadline Selection
             const Text(
               'ส่วนที่ 3: กำหนดเส้นตาย (Deadline)',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF006432)),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF006432),
+              ),
             ),
             const SizedBox(height: 10),
             Row(

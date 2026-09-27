@@ -44,8 +44,9 @@ class DashboardMainGoalCard extends StatelessWidget {
     }
 
     final remainingText = goal?['sRemainingText']?.toString() ?? '';
-    final match = RegExp(r'(\d{1,2})/(\d{1,2})/(\d{4})')
-        .firstMatch(remainingText);
+    final match = RegExp(
+      r'(\d{1,2})/(\d{1,2})/(\d{4})',
+    ).firstMatch(remainingText);
     if (match == null) return null;
 
     final day = int.parse(match.group(1)!);
@@ -230,17 +231,38 @@ class DashboardMainGoalCard extends StatelessWidget {
       displayDetail =
           'ความคืบหน้าวันนี้: ${_formatNum(currentVal)} / ${_formatNum(targetVal)} $unitText ($percent%)';
     } else if (hasPinnedGoal) {
-      progress =
-          (userGoal!['nProgress'] as num?)?.toDouble().clamp(0.0, 1.0) ?? 0.0;
-      goalColor = primaryGreen;
-      goalIcon = Icons.flag_rounded;
-      isCompleted = progress >= 1.0;
-
       displayTitle = userGoal!['sTitle']?.toString() ?? 'เป้าหมายหลัก';
       final remaining = userGoal!['sRemainingText']?.toString() ?? '';
-      displayDetail = remaining.isNotEmpty
-          ? remaining.replaceAll(RegExp(r'\s*\(\s*เหลือ[^)]*\)'), '').trim()
-          : 'ทำสำเร็จแล้ว ${(progress * 100).toInt()}%';
+      final lowerTitle = displayTitle.toLowerCase();
+
+      double targetVal = 0.0;
+      final targetMatch = RegExp(r'/\s*([\d.]+)\s*(\S+)?').firstMatch(remaining);
+      if (targetMatch != null) {
+        targetVal = double.tryParse(targetMatch.group(1) ?? '') ?? 0.0;
+      }
+      if (targetVal <= 0) {
+        targetVal = (userGoal!['targetValue'] as num?)?.toDouble() ?? 1.0;
+      }
+
+      if (lowerTitle.contains('ลดน้ำหนัก') || lowerTitle.contains('น้ำหนัก')) {
+        goalColor = primaryGreen;
+        goalIcon = Icons.monitor_weight_outlined;
+        progress = (userGoal!['nProgress'] as num?)?.toDouble().clamp(0.0, 1.0) ?? 0.0;
+        final percent = (progress * 100).toInt();
+        isCompleted = progress >= 1.0;
+        displayDetail = remaining.isNotEmpty
+            ? remaining.replaceAll(RegExp(r'\s*\(\s*เหลือ[^)]*\)'), '').trim()
+            : 'ทำสำเร็จแล้ว $percent%';
+      } else {
+        progress =
+            (userGoal!['nProgress'] as num?)?.toDouble().clamp(0.0, 1.0) ?? 0.0;
+        goalColor = primaryGreen;
+        goalIcon = Icons.flag_rounded;
+        isCompleted = progress >= 1.0;
+        displayDetail = remaining.isNotEmpty
+            ? remaining.replaceAll(RegExp(r'\s*\(\s*เหลือ[^)]*\)'), '').trim()
+            : 'ทำสำเร็จแล้ว ${(progress * 100).toInt()}%';
+      }
     } else {
       progress = 0.0;
       goalColor = primaryGreen;
@@ -250,7 +272,9 @@ class DashboardMainGoalCard extends StatelessWidget {
           'เลือกปักหมุดกิจวัตรสำคัญจากหน้ากิจวัตรเพื่อติดตามความคืบหน้า';
     }
 
-    displayDetail = displayDetail.replaceAll(RegExp(r'\s*\(\s*เหลือ[^)]*\)'), '').trim();
+    displayDetail = displayDetail
+        .replaceAll(RegExp(r'\s*\(\s*เหลือ[^)]*\)'), '')
+        .trim();
 
     final deadline = _getGoalDeadline(userGoal, pinnedRoutine);
     final today = DateTime(now.year, now.month, now.day);

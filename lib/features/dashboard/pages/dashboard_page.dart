@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/services/routine_state_notifier.dart';
 import 'package:healthymate/shared/widgets/fade_slide_entrance.dart';
+import 'package:healthymate/core/database/app_database.dart';
+import 'package:healthymate/features/practice/widgets/add_main_goal_bottom_sheet.dart';
 import '../widgets/index.dart';
 import '../controllers/dashboard_controller.dart';
 
@@ -8,7 +10,8 @@ class DashboardPageUpdated extends StatefulWidget {
   final bool isActive;
   final VoidCallback? onNavigateToCalculator;
   final VoidCallback? onNavigateToPractice;
-  final VoidCallback? onNavigateToWorkout;
+  final VoidCallback? onNavigateToProfile;
+  final Function(String? workoutCategory)? onNavigateToWorkout;
   final VoidCallback? onStartWorkout;
 
   const DashboardPageUpdated({
@@ -16,6 +19,7 @@ class DashboardPageUpdated extends StatefulWidget {
     this.isActive = true,
     this.onNavigateToCalculator,
     this.onNavigateToPractice,
+    this.onNavigateToProfile,
     this.onNavigateToWorkout,
     this.onStartWorkout,
   });
@@ -60,9 +64,37 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
     super.dispose();
   }
 
-  void _handleStartWorkout() {
+  void _handleStartWorkout([String? category]) {
+    final pinnedTitle = _controller.userGoal?['sTitle']?.toString() ?? '';
+    final lower = pinnedTitle.toLowerCase();
+    if (lower.contains('น้ำหนัก') || lower.contains('ลดน้ำหนัก')) {
+      if (widget.onNavigateToCalculator != null) {
+        widget.onNavigateToCalculator!();
+        return;
+      }
+    }
+
+    String? targetCategory = category;
+    if (targetCategory == null && pinnedTitle.isNotEmpty) {
+      if (lower.contains('จักรยาน') || lower.contains('ปั่น')) {
+        targetCategory = 'cycling';
+      } else if (lower.contains('แคลอรี') || lower.contains('เผาผลาญ')) {
+        targetCategory = 'selectingCategory';
+      } else if (lower.contains('สมาธิ') || lower.contains('ฝึกสติ')) {
+        targetCategory = 'meditation';
+      } else if (lower.contains('โยคะ')) {
+        targetCategory = 'yoga';
+      } else if (lower.contains('เดิน')) {
+        targetCategory = 'walking';
+      } else if (lower.contains('วิ่ง')) {
+        targetCategory = 'running';
+      } else {
+        targetCategory = 'selectingCategory';
+      }
+    }
+
     if (widget.onNavigateToWorkout != null) {
-      widget.onNavigateToWorkout!();
+      widget.onNavigateToWorkout!(targetCategory);
     } else if (widget.onStartWorkout != null) {
       widget.onStartWorkout!();
     } else {
@@ -73,6 +105,46 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
           behavior: SnackBarBehavior.floating,
         ),
       );
+    }
+  }
+
+  Future<void> _openAddMainGoalBottomSheet() async {
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (context) => const AddMainGoalBottomSheet(),
+    );
+
+    if (result != null && _controller.user != null) {
+      final title = result['title']?.toString() ?? '';
+      final icon = result['icon']?.toString() ?? '🚩';
+      final unit = result['unit']?.toString() ?? '';
+      final targetVal = (result['targetValue'] as num?)?.toDouble() ?? 1.0;
+      final deadlineDate = result['deadlineDate'] as DateTime? ?? DateTime.now().add(const Duration(days: 30));
+      final now = DateTime.now();
+      final remainingDays = deadlineDate.difference(now).inDays.clamp(1, 9999);
+      final deadlineStr = '${deadlineDate.day.toString().padLeft(2, '0')}/${deadlineDate.month.toString().padLeft(2, '0')}/${deadlineDate.year + 543}';
+      final remainingText = 'เป้าหมาย: 0 / ${targetVal == targetVal.toInt() ? targetVal.toInt() : targetVal.toStringAsFixed(1)} $unit (เหลือ $remainingDays วัน • สิ้นสุด $deadlineStr)';
+
+      await AppDatabase.instance.saveUserGoal(
+        userId: _controller.user!.nUserId,
+        nRoutineId: 0,
+        title: '$icon $title',
+        progress: 0.0,
+        remainingText: remainingText,
+      );
+      RoutineStateNotifier.instance.loadData(userId: _controller.user!.nUserId);
+
+      final isWeightGoal = (result['isWeightGoal'] as bool?) == true ||
+          title.contains('ลดน้ำหนัก') ||
+          (result['linkedWorkout']?.toString() ?? '') == 'น้ำหนัก';
+
+      if (isWeightGoal && widget.onNavigateToCalculator != null) {
+        widget.onNavigateToCalculator!();
+      }
     }
   }
 
@@ -104,9 +176,9 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
           backgroundColor: lightBg,
           body: SafeArea(
             child: RefreshIndicator(
-                color: primaryGreen,
-                onRefresh: _controller.loadDashboardData,
-                child: SingleChildScrollView(
+              color: primaryGreen,
+              onRefresh: _controller.loadDashboardData,
+              child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -118,11 +190,13 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                         delayIndex: 0,
                         child: DashboardHeader(
                           userName: _controller.user?.sFirstName ?? 'ผู้ใช้งาน',
-                          profilePath: _controller.user?.sProfileImagePath ?? '',
+                          profilePath:
+                              _controller.user?.sProfileImagePath ?? '',
                           thaiDayName: _controller.thaiDayName,
                           weekOfMonth: _controller.weekOfMonth,
                           greetingText: _controller.getGreeting(),
                           greetingEmoji: _controller.getGreetingEmoji(),
+                          onProfileTap: widget.onNavigateToProfile,
                           primaryGreen: primaryGreen,
                           darkGreen: darkGreen,
                         ),
@@ -164,6 +238,7 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                         child: MainGoalCard(
                           controller: _controller,
                           onNavigateToPractice: widget.onNavigateToPractice,
+                          onNavigateToCalculator: widget.onNavigateToCalculator,
                         ),
                       ),
                       const SizedBox(height: 20),
@@ -175,6 +250,8 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                           userGoal: _controller.userGoal,
                           onStartWorkout: _handleStartWorkout,
                           onNavigateToWorkout: widget.onNavigateToWorkout,
+                          onNavigateToCalculator: widget.onNavigateToCalculator,
+                          onOpenAddMainGoal: _openAddMainGoalBottomSheet,
                           darkGreen: darkGreen,
                         ),
                       ),
@@ -194,7 +271,6 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                           lightBg: lightBg,
                           onNavigateToPractice: widget.onNavigateToPractice,
                         ),
-
                       ),
                       const SizedBox(height: 40),
                     ],

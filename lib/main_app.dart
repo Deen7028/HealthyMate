@@ -30,9 +30,7 @@ class _MainAppShellState extends State<MainAppShell> {
   void _onTabTapped(int index, [String? category]) {
     setState(() {
       _currentIndex = index;
-      if (category != null) {
-        _selectedWorkoutCategory = category;
-      }
+      _selectedWorkoutCategory = category;
     });
   }
 
@@ -49,7 +47,8 @@ class _MainAppShellState extends State<MainAppShell> {
             isActive: _currentIndex == 0,
             onNavigateToCalculator: () => _onTabTapped(2),
             onNavigateToPractice: () => _onTabTapped(3),
-            onNavigateToWorkout: () => _onTabTapped(1),
+            onNavigateToProfile: () => _onTabTapped(4),
+            onNavigateToWorkout: (category) => _onTabTapped(1, category),
           ),
           // 1: Workout (ออกกำลังกาย)
           WorkoutTrackingPage(
@@ -78,9 +77,7 @@ class _MainAppShellState extends State<MainAppShell> {
       // ซ่อนปุ่มเมื่อคีย์บอร์ดถูกเปิดขึ้นมา เพื่อไม่ให้ปุ่มลอยขึ้นมาทับช่องกรอกข้อมูล
       floatingActionButton: isKeyboardOpen
           ? null
-          : _CameraDockedFab(
-              onTap: () => FoodSourceBottomSheet.show(context),
-            ),
+          : _CameraDockedFab(onTap: () => FoodSourceBottomSheet.show(context)),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       // ใช้งาน VitalityBottomNavBar ที่รองรับ Center Notch Cutout
       bottomNavigationBar: VitalityBottomNavBar(
@@ -129,7 +126,9 @@ class _CameraDockedFabState extends State<_CameraDockedFab> {
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF2E6339).withValues(alpha: _isPressed ? 0.20 : 0.38),
+                color: const Color(
+                  0xFF2E6339,
+                ).withValues(alpha: _isPressed ? 0.20 : 0.38),
                 blurRadius: _isPressed ? 6 : 14,
                 offset: Offset(0, _isPressed ? 2 : 5),
               ),
@@ -147,4 +146,3 @@ class _CameraDockedFabState extends State<_CameraDockedFab> {
     );
   }
 }
-
