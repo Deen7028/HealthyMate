@@ -99,7 +99,7 @@ class NotificationService {
 
       const details = NotificationDetails(
         android: AndroidNotificationDetails(
-          'routine_channel_v3',
+          'routine_channel_v4',
           'การแจ้งเตือนกิจวัตร',
           channelDescription: 'แจ้งเตือนเวลาทำกิจวัตร',
           importance: Importance.max,
@@ -107,7 +107,6 @@ class NotificationService {
           playSound: true,
           enableVibration: true,
           visibility: NotificationVisibility.public,
-          icon: '@mipmap/ic_launcher',
         ),
         iOS: DarwinNotificationDetails(presentSound: true, presentAlert: true),
       );
@@ -157,15 +156,14 @@ class NotificationService {
 
       const details = NotificationDetails(
         android: AndroidNotificationDetails(
-          'routine_channel_v3',
+          'routine_channel_v4',
           'การแจ้งเตือนกิจวัตร',
           channelDescription: 'แจ้งเตือนกิจวัตรแบบวนรอบ',
           importance: Importance.max,
           priority: Priority.high,
           playSound: true,
           enableVibration: true,
-          visibility: NotificationVisibility.public,
-          icon: '@mipmap/ic_launcher',
+          visibility: NotificationVisibility.public
         ),
         iOS: DarwinNotificationDetails(presentSound: true, presentAlert: true),
       );

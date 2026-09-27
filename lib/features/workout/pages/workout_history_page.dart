@@ -38,13 +38,19 @@ class _WorkoutHistoryPageState extends State<WorkoutHistoryPage> {
   }
 
   Future<void> _handlePullSync({bool isInitial = false}) async {
-    final pulledCount = await _controller.pullDownstreamData(isInitial: isInitial);
+    final pulledCount = await _controller.pullDownstreamData(
+      isInitial: isInitial,
+    );
     if (pulledCount > 0 && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
             children: [
-              const Icon(Icons.cloud_download_rounded, color: Colors.white, size: 20),
+              const Icon(
+                Icons.cloud_download_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
               const SizedBox(width: 8),
               Text('ดึงข้อมูลสำเร็จ $pulledCount รายการ'),
             ],
@@ -96,7 +102,9 @@ class _WorkoutHistoryPageState extends State<WorkoutHistoryPage> {
                   height: 18,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: isDark ? AppTheme.primaryLightGreen : const Color(0xFF2E5327),
+                    color: isDark
+                        ? AppTheme.primaryLightGreen
+                        : const Color(0xFF2E5327),
                   ),
                 ),
               ),
@@ -105,7 +113,9 @@ class _WorkoutHistoryPageState extends State<WorkoutHistoryPage> {
             IconButton(
               icon: Icon(
                 Icons.sync_rounded,
-                color: isDark ? AppTheme.primaryLightGreen : const Color(0xFF2E5327),
+                color: isDark
+                    ? AppTheme.primaryLightGreen
+                    : const Color(0xFF2E5327),
               ),
               onPressed: () => _handlePullSync(isInitial: false),
               tooltip: 'ดึงข้อมูลล่าสุดจากเซิร์ฟเวอร์ (Delta Sync)',
@@ -121,8 +131,8 @@ class _WorkoutHistoryPageState extends State<WorkoutHistoryPage> {
                 child: CircularProgressIndicator(color: AppTheme.primaryGreen),
               )
             : _controller.workouts.isEmpty
-                ? _buildEmptyState()
-                : _buildHistoryList(),
+            ? _buildEmptyState()
+            : _buildHistoryList(),
       ),
     );
   }
@@ -139,8 +149,26 @@ class _WorkoutHistoryPageState extends State<WorkoutHistoryPage> {
       padding: const EdgeInsets.all(18),
       itemCount: _controller.workouts.length,
       itemBuilder: (context, index) {
-        return WorkoutHistoryItemCard(
-          workoutItem: _controller.workouts[index],
+        return TweenAnimationBuilder<double>(
+          tween: Tween<double>(begin: 0.0, end: 1.0),
+          duration: const Duration(milliseconds: 500),
+          curve: Interval(
+            (index * 0.1).clamp(0.0, 1.0),
+            1.0,
+            curve: Curves.easeOutCubic,
+          ),
+          builder: (context, value, child) {
+            return Opacity(
+              opacity: value,
+              child: Transform.translate(
+                offset: Offset(0, 30 * (1 - value)),
+                child: child,
+              ),
+            );
+          },
+          child: WorkoutHistoryItemCard(
+            workoutItem: _controller.workouts[index],
+          ),
         );
       },
     );

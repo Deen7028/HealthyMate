@@ -17,22 +17,38 @@ class OtpVerificationDialog extends StatefulWidget {
   State<OtpVerificationDialog> createState() => _OtpVerificationDialogState();
 }
 
-class _OtpVerificationDialogState extends State<OtpVerificationDialog> {
+class _OtpVerificationDialogState extends State<OtpVerificationDialog>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _otpController = TextEditingController();
   bool _isLoading = false;
   int _nCountdown = 60;
   Timer? _timer;
+  late final AnimationController _shakeController;
+  late final Animation<double> _shakeAnimation;
 
   @override
   void initState() {
     super.initState();
     _startCountdown();
+    _shakeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _shakeAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: -12.0), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: -12.0, end: 12.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 12.0, end: -10.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -10.0, end: 10.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 10.0, end: -5.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -5.0, end: 0.0), weight: 1),
+    ]).animate(CurvedAnimation(parent: _shakeController, curve: Curves.easeInOut));
   }
 
   @override
   void dispose() {
     _timer?.cancel();
     _otpController.dispose();
+    _shakeController.dispose();
     super.dispose();
   }
 
@@ -56,7 +72,10 @@ class _OtpVerificationDialogState extends State<OtpVerificationDialog> {
 
   Future<void> _handleVerify() async {
     final sCode = _otpController.text.trim();
-    if (sCode.length != 6) return;
+    if (sCode.length != 6) {
+      _shakeController.forward(from: 0.0);
+      return;
+    }
 
     setState(() => _isLoading = true);
     final objRes = await HealthApiService.verifyEmailOtp(widget.sEmail, sCode);
@@ -68,6 +87,7 @@ class _OtpVerificationDialogState extends State<OtpVerificationDialog> {
         widget.onVerificationSuccess();
       }
     } else {
+      _shakeController.forward(from: 0.0);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -140,18 +160,27 @@ class _OtpVerificationDialogState extends State<OtpVerificationDialog> {
               style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary, height: 1.4),
             ),
             const SizedBox(height: 20),
-            TextField(
-              controller: _otpController,
-              keyboardType: TextInputType.number,
-              maxLength: 6,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, letterSpacing: 8),
-              decoration: InputDecoration(
-                counterText: '',
-                hintText: '••••••',
-                filled: true,
-                fillColor: AppTheme.subtleSurface,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+            AnimatedBuilder(
+              animation: _shakeAnimation,
+              builder: (context, child) {
+                return Transform.translate(
+                  offset: Offset(_shakeAnimation.value, 0),
+                  child: child,
+                );
+              },
+              child: TextField(
+                controller: _otpController,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, letterSpacing: 8),
+                decoration: InputDecoration(
+                  counterText: '',
+                  hintText: '••••••',
+                  filled: true,
+                  fillColor: AppTheme.subtleSurface,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                ),
               ),
             ),
             const SizedBox(height: 20),

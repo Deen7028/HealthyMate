@@ -16,9 +16,10 @@ class RoutineTopOverviewBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final overallRatio = (overallProgressRatio ??
-            (totalCount > 0 ? (completedCount / totalCount) : 0.0))
-        .clamp(0.0, 1.0);
+    final overallRatio =
+        (overallProgressRatio ??
+                (totalCount > 0 ? (completedCount / totalCount) : 0.0))
+            .clamp(0.0, 1.0);
     final overallPercent = (overallRatio * 100).round();
 
     double totalCalories = 0.0;
@@ -101,21 +102,27 @@ class RoutineTopOverviewBanner extends StatelessWidget {
             ],
           ),
 
-
           const SizedBox(height: 16),
 
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              Text(
-                '$overallPercent',
-                style: const TextStyle(
-                  fontSize: 44,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                  letterSpacing: -1,
-                ),
+              TweenAnimationBuilder<int>(
+                tween: IntTween(begin: 0, end: overallPercent),
+                duration: const Duration(milliseconds: 3000),
+                curve: Curves.easeOutCubic,
+                builder: (context, value, child) {
+                  return Text(
+                    '$value',
+                    style: const TextStyle(
+                      fontSize: 44,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: -1,
+                    ),
+                  );
+                },
               ),
               const Text(
                 '%',
@@ -151,7 +158,9 @@ class RoutineTopOverviewBanner extends StatelessWidget {
                           return LinearProgressIndicator(
                             value: value,
                             minHeight: 8,
-                            backgroundColor: Colors.white.withValues(alpha: 0.15),
+                            backgroundColor: Colors.white.withValues(
+                              alpha: 0.15,
+                            ),
                             valueColor: const AlwaysStoppedAnimation<Color>(
                               Color(0xFF90DB89),
                             ),

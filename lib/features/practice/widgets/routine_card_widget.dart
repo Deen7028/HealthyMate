@@ -36,6 +36,8 @@ class RoutineCardWidget extends StatelessWidget {
   String _formatValue(double val) =>
       val == val.toInt() ? val.toInt().toString() : val.toStringAsFixed(2);
 
+  String _formatProgress(double val) => val.toStringAsFixed(2);
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -43,6 +45,25 @@ class RoutineCardWidget extends StatelessWidget {
     final borderColor = AppTheme.getBorderColor(isDark);
     final textPrimary = AppTheme.getTextPrimaryColor(isDark);
     final textSecondary = AppTheme.getTextSecondaryColor(isDark);
+
+    final percentBadge = Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 7,
+        vertical: 2,
+      ),
+      decoration: BoxDecoration(
+        color: cardColor.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        '$percent%',
+        style: TextStyle(
+          fontSize: 10.5,
+          fontWeight: FontWeight.bold,
+          color: isDark ? const Color(0xFF90DB89) : cardColor,
+        ),
+      ),
+    );
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -83,40 +104,15 @@ class RoutineCardWidget extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            title,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                              color: textPrimary,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 7,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: cardColor.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            '$percent%',
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? const Color(0xFF90DB89) : cardColor,
-                            ),
-                          ),
-                        ),
-                      ],
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: textPrimary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
 
@@ -164,15 +160,26 @@ class RoutineCardWidget extends StatelessWidget {
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
+                          percentBadge,
                         ],
                       ),
                     ] else ...[
-                      Text(
-                        'เป้าหมายประจำวัน: ${_formatValue(targetVal)} $unitText',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          color: textSecondary,
-                        ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              'เป้าหมายประจำวัน: ${_formatValue(targetVal)} $unitText',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: textSecondary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          percentBadge,
+                        ],
                       ),
                     ],
                   ],
@@ -211,7 +218,7 @@ class RoutineCardWidget extends StatelessWidget {
                 style: TextStyle(fontSize: 11, color: textSecondary),
               ),
               Text(
-                '${_formatValue(currentVal)} / ${_formatValue(targetVal)} $unitText ($percent%)',
+                '${_formatProgress(currentVal)} / ${_formatValue(targetVal)} $unitText',
                 style: TextStyle(
                   fontSize: 11.5,
                   color: isDark ? const Color(0xFF90DB89) : cardColor,
