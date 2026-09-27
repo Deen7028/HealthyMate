@@ -4,7 +4,7 @@ import 'package:healthymate/core/services/api_service.dart';
 import 'package:healthymate/core/services/auth_service.dart';
 import 'package:healthymate/core/services/biometric_apple_auth_service.dart';
 import 'package:healthymate/core/services/sync_service.dart';
-import 'package:healthymate/core/theme/app_theme.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
 import 'package:healthymate/features/register/pages/register_page.dart';
 import 'package:google_sign_in/google_sign_in.dart';

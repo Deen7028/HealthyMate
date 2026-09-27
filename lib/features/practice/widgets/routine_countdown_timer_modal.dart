@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
 
 /// Mini Countdown Timer Dialog Widget
 class RoutineCountdownTimerModal extends StatefulWidget {
@@ -81,13 +82,20 @@ class _RoutineCountdownTimerModalState
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = AppTheme.getBackgroundColor(isDark);
+    final textPrimary = AppTheme.getTextPrimaryColor(isDark);
+    final textSecondary = AppTheme.getTextSecondaryColor(isDark);
+    final primaryColor = isDark ? AppTheme.primaryLightGreen : const Color(0xFF2E5327);
+    final borderColor = AppTheme.getBorderColor(isDark);
+
     final double progress = _totalSeconds > 0
         ? (1.0 - (_secondsRemaining / _totalSeconds))
         : 1.0;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      backgroundColor: Colors.white,
+      backgroundColor: cardBg,
       elevation: 8,
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -99,13 +107,13 @@ class _RoutineCountdownTimerModalState
               children: [
                 Container(
                   padding: const EdgeInsets.all(10),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFE8F3EB),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF23352A) : const Color(0xFFE8F3EB),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.timer_rounded,
-                    color: Color(0xFF2E5327),
+                    color: primaryColor,
                     size: 24,
                   ),
                 ),
@@ -114,20 +122,20 @@ class _RoutineCountdownTimerModalState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'จับเวลาโฟกัส',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.grey,
+                          color: textSecondary,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
                         widget.title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF1E281F),
+                          color: textPrimary,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -136,7 +144,7 @@ class _RoutineCountdownTimerModalState
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close, color: Colors.grey),
+                  icon: Icon(Icons.close, color: textSecondary),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
@@ -156,9 +164,9 @@ class _RoutineCountdownTimerModalState
                     child: CircularProgressIndicator(
                       value: progress,
                       strokeWidth: 10,
-                      backgroundColor: const Color(0xFFE2E9E0),
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                        Color(0xFF2E5327),
+                      backgroundColor: isDark ? const Color(0xFF2E3D34) : const Color(0xFFE2E9E0),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        primaryColor,
                       ),
                     ),
                   ),
@@ -167,10 +175,10 @@ class _RoutineCountdownTimerModalState
                     children: [
                       Text(
                         _formattedTime,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 42,
                           fontWeight: FontWeight.w900,
-                          color: Color(0xFF2E5327),
+                          color: primaryColor,
                           letterSpacing: 1.5,
                         ),
                       ),
@@ -181,8 +189,8 @@ class _RoutineCountdownTimerModalState
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: _isRunning
-                              ? const Color(0xFF2E5327)
-                              : Colors.orange.shade800,
+                              ? primaryColor
+                              : (isDark ? Colors.orangeAccent : Colors.orange.shade800),
                         ),
                       ),
                     ],
@@ -211,7 +219,7 @@ class _RoutineCountdownTimerModalState
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2E5327),
+                    backgroundColor: isDark ? const Color(0xFF2E5327) : const Color(0xFF2E5327),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 12,
@@ -229,14 +237,14 @@ class _RoutineCountdownTimerModalState
                     Navigator.of(context).pop();
                     widget.onTimerCompleted();
                   },
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.check_circle_outline,
-                    color: Color(0xFF2E5327),
+                    color: primaryColor,
                   ),
-                  label: const Text(
+                  label: Text(
                     'เสร็จแล้ว',
                     style: TextStyle(
-                      color: Color(0xFF2E5327),
+                      color: primaryColor,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -245,8 +253,8 @@ class _RoutineCountdownTimerModalState
                       horizontal: 16,
                       vertical: 12,
                     ),
-                    side: const BorderSide(
-                      color: Color(0xFF2E5327),
+                    side: BorderSide(
+                      color: isDark ? borderColor : const Color(0xFF2E5327),
                       width: 1.5,
                     ),
                     shape: RoundedRectangleBorder(

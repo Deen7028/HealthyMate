@@ -26,11 +26,13 @@ class _MainAppShellState extends State<MainAppShell> {
   }
 
   String? _selectedWorkoutCategory;
+  int? _selectedWorkoutDurationMinutes;
 
-  void _onTabTapped(int index, [String? category]) {
+  void _onTabTapped(int index, [String? category, int? targetDurationMinutes]) {
     setState(() {
       _currentIndex = index;
       _selectedWorkoutCategory = category;
+      _selectedWorkoutDurationMinutes = targetDurationMinutes;
     });
   }
 
@@ -55,6 +57,7 @@ class _MainAppShellState extends State<MainAppShell> {
             isActive: _currentIndex == 1,
             onBackToDashboard: () => _onTabTapped(0),
             initialCategory: _selectedWorkoutCategory,
+            targetDurationMinutes: _selectedWorkoutDurationMinutes,
           ),
           // 2: Health Calculator (สุขภาพ)
           HealthCalculatorPage(
@@ -64,7 +67,8 @@ class _MainAppShellState extends State<MainAppShell> {
           // 3: Routine (กิจวัตร)
           MyRoutinesPage(
             isActive: _currentIndex == 3,
-            onNavigateToWorkout: (category) => _onTabTapped(1, category),
+            onNavigateToWorkout: (category, [durationMin]) =>
+                _onTabTapped(1, category, durationMin),
           ),
           // 4: Profile (โปรไฟล์)
           ProfilePage(

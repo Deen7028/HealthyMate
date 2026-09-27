@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:healthymate/core/theme/app_theme.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:healthymate/features/workout/controllers/workout_history_controller.dart';
 import '../widgets/index.dart';
 
@@ -59,46 +59,54 @@ class _WorkoutHistoryPageState extends State<WorkoutHistoryPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scaffoldBg = AppTheme.getScaffoldColor(isDark);
+    final cardBg = AppTheme.getBackgroundColor(isDark);
+    final textPrimary = AppTheme.getTextPrimaryColor(isDark);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F3),
+      backgroundColor: scaffoldBg,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'ประวัติการออกกำลังกาย',
           style: TextStyle(
             fontWeight: FontWeight.w800,
             fontSize: 18,
-            color: Color(0xFF1C2819),
+            color: textPrimary,
           ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: cardBg,
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(
+          icon: Icon(
             Icons.arrow_back_ios_new_rounded,
-            color: Color(0xFF1C2819),
+            color: textPrimary,
             size: 20,
           ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
           if (_controller.isPulling)
-            const Center(
+            Center(
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
                 child: SizedBox(
                   width: 18,
                   height: 18,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Color(0xFF2E5327),
+                    color: isDark ? AppTheme.primaryLightGreen : const Color(0xFF2E5327),
                   ),
                 ),
               ),
             )
           else
             IconButton(
-              icon: const Icon(Icons.sync_rounded, color: Color(0xFF2E5327)),
+              icon: Icon(
+                Icons.sync_rounded,
+                color: isDark ? AppTheme.primaryLightGreen : const Color(0xFF2E5327),
+              ),
               onPressed: () => _handlePullSync(isInitial: false),
               tooltip: 'ดึงข้อมูลล่าสุดจากเซิร์ฟเวอร์ (Delta Sync)',
             ),
@@ -106,7 +114,7 @@ class _WorkoutHistoryPageState extends State<WorkoutHistoryPage> {
       ),
       body: RefreshIndicator(
         color: AppTheme.primaryGreen,
-        backgroundColor: Colors.white,
+        backgroundColor: cardBg,
         onRefresh: () => _handlePullSync(isInitial: false),
         child: _controller.isLoading
             ? const Center(

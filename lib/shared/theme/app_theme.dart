@@ -8,6 +8,7 @@ class AppTheme {
   static const Color primaryGreen = Color(0xFF2E6339);
   static const Color primaryGreenDark = Color(0xFF2E5327);
   static const Color primaryGreenLight = Color(0xFFE8F3EB);
+  static const Color primaryLightGreen = Color(0xFF5CA86E);
   static const Color accentGreen = Color(0xFF3F824E);
   static const Color sageGreen = Color(0xFF659B70);
   static const Color activeTabGreen = Color(0xFF5B9E66);

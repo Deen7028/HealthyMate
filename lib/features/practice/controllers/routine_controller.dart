@@ -130,11 +130,10 @@ class RoutineController extends ChangeNotifier {
         final title = (r['sTitle'] as String? ?? '').toLowerCase();
         final unit = (r['unit'] as String? ?? (r['sUnit'] as String? ?? '')).toLowerCase();
 
-        const workoutKeywords = ['วิ่ง', 'เดิน', 'ปั่นจักรยาน', 'จักรยาน', 'ลู่วิ่ง', 'คาร์ดิโอ', 'ออกกำลังกาย'];
+        const workoutKeywords = ['วิ่ง', 'เดิน', 'ปั่นจักรยาน', 'จักรยาน', 'ลู่วิ่ง', 'คาร์ดิโอ', 'ออกกำลังกาย', 'สมาธิ', 'ทำสมาธิ', 'โยคะ'];
         final bool hasWorkoutKeyword = workoutKeywords.any((kw) => title.contains(kw));
         final bool isNonWorkout = !hasWorkoutKeyword && (
             title.contains('น้ำ') ||
-            title.contains('สมาธิ') ||
             title.contains('นอน') ||
             title.contains('กิน') ||
             title.contains('อาหาร') ||
@@ -152,6 +151,10 @@ class RoutineController extends ChangeNotifier {
             matchedType = 'ปั่นจักรยาน';
           } else if (title.contains('ลู่วิ่ง')) {
             matchedType = 'ลู่วิ่งในร่ม';
+          } else if (title.contains('สมาธิ')) {
+            matchedType = 'ทำสมาธิ';
+          } else if (title.contains('โยคะ')) {
+            matchedType = 'โยคะ';
           }
         }
 

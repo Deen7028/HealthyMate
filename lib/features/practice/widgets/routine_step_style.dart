@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
 
 class RoutineStepStyle extends StatefulWidget {
   final Color btnColor;
@@ -85,12 +86,13 @@ class _RoutineStepStyleState extends State<RoutineStepStyle> {
       context: context,
       initialTime: initialTime,
       builder: (context, child) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: ColorScheme.light(
               primary: widget.btnColor,
               onPrimary: Colors.white,
-              onSurface: const Color(0xFF1E293B),
+              onSurface: isDark ? Colors.white : const Color(0xFF1E293B),
             ),
           ),
           child: child!,
@@ -99,28 +101,28 @@ class _RoutineStepStyleState extends State<RoutineStepStyle> {
     );
   }
 
-  Widget _buildNotificationModeSelector() {
+  Widget _buildNotificationModeSelector(bool isDark, Color cardBg, Color borderColor, Color textPrimary, Color textSecondary) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            _buildModeTab(0, 'เวลาเดียว', Icons.access_time_rounded),
+            _buildModeTab(0, 'เวลาเดียว', Icons.access_time_rounded, isDark, cardBg, borderColor, textPrimary, textSecondary),
             const SizedBox(width: 6),
-            _buildModeTab(1, 'หลายเวลา', Icons.more_time_rounded),
+            _buildModeTab(1, 'หลายเวลา', Icons.more_time_rounded, isDark, cardBg, borderColor, textPrimary, textSecondary),
             const SizedBox(width: 6),
-            _buildModeTab(2, 'ความถี่', Icons.update_rounded),
+            _buildModeTab(2, 'ความถี่', Icons.update_rounded, isDark, cardBg, borderColor, textPrimary, textSecondary),
           ],
         ),
         const SizedBox(height: 12),
-        if (_selectedModeIndex == 0) _buildSingleTimeMode(),
-        if (_selectedModeIndex == 1) _buildMultipleTimesMode(),
-        if (_selectedModeIndex == 2) _buildIntervalMode(),
+        if (_selectedModeIndex == 0) _buildSingleTimeMode(isDark, cardBg, borderColor, textPrimary),
+        if (_selectedModeIndex == 1) _buildMultipleTimesMode(isDark, cardBg, borderColor, textPrimary, textSecondary),
+        if (_selectedModeIndex == 2) _buildIntervalMode(isDark, cardBg, borderColor, textPrimary, textSecondary),
       ],
     );
   }
 
-  Widget _buildModeTab(int index, String label, IconData icon) {
+  Widget _buildModeTab(int index, String label, IconData icon, bool isDark, Color cardBg, Color borderColor, Color textPrimary, Color textSecondary) {
     final isSelected = _selectedModeIndex == index;
     return Expanded(
       child: InkWell(
@@ -134,10 +136,10 @@ class _RoutineStepStyleState extends State<RoutineStepStyle> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected ? widget.btnColor : Colors.white,
+            color: isSelected ? widget.btnColor : cardBg,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: isSelected ? widget.btnColor : Colors.grey.shade300,
+              color: isSelected ? widget.btnColor : borderColor,
             ),
           ),
           child: Row(
@@ -146,7 +148,7 @@ class _RoutineStepStyleState extends State<RoutineStepStyle> {
               Icon(
                 icon,
                 size: 15,
-                color: isSelected ? Colors.white : const Color(0xFF475569),
+                color: isSelected ? Colors.white : textSecondary,
               ),
               const SizedBox(width: 4),
               Text(
@@ -154,7 +156,7 @@ class _RoutineStepStyleState extends State<RoutineStepStyle> {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: isSelected ? Colors.white : const Color(0xFF475569),
+                  color: isSelected ? Colors.white : textSecondary,
                 ),
               ),
             ],
@@ -164,7 +166,7 @@ class _RoutineStepStyleState extends State<RoutineStepStyle> {
     );
   }
 
-  Widget _buildSingleTimeMode() {
+  Widget _buildSingleTimeMode(bool isDark, Color cardBg, Color borderColor, Color textPrimary) {
     final currentText = widget.notificationTimeController.text.trim();
     final timeDisplay = (currentText.isNotEmpty && !currentText.startsWith('ทุก ') && !currentText.contains(','))
         ? currentText
@@ -193,9 +195,9 @@ class _RoutineStepStyleState extends State<RoutineStepStyle> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: cardBg,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade300),
+          border: Border.all(color: borderColor),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -210,10 +212,10 @@ class _RoutineStepStyleState extends State<RoutineStepStyle> {
                 const SizedBox(width: 10),
                 Text(
                   timeDisplay,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E293B),
+                    color: textPrimary,
                   ),
                 ),
               ],
@@ -239,7 +241,7 @@ class _RoutineStepStyleState extends State<RoutineStepStyle> {
     );
   }
 
-  Widget _buildMultipleTimesMode() {
+  Widget _buildMultipleTimesMode(bool isDark, Color cardBg, Color borderColor, Color textPrimary, Color textSecondary) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -326,20 +328,20 @@ class _RoutineStepStyleState extends State<RoutineStepStyle> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
+                  color: isDark ? const Color(0xFF2E3D34) : Colors.grey.shade200,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.add_rounded, size: 16, color: Color(0xFF475569)),
-                    SizedBox(width: 2),
+                    Icon(Icons.add_rounded, size: 16, color: textPrimary),
+                    const SizedBox(width: 2),
                     Text(
                       'เพิ่มเวลา',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF475569),
+                        color: textPrimary,
                       ),
                     ),
                   ],
@@ -352,19 +354,20 @@ class _RoutineStepStyleState extends State<RoutineStepStyle> {
     );
   }
 
-  Widget _buildIntervalMode() {
+  Widget _buildIntervalMode(bool isDark, Color cardBg, Color borderColor, Color textPrimary, Color textSecondary) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: borderColor),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: _intervalOptions.contains(_selectedInterval) ? _selectedInterval : _intervalOptions.first,
+          dropdownColor: cardBg,
           isExpanded: true,
-          icon: const Icon(Icons.arrow_drop_down_rounded, color: Color(0xFF475569)),
+          icon: Icon(Icons.arrow_drop_down_rounded, color: textSecondary),
           onChanged: (val) {
             if (val != null) {
               setState(() {
@@ -382,10 +385,10 @@ class _RoutineStepStyleState extends State<RoutineStepStyle> {
                   const SizedBox(width: 10),
                   Text(
                     opt,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1E293B),
+                      color: textPrimary,
                     ),
                   ),
                 ],
@@ -399,25 +402,32 @@ class _RoutineStepStyleState extends State<RoutineStepStyle> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = AppTheme.getTextPrimaryColor(isDark);
+    final textSecondary = AppTheme.getTextSecondaryColor(isDark);
+    final cardBg = AppTheme.getBackgroundColor(isDark);
+    final borderColor = AppTheme.getBorderColor(isDark);
+    final surfaceBg = AppTheme.getSurfaceColor(isDark);
+
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Step 3: การแจ้งเตือนและธีมกิจวัตร 🔔🎨',
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF334155),
+              color: textPrimary,
             ),
           ),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.grey.shade50,
+              color: surfaceBg,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.grey.shade200),
+              border: Border.all(color: borderColor),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -432,15 +442,16 @@ class _RoutineStepStyleState extends State<RoutineStepStyle> {
                               ? Icons.notifications_active_rounded
                               : Icons.notifications_off_rounded,
                           color: widget.isNotificationEnabled
-                              ? Colors.amber.shade800
-                              : Colors.grey,
+                              ? (isDark ? Colors.amberAccent : Colors.amber.shade800)
+                              : textSecondary,
                         ),
                         const SizedBox(width: 8),
-                        const Text(
+                        Text(
                           'การแจ้งเตือนประจำวัน',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
+                            color: textPrimary,
                           ),
                         ),
                       ],
@@ -454,16 +465,16 @@ class _RoutineStepStyleState extends State<RoutineStepStyle> {
                 ),
                 if (widget.isNotificationEnabled) ...[
                   const SizedBox(height: 12),
-                  const Text(
+                  Text(
                     'รูปแบบการแจ้งเตือน',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF334155),
+                      color: textSecondary,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  _buildNotificationModeSelector(),
+                  _buildNotificationModeSelector(isDark, cardBg, borderColor, textPrimary, textSecondary),
                 ],
               ],
             ),
@@ -471,8 +482,10 @@ class _RoutineStepStyleState extends State<RoutineStepStyle> {
           const SizedBox(height: 12),
           Row(
             children: [
-              const Text('ไอคอน:',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                'ไอคอน:',
+                style: TextStyle(fontWeight: FontWeight.bold, color: textPrimary),
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: SizedBox(
@@ -490,17 +503,17 @@ class _RoutineStepStyleState extends State<RoutineStepStyle> {
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? Colors.grey.shade300
-                                  : Colors.grey.shade100,
+                                  ? (isDark ? const Color(0xFF354E3C) : Colors.grey.shade300)
+                                  : (isDark ? surfaceBg : Colors.grey.shade100),
                               shape: BoxShape.circle,
                               border: Border.all(
                                 color: isSelected
-                                    ? Colors.grey.shade700
-                                    : Colors.grey.shade300,
+                                    ? (isDark ? AppTheme.primaryLightGreen : Colors.grey.shade700)
+                                    : borderColor,
                               ),
                             ),
-                            child: const Icon(Icons.block,
-                                size: 18, color: Colors.grey),
+                            child: Icon(Icons.block,
+                                size: 18, color: textSecondary),
                           ),
                         );
                       }
@@ -513,7 +526,7 @@ class _RoutineStepStyleState extends State<RoutineStepStyle> {
                           decoration: BoxDecoration(
                             color: isSelected
                                 ? widget.btnColor.withAlpha(50)
-                                : Colors.grey.shade100,
+                                : (isDark ? surfaceBg : Colors.grey.shade100),
                             shape: BoxShape.circle,
                             border: Border.all(
                               color: isSelected ? widget.btnColor : Colors.transparent,
@@ -522,7 +535,7 @@ class _RoutineStepStyleState extends State<RoutineStepStyle> {
                           child: Icon(
                             icon,
                             size: 18,
-                            color: isSelected ? widget.btnColor : Colors.grey.shade700,
+                            color: isSelected ? widget.btnColor : textSecondary,
                           ),
                         ),
                       );
@@ -535,8 +548,10 @@ class _RoutineStepStyleState extends State<RoutineStepStyle> {
           const SizedBox(height: 10),
           Row(
             children: [
-              const Text('สีประจำ:',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                'สีประจำ:',
+                style: TextStyle(fontWeight: FontWeight.bold, color: textPrimary),
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: SizedBox(
@@ -554,18 +569,18 @@ class _RoutineStepStyleState extends State<RoutineStepStyle> {
                             width: 30,
                             height: 30,
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: cardBg,
                               shape: BoxShape.circle,
                               border: Border.all(
                                 color: isSelected
-                                    ? Colors.black
-                                    : Colors.grey.shade300,
+                                    ? textPrimary
+                                    : borderColor,
                               ),
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.format_color_reset_rounded,
                               size: 16,
-                              color: Colors.grey,
+                              color: textSecondary,
                             ),
                           ),
                         );
@@ -582,7 +597,7 @@ class _RoutineStepStyleState extends State<RoutineStepStyle> {
                             shape: BoxShape.circle,
                             border: Border.all(
                               color: isSelected
-                                  ? Colors.black
+                                  ? (isDark ? Colors.white : Colors.black)
                                   : Colors.transparent,
                               width: 2,
                             ),

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:healthymate/core/theme/app_theme.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:healthymate/features/health_calculator/controllers/health_calculator_controller.dart';
 import 'package:healthymate/features/health_calculator/widgets/index.dart';
 
@@ -219,10 +219,20 @@ class _HealthCalculatorPageState extends State<HealthCalculatorPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scaffoldBg = AppTheme.getScaffoldColor(isDark);
+    final cardBg = AppTheme.getBackgroundColor(isDark);
+    final textPrimary = AppTheme.getTextPrimaryColor(isDark);
+    final textSecondary = AppTheme.getTextSecondaryColor(isDark);
+    final borderColor = AppTheme.getBorderColor(isDark);
+    final surfaceBg = AppTheme.getSurfaceColor(isDark);
+
     return Scaffold(
+      backgroundColor: scaffoldBg,
       body: SafeArea(
         child: RefreshIndicator(
             color: AppTheme.primaryGreen,
+            backgroundColor: cardBg,
             onRefresh: () => widget.state.loadData(),
             child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -242,12 +252,12 @@ class _HealthCalculatorPageState extends State<HealthCalculatorPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'เครื่องคำนวณสุขภาพ',
                             style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.w800,
-                              color: AppTheme.textPrimary,
+                              color: textPrimary,
                               letterSpacing: -0.5,
                             ),
                           ),
@@ -260,9 +270,9 @@ class _HealthCalculatorPageState extends State<HealthCalculatorPage> {
                                 user != null
                                     ? 'ข้อมูลของคุณ (${user.sFirstName})'
                                     : 'ติดตามและคำนวณ BMI, BMR และ TDEE ของคุณ',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13.5,
-                                  color: AppTheme.textSecondary,
+                                  color: textSecondary,
                                   fontWeight: FontWeight.w500,
                                 ),
                               );
@@ -279,13 +289,13 @@ class _HealthCalculatorPageState extends State<HealthCalculatorPage> {
                         width: 42,
                         height: 42,
                         decoration: BoxDecoration(
-                          color: AppTheme.subtleSurface,
+                          color: surfaceBg,
                           shape: BoxShape.circle,
-                          border: Border.all(color: AppTheme.borderLight),
+                          border: Border.all(color: borderColor),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.history_rounded,
-                          color: AppTheme.textPrimary,
+                          color: textPrimary,
                           size: 22,
                         ),
                       ),
@@ -304,13 +314,13 @@ class _HealthCalculatorPageState extends State<HealthCalculatorPage> {
                       margin: const EdgeInsets.only(bottom: 16),
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
-                        color: AppTheme.subtleSurface,
+                        color: surfaceBg,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppTheme.borderLight),
+                        border: Border.all(color: borderColor),
                       ),
                       child: Row(
-                        children: const [
-                          SizedBox(
+                        children: [
+                          const SizedBox(
                             width: 18,
                             height: 18,
                             child: CircularProgressIndicator(
@@ -318,13 +328,13 @@ class _HealthCalculatorPageState extends State<HealthCalculatorPage> {
                               color: AppTheme.primaryGreen,
                             ),
                           ),
-                          SizedBox(width: 12),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               'กำลังโหลดข้อมูลสุขภาพล่าสุดจากเซิร์ฟเวอร์...',
                               style: TextStyle(
                                 fontSize: 13,
-                                color: AppTheme.textSecondary,
+                                color: textSecondary,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -473,7 +483,7 @@ class _HealthCalculatorPageState extends State<HealthCalculatorPage> {
                                       ),
                                     ),
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF1E3A24),
+                                      backgroundColor: isDark ? const Color(0xFF2E5327) : const Color(0xFF1E3A24),
                                       foregroundColor: Colors.white,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),

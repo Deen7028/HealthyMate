@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:healthymate/core/theme/app_theme.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:healthymate/features/health_calculator/controllers/health_calculator_controller.dart';
 import 'bmi_indicator_bar.dart';
 import 'calorie_target_card.dart';
@@ -15,17 +15,22 @@ class HealthCalculatorResultSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = AppTheme.getBackgroundColor(isDark);
+    final borderColor = AppTheme.getBorderColor(isDark);
+    final textPrimary = AppTheme.getTextPrimaryColor(isDark);
+    final textSecondary = AppTheme.getTextSecondaryColor(isDark);
     final bmiCategory = state.bmiCategory;
 
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.borderLight, width: 1.2),
+        border: Border.all(color: borderColor, width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.02),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -43,22 +48,22 @@ class HealthCalculatorResultSection extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE8F3EB),
+                      color: isDark ? const Color(0xFF23352A) : const Color(0xFFE8F3EB),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.analytics_outlined,
                       size: 20,
-                      color: AppTheme.primaryGreen,
+                      color: isDark ? AppTheme.primaryLightGreen : AppTheme.primaryGreen,
                     ),
                   ),
                   const SizedBox(width: 10),
-                  const Text(
+                  Text(
                     'ผลลัพธ์การวิเคราะห์',
                     style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w800,
-                      color: AppTheme.textPrimary,
+                      color: textPrimary,
                     ),
                   ),
                 ],
@@ -69,15 +74,15 @@ class HealthCalculatorResultSection extends StatelessWidget {
                   vertical: 5,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE8F3EB),
+                  color: isDark ? const Color(0xFF23352A) : const Color(0xFFE8F3EB),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   bmiCategory.badgeText,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w700,
-                    color: AppTheme.primaryGreen,
+                    color: isDark ? AppTheme.primaryLightGreen : AppTheme.primaryGreen,
                   ),
                 ),
               ),
@@ -85,7 +90,7 @@ class HealthCalculatorResultSection extends StatelessWidget {
           ),
 
           const SizedBox(height: 16),
-          const Divider(height: 1, color: AppTheme.borderLight),
+          Divider(height: 1, color: borderColor),
           const SizedBox(height: 16),
 
           // BMI Display
@@ -96,12 +101,12 @@ class HealthCalculatorResultSection extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'ดัชนีมวลกาย (BMI)',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: AppTheme.textSecondary,
+                      color: textSecondary,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -113,19 +118,19 @@ class HealthCalculatorResultSection extends StatelessWidget {
                       return RichText(
                         text: TextSpan(
                           text: val.toStringAsFixed(1),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 34,
                             fontWeight: FontWeight.w900,
-                            color: AppTheme.textPrimary,
+                            color: textPrimary,
                             letterSpacing: -1,
                           ),
-                          children: const [
+                          children: [
                             TextSpan(
                               text: ' kg/m²',
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: AppTheme.textSecondary,
+                                color: textSecondary,
                               ),
                             ),
                           ],
@@ -137,22 +142,22 @@ class HealthCalculatorResultSection extends StatelessWidget {
               ),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
-                children: const [
+                children: [
                   Text(
                     'เกณฑ์สุขภาพดี',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: AppTheme.primaryGreen,
+                      color: isDark ? AppTheme.primaryLightGreen : AppTheme.primaryGreen,
                     ),
                   ),
-                  SizedBox(height: 2),
+                  const SizedBox(height: 2),
                   Text(
                     '18.5 - 22.9',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: AppTheme.textSecondary,
+                      color: textSecondary,
                     ),
                   ),
                 ],

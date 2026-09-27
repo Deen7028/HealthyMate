@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:healthymate/core/theme/app_theme.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
 
 class LoginHeader extends StatelessWidget {
   const LoginHeader({super.key});

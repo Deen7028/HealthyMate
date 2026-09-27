@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:healthymate/features/workout/pages/workout_share_page.dart';
 import 'history_route_painter.dart';
 
@@ -54,6 +55,12 @@ class WorkoutHistoryItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = AppTheme.getBackgroundColor(isDark);
+    final textPrimary = AppTheme.getTextPrimaryColor(isDark);
+    final textSecondary = AppTheme.getTextSecondaryColor(isDark);
+    final borderColor = AppTheme.getBorderColor(isDark);
+
     final type = workoutItem['sType']?.toString() ?? 'กิจกรรม';
     final distance = (workoutItem['nDistance'] as num?)?.toDouble() ?? 0.0;
     final duration = (workoutItem['nDuration'] as num?)?.toInt() ?? 0;
@@ -78,16 +85,16 @@ class WorkoutHistoryItemCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
         ],
-        border: Border.all(color: const Color(0xFFE5ECE3), width: 1),
+        border: Border.all(color: borderColor, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -99,12 +106,12 @@ class WorkoutHistoryItemCard extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE8F3EB),
+                  color: isDark ? const Color(0xFF23352A) : const Color(0xFFE8F3EB),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
                   _getCategoryIcon(type),
-                  color: const Color(0xFF2E5327),
+                  color: isDark ? AppTheme.primaryLightGreen : const Color(0xFF2E5327),
                   size: 24,
                 ),
               ),
@@ -115,18 +122,18 @@ class WorkoutHistoryItemCard extends StatelessWidget {
                   children: [
                     Text(
                       type,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF1C2819),
+                        color: textPrimary,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       _formatDateTime(dateStr),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF7A8679),
+                        color: textSecondary,
                       ),
                     ),
                   ],
@@ -138,24 +145,24 @@ class WorkoutHistoryItemCard extends StatelessWidget {
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF1F6F0),
+                  color: isDark ? const Color(0xFF23352A) : const Color(0xFFF1F6F0),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.timer_outlined,
                       size: 14,
-                      color: Color(0xFF2E5327),
+                      color: isDark ? AppTheme.primaryLightGreen : const Color(0xFF2E5327),
                     ),
                     const SizedBox(width: 4),
                     Text(
                       _formatDuration(duration),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF2E5327),
+                        color: isDark ? AppTheme.primaryLightGreen : const Color(0xFF2E5327),
                       ),
                     ),
                   ],
@@ -221,7 +228,7 @@ class WorkoutHistoryItemCard extends StatelessWidget {
           ],
 
           const SizedBox(height: 14),
-          const Divider(height: 1, color: Color(0xFFF0F4EF)),
+          Divider(height: 1, color: borderColor),
           const SizedBox(height: 14),
 
           // สถิติ: ระยะทาง และ แคลอรี
@@ -230,28 +237,28 @@ class WorkoutHistoryItemCard extends StatelessWidget {
               Expanded(
                 child: Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.route_rounded,
                       size: 18,
-                      color: Color(0xFF4A7C42),
+                      color: isDark ? AppTheme.primaryLightGreen : const Color(0xFF4A7C42),
                     ),
                     const SizedBox(width: 6),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'ระยะทาง',
                           style: TextStyle(
                             fontSize: 11,
-                            color: Color(0xFF7A8679),
+                            color: textSecondary,
                           ),
                         ),
                         Text(
                           '${distance.toStringAsFixed(2)} km',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
-                            color: Color(0xFF1C2819),
+                            color: textPrimary,
                           ),
                         ),
                       ],
@@ -262,7 +269,7 @@ class WorkoutHistoryItemCard extends StatelessWidget {
               Container(
                 height: 28,
                 width: 1,
-                color: const Color(0xFFE5ECE3),
+                color: borderColor,
               ),
               Expanded(
                 child: Row(
@@ -277,19 +284,19 @@ class WorkoutHistoryItemCard extends StatelessWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'เผาผลาญ',
                           style: TextStyle(
                             fontSize: 11,
-                            color: Color(0xFF7A8679),
+                            color: textSecondary,
                           ),
                         ),
                         Text(
                           '${calories.toStringAsFixed(0)} kcal',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
-                            color: Color(0xFF1C2819),
+                            color: textPrimary,
                           ),
                         ),
                       ],
@@ -299,9 +306,9 @@ class WorkoutHistoryItemCard extends StatelessWidget {
               ),
               const SizedBox(width: 4),
               IconButton(
-                icon: const Icon(
+                icon: Icon(
                   Icons.share_rounded,
-                  color: Color(0xFF2E5327),
+                  color: isDark ? AppTheme.primaryLightGreen : const Color(0xFF2E5327),
                   size: 22,
                 ),
                 tooltip: 'แชร์กิจกรรม',

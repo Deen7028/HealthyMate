@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:healthymate/features/workout/models/workout_models.dart';
 import 'package:healthymate/features/workout/pages/workout_history_page.dart';
 
@@ -16,8 +17,15 @@ class CategorySelectionView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scaffoldBg = AppTheme.getScaffoldColor(isDark);
+    final cardBg = AppTheme.getBackgroundColor(isDark);
+    final textPrimary = AppTheme.getTextPrimaryColor(isDark);
+    final textSecondary = AppTheme.getTextSecondaryColor(isDark);
+    final borderColor = AppTheme.getBorderColor(isDark);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F6F2),
+      backgroundColor: scaffoldBg,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
@@ -31,20 +39,20 @@ class CategorySelectionView extends StatelessWidget {
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         Text(
                           'เลือกหมวดหมู่การออกกำลังกาย',
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.w800,
-                            color: Color(0xFF1C2819),
+                            color: textPrimary,
                             letterSpacing: -0.5,
                           ),
                         ),
-                        SizedBox(height: 4),
+                        const SizedBox(height: 4),
                         Text(
                           'เลือกประเภทกิจกรรมก่อนเริ่มตรวจวัดและคำนวณแคลอรี',
-                          style: TextStyle(fontSize: 13.5, color: Color(0xFF677366)),
+                          style: TextStyle(fontSize: 13.5, color: textSecondary),
                         ),
                       ],
                     ),
@@ -64,22 +72,22 @@ class CategorySelectionView extends StatelessWidget {
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: cardBg,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFE2E9E0), width: 1.2),
+                        border: Border.all(color: borderColor, width: 1.2),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.04),
+                            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
                             blurRadius: 8,
                             offset: const Offset(0, 3),
                           ),
                         ],
                       ),
-                      child: const Tooltip(
+                      child: Tooltip(
                         message: 'ประวัติการออกกำลังกาย',
                         child: Icon(
                           Icons.history_rounded,
-                          color: Color(0xFF2E5327),
+                          color: isDark ? AppTheme.primaryLightGreen : const Color(0xFF2E5327),
                           size: 26,
                         ),
                       ),
@@ -99,15 +107,17 @@ class CategorySelectionView extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: cardBg,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: isSelected ? const Color(0xFF2E5327) : const Color(0xFFE2E9E0),
+                          color: isSelected
+                              ? (isDark ? AppTheme.primaryLightGreen : const Color(0xFF2E5327))
+                              : borderColor,
                           width: isSelected ? 2 : 1.2,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.03),
+                            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -119,10 +129,14 @@ class CategorySelectionView extends StatelessWidget {
                             width: 52,
                             height: 52,
                             decoration: BoxDecoration(
-                              color: const Color(0xFFE8F3EB),
+                              color: isDark ? const Color(0xFF23352A) : const Color(0xFFE8F3EB),
                               borderRadius: BorderRadius.circular(16),
                             ),
-                            child: Icon(category.icon, color: const Color(0xFF2E5327), size: 28),
+                            child: Icon(
+                              category.icon,
+                              color: isDark ? AppTheme.primaryLightGreen : const Color(0xFF2E5327),
+                              size: 28,
+                            ),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
@@ -131,21 +145,25 @@ class CategorySelectionView extends StatelessWidget {
                               children: [
                                 Text(
                                   category.title,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w700,
-                                    color: Color(0xFF1C2819),
+                                    color: textPrimary,
                                   ),
                                 ),
                                 const SizedBox(height: 3),
                                 Text(
                                   category.subtitle,
-                                  style: const TextStyle(fontSize: 12.5, color: Color(0xFF677366)),
+                                  style: TextStyle(fontSize: 12.5, color: textSecondary),
                                 ),
                               ],
                             ),
                           ),
-                          const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Color(0xFF8B9889)),
+                          Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 16,
+                            color: isDark ? const Color(0xFF8B9889) : const Color(0xFF8B9889),
+                          ),
                         ],
                       ),
                     ),

@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:healthymate/core/theme/app_theme.dart';
 import 'package:healthymate/core/services/routine_state_notifier.dart';
 import 'package:healthymate/features/food_recognition/widgets/food_recognition_result_sheet.dart';
 import 'package:healthymate/features/food_recognition/services/food_recognition_service.dart';
@@ -82,11 +82,16 @@ class _FoodSourceBottomSheetState extends State<FoodSourceBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = AppTheme.getBackgroundColor(isDark);
+    final textPrimary = AppTheme.getTextPrimaryColor(isDark);
+    final textSecondary = AppTheme.getTextSecondaryColor(isDark);
+
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -96,43 +101,43 @@ class _FoodSourceBottomSheetState extends State<FoodSourceBottomSheet> {
             height: 4,
             margin: const EdgeInsets.only(bottom: 18),
             decoration: BoxDecoration(
-              color: Colors.grey.shade300,
+              color: isDark ? const Color(0xFF4A584E) : Colors.grey.shade300,
               borderRadius: BorderRadius.circular(10),
             ),
           ),
-          const Text(
+          Text(
             'บันทึกอาหารด้วย AI Food Scanner',
             style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1E2822),
+              color: textPrimary,
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             'ถ่ายภาพอาหารของคุณเพื่อให้ AI ประเมินแคลอรีและสารอาหารทันที',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12.5, color: Color(0xFF7A867E)),
+            style: TextStyle(fontSize: 12.5, color: textSecondary),
           ),
           const SizedBox(height: 22),
           if (_isLoading)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 20),
               child: Column(
-                children: const [
-                  CircularProgressIndicator(
+                children: [
+                  const CircularProgressIndicator(
                     valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
                     strokeWidth: 3,
                   ),
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
                   Text(
                     'AI กำลังวิเคราะห์รูปภาพอาหาร...',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E2822)),
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: textPrimary),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
                     'จำแนกหลายเมนู และคำนวณแคลอรี สารอาหาร P/C/F',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF7A867E)),
+                    style: TextStyle(fontSize: 12, color: textSecondary),
                   ),
                 ],
               ),
@@ -146,7 +151,7 @@ class _FoodSourceBottomSheetState extends State<FoodSourceBottomSheet> {
                     icon: Icons.camera_alt_rounded,
                     label: 'เปิดกล้องถ่ายสด',
                     sublabel: 'Camera',
-                    color: AppTheme.primaryGreen,
+                    color: isDark ? AppTheme.primaryLightGreen : AppTheme.primaryGreen,
                     onTap: () => _pickImage(ImageSource.camera),
                   ),
                 ),
@@ -157,7 +162,7 @@ class _FoodSourceBottomSheetState extends State<FoodSourceBottomSheet> {
                     icon: Icons.photo_library_rounded,
                     label: 'เลือกจากแกลเลอรี',
                     sublabel: 'Gallery Import',
-                    color: const Color(0xFF3F824E),
+                    color: isDark ? const Color(0xFF5CA86E) : const Color(0xFF3F824E),
                     onTap: () => _pickImage(ImageSource.gallery),
                   ),
                 ),
@@ -176,22 +181,28 @@ class _FoodSourceBottomSheetState extends State<FoodSourceBottomSheet> {
     required Color color,
     required VoidCallback onTap,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = AppTheme.getTextPrimaryColor(isDark);
+    final textSecondary = AppTheme.getTextSecondaryColor(isDark);
+    final surfaceBg = AppTheme.getSurfaceColor(isDark);
+    final borderColor = AppTheme.getBorderColor(isDark);
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(18),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFFF7FAF8),
+          color: surfaceBg,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFE2EBE5), width: 1.2),
+          border: Border.all(color: borderColor, width: 1.2),
         ),
         child: Column(
           children: [
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
+                color: color.withValues(alpha: isDark ? 0.2 : 0.12),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, size: 28, color: color),
@@ -199,16 +210,16 @@ class _FoodSourceBottomSheetState extends State<FoodSourceBottomSheet> {
             const SizedBox(height: 12),
             Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF1E2822),
+                color: textPrimary,
               ),
             ),
             const SizedBox(height: 2),
             Text(
               sublabel,
-              style: const TextStyle(fontSize: 11, color: Color(0xFF8A958E)),
+              style: TextStyle(fontSize: 11, color: textSecondary),
             ),
           ],
         ),

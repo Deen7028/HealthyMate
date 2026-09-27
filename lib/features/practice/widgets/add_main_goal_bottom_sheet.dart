@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
 
 class MainGoalTemplate {
   final String title;
@@ -112,12 +113,13 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
       fieldHintText: 'วัน/เดือน/ปี',
       fieldLabelText: 'กรอกวันที่',
       builder: (context, child) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF0F9C58),
+            colorScheme: ColorScheme.light(
+              primary: isDark ? AppTheme.primaryLightGreen : const Color(0xFF0F9C58),
               onPrimary: Colors.white,
-              onSurface: Color(0xFF1C2819),
+              onSurface: isDark ? Colors.white : const Color(0xFF1C2819),
             ),
           ),
           child: child!,
@@ -161,6 +163,12 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = AppTheme.getBackgroundColor(isDark);
+    final textPrimary = AppTheme.getTextPrimaryColor(isDark);
+    final textSecondary = AppTheme.getTextSecondaryColor(isDark);
+    final borderColor = AppTheme.getBorderColor(isDark);
+    final surfaceBg = AppTheme.getSurfaceColor(isDark);
     final selectedTemplate = templates[_selectedTemplateIndex];
 
     return Container(
@@ -170,9 +178,9 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
         top: 20,
         bottom: MediaQuery.of(context).viewInsets.bottom + 20,
       ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: SingleChildScrollView(
         child: Column(
@@ -185,7 +193,7 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
+                  color: isDark ? const Color(0xFF4A584E) : Colors.grey.shade300,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -198,17 +206,17 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE8F5E9),
+                    color: isDark ? const Color(0xFF23352A) : const Color(0xFFE8F5E9),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.flag_rounded,
-                    color: Color(0xFF0F9C58),
+                    color: isDark ? AppTheme.primaryLightGreen : const Color(0xFF0F9C58),
                     size: 24,
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Column(
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
@@ -216,12 +224,12 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF1C2819),
+                        color: textPrimary,
                       ),
                     ),
                     Text(
                       'เป้าหมายระยะยาวพร้อมยอดสะสมและวันสิ้นสุด',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                      style: TextStyle(fontSize: 12, color: textSecondary),
                     ),
                   ],
                 ),
@@ -230,12 +238,12 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
             const SizedBox(height: 20),
 
             // Section 1: Goal Type Selection
-            const Text(
+            Text(
               'ส่วนที่ 1: เลือกประเภทความท้าทาย (Goal Type)',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF006432),
+                color: isDark ? AppTheme.primaryLightGreen : const Color(0xFF006432),
               ),
             ),
             const SizedBox(height: 10),
@@ -264,13 +272,13 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
                     ),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? const Color(0xFFE8F5E9)
-                          : Colors.grey.shade50,
+                          ? (isDark ? const Color(0xFF23352A) : const Color(0xFFE8F5E9))
+                          : surfaceBg,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
                         color: isSelected
-                            ? const Color(0xFF0F9C58)
-                            : Colors.grey.shade200,
+                            ? (isDark ? AppTheme.primaryLightGreen : const Color(0xFF0F9C58))
+                            : borderColor,
                         width: isSelected ? 2.0 : 1.0,
                       ),
                     ),
@@ -287,8 +295,8 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
                                   ? FontWeight.bold
                                   : FontWeight.normal,
                               color: isSelected
-                                  ? const Color(0xFF006432)
-                                  : Colors.black87,
+                                  ? (isDark ? AppTheme.primaryLightGreen : const Color(0xFF006432))
+                                  : textPrimary,
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -303,12 +311,12 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
             const SizedBox(height: 20),
 
             // Section 2: Target & Unit
-            const Text(
+            Text(
               'ส่วนที่ 2: กำหนดเส้นชัย (Target & Unit)',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF006432),
+                color: isDark ? AppTheme.primaryLightGreen : const Color(0xFF006432),
               ),
             ),
             const SizedBox(height: 10),
@@ -320,27 +328,30 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
+                    style: TextStyle(color: textPrimary),
                     decoration: InputDecoration(
                       labelText: 'ตัวเลขเป้าหมาย',
+                      labelStyle: TextStyle(color: textSecondary),
                       hintText: 'เช่น 50',
-                      prefixIcon: const Icon(
+                      hintStyle: TextStyle(color: textSecondary.withValues(alpha: 0.6)),
+                      prefixIcon: Icon(
                         Icons.track_changes,
-                        color: Color(0xFF0F9C58),
+                        color: isDark ? AppTheme.primaryLightGreen : const Color(0xFF0F9C58),
                       ),
                       filled: true,
-                      fillColor: Colors.grey.shade50,
+                      fillColor: surfaceBg,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
+                        borderSide: BorderSide(color: borderColor),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
+                        borderSide: BorderSide(color: borderColor),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(
-                          color: Color(0xFF0F9C58),
+                        borderSide: BorderSide(
+                          color: isDark ? AppTheme.primaryLightGreen : const Color(0xFF0F9C58),
                           width: 2,
                         ),
                       ),
@@ -354,18 +365,18 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
                     vertical: 16,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE8F5E9),
+                    color: isDark ? const Color(0xFF23352A) : const Color(0xFFE8F5E9),
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: const Color(0xFF0F9C58).withValues(alpha: 0.3),
+                      color: (isDark ? AppTheme.primaryLightGreen : const Color(0xFF0F9C58)).withValues(alpha: 0.3),
                     ),
                   ),
                   child: Text(
                     selectedTemplate.defaultUnit,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF006432),
+                      color: isDark ? AppTheme.primaryLightGreen : const Color(0xFF006432),
                     ),
                   ),
                 ),
@@ -374,12 +385,12 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
             const SizedBox(height: 20),
 
             // Section 3: Deadline Selection
-            const Text(
+            Text(
               'ส่วนที่ 3: กำหนดเส้นตาย (Deadline)',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF006432),
+                color: isDark ? AppTheme.primaryLightGreen : const Color(0xFF006432),
               ),
             ),
             const SizedBox(height: 10),
@@ -387,6 +398,10 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
               children: [
                 Expanded(
                   child: _buildDeadlineOption(
+                    isDark: isDark,
+                    surfaceBg: surfaceBg,
+                    borderColor: borderColor,
+                    textPrimary: textPrimary,
                     type: '1_week',
                     label: '1 สัปดาห์\n(7 วัน)',
                   ),
@@ -394,6 +409,10 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: _buildDeadlineOption(
+                    isDark: isDark,
+                    surfaceBg: surfaceBg,
+                    borderColor: borderColor,
+                    textPrimary: textPrimary,
                     type: '1_month',
                     label: '1 เดือน\n(30 วัน)',
                   ),
@@ -401,6 +420,10 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: _buildDeadlineOption(
+                    isDark: isDark,
+                    surfaceBg: surfaceBg,
+                    borderColor: borderColor,
+                    textPrimary: textPrimary,
                     type: 'custom',
                     label: _deadlineType == 'custom'
                         ? '${_customDeadlineDate.day}/${_customDeadlineDate.month}/${_customDeadlineDate.year}'
@@ -419,7 +442,7 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
               child: ElevatedButton(
                 onPressed: _submit,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF006432),
+                  backgroundColor: isDark ? const Color(0xFF2E5327) : const Color(0xFF006432),
                   elevation: 2,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -449,6 +472,10 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
   }
 
   Widget _buildDeadlineOption({
+    required bool isDark,
+    required Color surfaceBg,
+    required Color borderColor,
+    required Color textPrimary,
     required String type,
     required String label,
     VoidCallback? onTapCustom,
@@ -469,10 +496,14 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFE8F5E9) : Colors.grey.shade50,
+          color: isSelected
+              ? (isDark ? const Color(0xFF23352A) : const Color(0xFFE8F5E9))
+              : surfaceBg,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? const Color(0xFF0F9C58) : Colors.grey.shade200,
+            color: isSelected
+                ? (isDark ? AppTheme.primaryLightGreen : const Color(0xFF0F9C58))
+                : borderColor,
             width: isSelected ? 2.0 : 1.0,
           ),
         ),
@@ -481,7 +512,9 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
             Icon(
               type == 'custom' ? Icons.calendar_month : Icons.timer_outlined,
               size: 20,
-              color: isSelected ? const Color(0xFF0F9C58) : Colors.grey,
+              color: isSelected
+                  ? (isDark ? AppTheme.primaryLightGreen : const Color(0xFF0F9C58))
+                  : (isDark ? const Color(0xFF6B7E72) : Colors.grey),
             ),
             const SizedBox(height: 4),
             Text(
@@ -490,7 +523,9 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected ? const Color(0xFF006432) : Colors.black87,
+                color: isSelected
+                    ? (isDark ? AppTheme.primaryLightGreen : const Color(0xFF006432))
+                    : textPrimary,
               ),
             ),
           ],

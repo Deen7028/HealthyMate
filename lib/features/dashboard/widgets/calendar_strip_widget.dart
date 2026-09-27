@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
 
 class CalendarStripWidget extends StatelessWidget {
   final DateTime now;
@@ -20,6 +21,11 @@ class CalendarStripWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = AppTheme.getBackgroundColor(isDark);
+    final borderColor = AppTheme.getBorderColor(isDark);
+    final textPrimary = AppTheme.getTextPrimaryColor(isDark);
+
     final monday = now.subtract(Duration(days: now.weekday - 1));
     final days = List.generate(7, (i) => monday.add(Duration(days: i)));
     const dayLabels = ['จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.', 'อา.'];
@@ -27,9 +33,9 @@ class CalendarStripWidget extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         children: [
@@ -46,7 +52,7 @@ class CalendarStripWidget extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     'สัปดาห์นี้ • $thaiMonthName ${now.year + 543}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: TextStyle(fontWeight: FontWeight.bold, color: textPrimary),
                   ),
                 ],
               ),
@@ -105,11 +111,12 @@ class CalendarStripWidget extends StatelessWidget {
                 '${days[i].day}',
                 isToday,
                 isPast,
+                isDark,
               );
             }),
           ),
           const SizedBox(height: 16),
-          const Divider(height: 1),
+          Divider(height: 1, color: borderColor),
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -168,14 +175,14 @@ class CalendarStripWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildDayItem(String day, String date, bool isSelected, bool isPast) {
+  Widget _buildDayItem(String day, String date, bool isSelected, bool isPast, bool isDark) {
     return Column(
       children: [
         Text(
           day,
           style: TextStyle(
             fontSize: 12,
-            color: isSelected ? darkGreen : Colors.grey,
+            color: isSelected ? darkGreen : (isDark ? const Color(0xFFA0ACA0) : Colors.grey),
           ),
         ),
         const SizedBox(height: 8),
@@ -191,7 +198,7 @@ class CalendarStripWidget extends StatelessWidget {
               date,
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                color: isSelected ? Colors.white : Colors.black87,
+                color: isSelected ? Colors.white : (isDark ? Colors.white : Colors.black87),
               ),
             ),
           ),
@@ -203,7 +210,7 @@ class CalendarStripWidget extends StatelessWidget {
           decoration: BoxDecoration(
             color: isSelected
                 ? Colors.greenAccent
-                : (isPast ? darkGreen : Colors.grey.shade300),
+                : (isPast ? darkGreen : (isDark ? const Color(0xFF3B4D41) : Colors.grey.shade300)),
             shape: BoxShape.circle,
           ),
         ),

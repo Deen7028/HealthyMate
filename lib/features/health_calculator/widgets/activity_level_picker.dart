@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:healthymate/core/theme/app_theme.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:healthymate/features/health_calculator/models/activity_level.dart';
 
 class ActivityLevelPicker extends StatelessWidget {
@@ -14,15 +14,21 @@ class ActivityLevelPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = AppTheme.getTextPrimaryColor(isDark);
+    final textSecondary = AppTheme.getTextSecondaryColor(isDark);
+    final cardBg = AppTheme.getBackgroundColor(isDark);
+    final borderColor = AppTheme.getBorderColor(isDark);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'ระดับกิจกรรมทางกายภาพ (Activity Level)',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w700,
-            color: AppTheme.textPrimary,
+            color: textPrimary,
           ),
         ),
         const SizedBox(height: 10),
@@ -34,6 +40,8 @@ class ActivityLevelPicker extends StatelessWidget {
           itemBuilder: (context, index) {
             final option = ActivityLevel.options[index];
             final isSelected = option.id == selectedLevel.id;
+            final selectedBg = isDark ? const Color(0xFF23352A) : const Color(0xFFF3F8F4);
+            final selectedBorder = isDark ? AppTheme.primaryLightGreen : AppTheme.primaryGreen;
 
             return InkWell(
               onTap: () => onLevelChanged(option),
@@ -42,10 +50,10 @@ class ActivityLevelPicker extends StatelessWidget {
                 duration: const Duration(milliseconds: 180),
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFFF3F8F4) : Colors.white,
+                  color: isSelected ? selectedBg : cardBg,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isSelected ? AppTheme.primaryGreen : AppTheme.borderLight,
+                    color: isSelected ? selectedBorder : borderColor,
                     width: isSelected ? 1.8 : 1.2,
                   ),
                 ),
@@ -58,7 +66,9 @@ class ActivityLevelPicker extends StatelessWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: isSelected ? AppTheme.primaryGreen : AppTheme.textTertiary,
+                          color: isSelected
+                              ? (isDark ? AppTheme.primaryLightGreen : AppTheme.primaryGreen)
+                              : (isDark ? const Color(0xFF6B7E72) : AppTheme.textTertiary),
                           width: 2,
                         ),
                       ),
@@ -67,9 +77,9 @@ class ActivityLevelPicker extends StatelessWidget {
                               child: Container(
                                 width: 10,
                                 height: 10,
-                                decoration: const BoxDecoration(
+                                decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: AppTheme.primaryGreen,
+                                  color: isDark ? AppTheme.primaryLightGreen : AppTheme.primaryGreen,
                                 ),
                               ),
                             )
@@ -85,15 +95,15 @@ class ActivityLevelPicker extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                              color: AppTheme.textPrimary,
+                              color: textPrimary,
                             ),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             option.description,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12.5,
-                              color: AppTheme.textSecondary,
+                              color: textSecondary,
                               height: 1.2,
                             ),
                           ),

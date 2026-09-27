@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:healthymate/core/theme/app_theme.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
 
 class WorkoutHistoryEmptyCard extends StatelessWidget {
   final VoidCallback onSyncTap;
@@ -11,6 +11,10 @@ class WorkoutHistoryEmptyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = AppTheme.getTextPrimaryColor(isDark);
+    final textSecondary = AppTheme.getTextSecondaryColor(isDark);
+
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -26,35 +30,35 @@ class WorkoutHistoryEmptyCard extends StatelessWidget {
                     width: 96,
                     height: 96,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE8F1E7),
+                      color: isDark ? const Color(0xFF23352A) : const Color(0xFFE8F1E7),
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: const Color(0xFFD4E6D2),
+                        color: isDark ? const Color(0xFF354E3C) : const Color(0xFFD4E6D2),
                         width: 2,
                       ),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.fitness_center_rounded,
                       size: 48,
-                      color: Color(0xFF2E5327),
+                      color: isDark ? AppTheme.primaryLightGreen : const Color(0xFF2E5327),
                     ),
                   ),
                   const SizedBox(height: 24),
-                  const Text(
+                  Text(
                     'ยังไม่มีประวัติการออกกำลังกาย',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFF1C2819),
+                      color: textPrimary,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'เลื่อนลงเพื่อดึงข้อมูลจาก Cloud หรือเริ่มบันทึกกิจกรรมวิ่ง เดิน หรือปั่นจักรยานใหม่',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13.5,
-                      color: Color(0xFF677366),
+                      color: textSecondary,
                       height: 1.4,
                     ),
                   ),
@@ -64,8 +68,10 @@ class WorkoutHistoryEmptyCard extends StatelessWidget {
                     icon: const Icon(Icons.cloud_download_outlined, size: 18),
                     label: const Text('ดึงข้อมูลทั้งหมดจาก Server'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.primaryGreen,
-                      side: const BorderSide(color: AppTheme.primaryGreen),
+                      foregroundColor: isDark ? AppTheme.primaryLightGreen : AppTheme.primaryGreen,
+                      side: BorderSide(
+                        color: isDark ? AppTheme.primaryLightGreen : AppTheme.primaryGreen,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/services/routine_state_notifier.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:healthymate/shared/widgets/fade_slide_entrance.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/features/practice/widgets/add_main_goal_bottom_sheet.dart';
@@ -32,9 +33,8 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
   late final DashboardController _controller;
 
   // สีหลักอ้างอิงจากดีไซน์
-  final Color primaryGreen = const Color(0xFF0F9C58);
-  final Color darkGreen = const Color(0xFF006432);
-  final Color lightBg = const Color(0xFFF7F9FB);
+  final Color primaryGreen = AppTheme.primaryGreen;
+  final Color darkGreen = AppTheme.primaryGreenDark;
 
   @override
   void initState() {
@@ -150,12 +150,15 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scaffoldBg = AppTheme.getScaffoldColor(isDark);
+
     return ListenableBuilder(
       listenable: _controller,
       builder: (context, _) {
         if (_controller.isLoading) {
           return Scaffold(
-            backgroundColor: lightBg,
+            backgroundColor: scaffoldBg,
             body: Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -164,7 +167,7 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                   const SizedBox(height: 16),
                   Text(
                     'กำลังโหลดข้อมูลสุขภาพ...',
-                    style: TextStyle(color: Colors.grey.shade600),
+                    style: TextStyle(color: isDark ? Colors.white70 : Colors.grey.shade600),
                   ),
                 ],
               ),
@@ -173,7 +176,7 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
         }
 
         return Scaffold(
-          backgroundColor: lightBg,
+          backgroundColor: scaffoldBg,
           body: SafeArea(
             child: RefreshIndicator(
               color: primaryGreen,
@@ -269,7 +272,7 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                           todayWorkoutStats: _controller.todayWorkoutStats,
                           now: _controller.now,
                           darkGreen: darkGreen,
-                          lightBg: lightBg,
+                          lightBg: scaffoldBg,
                           onNavigateToPractice: widget.onNavigateToPractice,
                         ),
                       ),

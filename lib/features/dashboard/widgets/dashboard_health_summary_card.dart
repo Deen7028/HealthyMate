@@ -3,6 +3,7 @@ import 'package:healthymate/core/utils/health_calculator.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
 import 'package:healthymate/features/health_calculator/models/health_record_model.dart';
 import 'package:healthymate/features/health_calculator/models/activity_level.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
 
 class DashboardHealthSummaryCard extends StatelessWidget {
   final TbUser? user;
@@ -31,6 +32,13 @@ class DashboardHealthSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = AppTheme.getBackgroundColor(isDark);
+    final borderColor = AppTheme.getBorderColor(isDark);
+    final textPrimary = AppTheme.getTextPrimaryColor(isDark);
+    final textSecondary = AppTheme.getTextSecondaryColor(isDark);
+    final subtleSurface = isDark ? const Color(0xFF27342C) : const Color(0xFFF7F9FB);
+
     final weight = latestRecord?.nWeight ?? user?.nWeight ?? 0.0;
     final height = latestRecord?.nHeight ?? user?.nHeight ?? 0.0;
     final bmi =
@@ -86,11 +94,12 @@ class DashboardHealthSummaryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -104,26 +113,27 @@ class DashboardHealthSummaryCard extends StatelessWidget {
               Expanded(
                 child: Row(
                   children: [
-                    Icon(Icons.health_and_safety, color: darkGreen),
+                    Icon(Icons.health_and_safety, color: primaryGreen),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'ข้อมูลสุขภาพส่วนบุคคล',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 15,
+                              color: textPrimary,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
                             lastRecordText,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 11.5,
-                              color: Colors.grey,
+                              color: textSecondary,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -136,7 +146,7 @@ class DashboardHealthSummaryCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Material(
-                color: Colors.blue.shade50,
+                color: isDark ? const Color(0xFF1E3A5F) : Colors.blue.shade50,
                 borderRadius: BorderRadius.circular(20),
                 child: InkWell(
                   onTap: onNavigateToCalculator,
@@ -148,13 +158,13 @@ class DashboardHealthSummaryCard extends StatelessWidget {
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Icon(Icons.sync, size: 15, color: Colors.blue),
-                        SizedBox(width: 4),
+                      children: [
+                        Icon(Icons.sync, size: 15, color: isDark ? Colors.lightBlueAccent : Colors.blue),
+                        const SizedBox(width: 4),
                         Text(
                           'อัปเดตข้อมูล',
                           style: TextStyle(
-                            color: Colors.blue,
+                            color: isDark ? Colors.lightBlueAccent : Colors.blue,
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                           ),
@@ -176,6 +186,9 @@ class DashboardHealthSummaryCard extends StatelessWidget {
                   weight > 0
                       ? '${_formatNumber(weight)} กก. | ${_formatNumber(height)} ซม.'
                       : 'ยังไม่ระบุ',
+                  subtleSurface,
+                  textPrimary,
+                  textSecondary,
                 ),
               ),
               const SizedBox(width: 8),
@@ -185,6 +198,9 @@ class DashboardHealthSummaryCard extends StatelessWidget {
                   bmi > 0 ? bmi.toStringAsFixed(1) : '-',
                   bmi > 0 ? bmiCategory.badgeText : 'ยังไม่ระบุ',
                   bmi > 0 ? bmiCategory.color : Colors.grey,
+                  subtleSurface,
+                  textPrimary,
+                  textSecondary,
                 ),
               ),
             ],
@@ -202,13 +218,15 @@ class DashboardHealthSummaryCard extends StatelessWidget {
                     curve: Curves.easeOutCubic,
                     builder: (context, val, _) => Text(
                       bmr > 0 ? '${val.round()} kcal' : '- kcal',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
-                        color: Colors.black87,
+                        color: textPrimary,
                       ),
                     ),
                   ),
+                  subtleSurface,
+                  textSecondary,
                   icon: Icons.bolt,
                 ),
               ),
@@ -222,13 +240,15 @@ class DashboardHealthSummaryCard extends StatelessWidget {
                     curve: Curves.easeOutCubic,
                     builder: (context, val, _) => Text(
                       tdee > 0 ? '${val.round()} kcal' : '- kcal',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
-                        color: Colors.black87,
+                        color: textPrimary,
                       ),
                     ),
                   ),
+                  subtleSurface,
+                  textSecondary,
                   icon: Icons.local_fire_department,
                 ),
               ),
@@ -241,10 +261,15 @@ class DashboardHealthSummaryCard extends StatelessWidget {
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  primaryGreen.withValues(alpha: 0.08),
-                  Colors.amber.shade50.withValues(alpha: 0.5),
-                ],
+                colors: isDark
+                    ? [
+                        primaryGreen.withValues(alpha: 0.18),
+                        const Color(0xFF352B1E).withValues(alpha: 0.4),
+                      ]
+                    : [
+                        primaryGreen.withValues(alpha: 0.08),
+                        Colors.amber.shade50.withValues(alpha: 0.5),
+                      ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -262,14 +287,14 @@ class DashboardHealthSummaryCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.restaurant, size: 16, color: darkGreen),
+                        Icon(Icons.restaurant, size: 16, color: isDark ? const Color(0xFF90DB89) : darkGreen),
                         const SizedBox(width: 6),
-                        const Text(
+                        Text(
                           'สมดุลแคลอรีประจำวัน (AI Tracker)',
                           style: TextStyle(
                             fontSize: 12.5,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black87,
+                            color: textPrimary,
                           ),
                         ),
                       ],
@@ -280,8 +305,8 @@ class DashboardHealthSummaryCard extends StatelessWidget {
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                         color: todayNutritionCalories > targetTdee
-                            ? Colors.red.shade700
-                            : darkGreen,
+                            ? Colors.redAccent
+                            : (isDark ? const Color(0xFF90DB89) : darkGreen),
                       ),
                     ),
                   ],
@@ -314,15 +339,15 @@ class DashboardHealthSummaryCard extends StatelessWidget {
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: remainingEnergyQuota >= 0
-                            ? Colors.black87
-                            : Colors.red.shade700,
+                            ? textPrimary
+                            : Colors.redAccent,
                       ),
                     ),
                     Text(
                       'เบิร์นเพิ่ม +${totalCaloriesBurned.round()} kcal',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 10.5,
-                        color: Colors.grey,
+                        color: textSecondary,
                       ),
                     ),
                   ],
@@ -335,7 +360,7 @@ class DashboardHealthSummaryCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: primaryGreen.withValues(alpha: 0.1),
+              color: primaryGreen.withValues(alpha: isDark ? 0.18 : 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -346,12 +371,12 @@ class DashboardHealthSummaryCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'เป้าหมายเผาผลาญจากการออกกำลังกาย',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          color: textPrimary,
                         ),
                       ),
                       TweenAnimationBuilder<double>(
@@ -360,9 +385,9 @@ class DashboardHealthSummaryCard extends StatelessWidget {
                         curve: Curves.easeOutCubic,
                         builder: (context, val, _) => Text(
                           'เผาผลาญแล้ววันนี้ ${val.toStringAsFixed(0)} kcal',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 10,
-                            color: Colors.black54,
+                            color: textSecondary,
                           ),
                         ),
                       ),
@@ -386,11 +411,17 @@ class DashboardHealthSummaryCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStatItemWithWidget(String title, Widget valueWidget, {IconData? icon}) {
+  Widget _buildStatItemWithWidget(
+    String title,
+    Widget valueWidget,
+    Color surfaceColor,
+    Color secondaryColor, {
+    IconData? icon,
+  }) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7F9FB),
+        color: surfaceColor,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -399,13 +430,13 @@ class DashboardHealthSummaryCard extends StatelessWidget {
           Row(
             children: [
               if (icon != null) ...[
-                Icon(icon, size: 14, color: Colors.grey),
+                Icon(icon, size: 14, color: secondaryColor),
                 const SizedBox(width: 4),
               ],
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                  style: TextStyle(fontSize: 11, color: secondaryColor),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -418,11 +449,18 @@ class DashboardHealthSummaryCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStatItem(String title, String value, {IconData? icon}) {
+  Widget _buildStatItem(
+    String title,
+    String value,
+    Color surfaceColor,
+    Color primaryColor,
+    Color secondaryColor, {
+    IconData? icon,
+  }) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7F9FB),
+        color: surfaceColor,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -431,13 +469,13 @@ class DashboardHealthSummaryCard extends StatelessWidget {
           Row(
             children: [
               if (icon != null) ...[
-                Icon(icon, size: 14, color: Colors.grey),
+                Icon(icon, size: 14, color: secondaryColor),
                 const SizedBox(width: 4),
               ],
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                  style: TextStyle(fontSize: 11, color: secondaryColor),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -446,10 +484,10 @@ class DashboardHealthSummaryCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 13,
-              color: Colors.black87,
+              color: primaryColor,
             ),
           ),
         ],
@@ -462,11 +500,14 @@ class DashboardHealthSummaryCard extends StatelessWidget {
     String value,
     String badgeText,
     Color badgeColor,
+    Color surfaceColor,
+    Color primaryColor,
+    Color secondaryColor,
   ) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7F9FB),
+        color: surfaceColor,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -474,7 +515,7 @@ class DashboardHealthSummaryCard extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(fontSize: 11, color: Colors.grey),
+            style: TextStyle(fontSize: 11, color: secondaryColor),
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 4),
@@ -485,10 +526,10 @@ class DashboardHealthSummaryCard extends StatelessWidget {
             children: [
               Text(
                 value,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
-                  color: Colors.black87,
+                  color: primaryColor,
                 ),
               ),
               Container(

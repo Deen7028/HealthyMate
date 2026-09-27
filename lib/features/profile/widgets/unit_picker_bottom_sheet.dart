@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
 
 class UnitPickerBottomSheet extends StatelessWidget {
   final String selectedUnit;
@@ -12,45 +13,62 @@ class UnitPickerBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'เลือกหน่วยวัด',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1E2822),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = AppTheme.getBackgroundColor(isDark);
+    final textPrimary = AppTheme.getTextPrimaryColor(isDark);
+    final textSecondary = AppTheme.getTextSecondaryColor(isDark);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'เลือกหน่วยวัด',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: textPrimary,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            ListTile(
-              title: const Text('เมตริก (กิโลเมตร, กิโลกรัม)'),
-              subtitle: const Text('Kilometers, Kilograms'),
-              trailing: selectedUnit.startsWith('Kilo')
-                  ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
-                  : null,
-              onTap: () {
-                onUnitSelected('Kilometers, Kilograms');
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              title: const Text('อิมพีเรียล (ไมล์, ปอนด์)'),
-              subtitle: const Text('Miles, Pounds'),
-              trailing: selectedUnit.startsWith('Mile')
-                  ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
-                  : null,
-              onTap: () {
-                onUnitSelected('Miles, Pounds');
-                Navigator.pop(context);
-              },
-            ),
-          ],
+              const SizedBox(height: 16),
+              ListTile(
+                title: Text(
+                  'เมตริก (กิโลเมตร, กิโลกรัม)',
+                  style: TextStyle(color: textPrimary, fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text('Kilometers, Kilograms', style: TextStyle(color: textSecondary)),
+                trailing: selectedUnit.startsWith('Kilo')
+                    ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
+                    : null,
+                onTap: () {
+                  onUnitSelected('Kilometers, Kilograms');
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                title: Text(
+                  'อิมพีเรียล (ไมล์, ปอนด์)',
+                  style: TextStyle(color: textPrimary, fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text('Miles, Pounds', style: TextStyle(color: textSecondary)),
+                trailing: selectedUnit.startsWith('Mile')
+                    ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
+                    : null,
+                onTap: () {
+                  onUnitSelected('Miles, Pounds');
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );

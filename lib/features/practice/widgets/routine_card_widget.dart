@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
 
 enum RoutineButtonType { workout, stepAdd, timer, singleCheck }
 
@@ -37,18 +38,24 @@ class RoutineCardWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = AppTheme.getBackgroundColor(isDark);
+    final borderColor = AppTheme.getBorderColor(isDark);
+    final textPrimary = AppTheme.getTextPrimaryColor(isDark);
+    final textSecondary = AppTheme.getTextSecondaryColor(isDark);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: const Color(0xFFE2E9E0),
+          color: borderColor,
           width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -64,11 +71,11 @@ class RoutineCardWidget extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: cardColor.withValues(alpha: 0.12),
+                  color: cardColor.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                   border: Border.all(color: cardColor.withValues(alpha: 0.25)),
                 ),
-                child: Icon(icon, color: cardColor, size: 22),
+                child: Icon(icon, color: isDark ? const Color(0xFF90DB89) : cardColor, size: 22),
               ),
               const SizedBox(width: 12),
 
@@ -81,10 +88,10 @@ class RoutineCardWidget extends StatelessWidget {
                         Expanded(
                           child: Text(
                             title,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 15,
-                              color: Color(0xFF1E281F),
+                              color: textPrimary,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -97,7 +104,7 @@ class RoutineCardWidget extends StatelessWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: cardColor.withValues(alpha: 0.12),
+                            color: cardColor.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
@@ -105,7 +112,7 @@ class RoutineCardWidget extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 10.5,
                               fontWeight: FontWeight.bold,
-                              color: cardColor,
+                              color: isDark ? const Color(0xFF90DB89) : cardColor,
                             ),
                           ),
                         ),
@@ -125,9 +132,9 @@ class RoutineCardWidget extends StatelessWidget {
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.orange.shade50,
+                              color: isDark ? const Color(0xFF352B1E) : Colors.orange.shade50,
                               borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: Colors.orange.shade200),
+                              border: Border.all(color: isDark ? const Color(0xFF5C4018) : Colors.orange.shade200),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -135,7 +142,7 @@ class RoutineCardWidget extends StatelessWidget {
                                 Icon(
                                   Icons.bolt_rounded,
                                   size: 12,
-                                  color: Colors.orange.shade800,
+                                  color: isDark ? const Color(0xFFFFB74D) : Colors.orange.shade800,
                                 ),
                                 const SizedBox(width: 2),
                                 Text(
@@ -143,7 +150,7 @@ class RoutineCardWidget extends StatelessWidget {
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.orange.shade900,
+                                    color: isDark ? const Color(0xFFFFB74D) : Colors.orange.shade900,
                                   ),
                                 ),
                               ],
@@ -153,7 +160,7 @@ class RoutineCardWidget extends StatelessWidget {
                             'เป้าหมาย: ${_formatValue(targetVal)} $unitText',
                             style: TextStyle(
                               fontSize: 11,
-                              color: Colors.grey.shade600,
+                              color: textSecondary,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -164,7 +171,7 @@ class RoutineCardWidget extends StatelessWidget {
                         'เป้าหมายประจำวัน: ${_formatValue(targetVal)} $unitText',
                         style: TextStyle(
                           fontSize: 11.5,
-                          color: Colors.grey.shade600,
+                          color: textSecondary,
                         ),
                       ),
                     ],
@@ -201,13 +208,13 @@ class RoutineCardWidget extends StatelessWidget {
             children: [
               Text(
                 'ความคืบหน้า',
-                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                style: TextStyle(fontSize: 11, color: textSecondary),
               ),
               Text(
                 '${_formatValue(currentVal)} / ${_formatValue(targetVal)} $unitText ($percent%)',
                 style: TextStyle(
                   fontSize: 11.5,
-                  color: cardColor,
+                  color: isDark ? const Color(0xFF90DB89) : cardColor,
                   fontWeight: FontWeight.bold,
                 ),
               ),

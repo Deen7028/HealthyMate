@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/routine_state_notifier.dart';
@@ -262,20 +263,26 @@ class MainGoalCard extends StatelessWidget {
         .replaceAll(RegExp(r'\s*\(\s*เหลือ[^)]*\)'), '')
         .trim();
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = AppTheme.getBackgroundColor(isDark);
+    final textPrimary = AppTheme.getTextPrimaryColor(isDark);
+    final textSecondary = AppTheme.getTextSecondaryColor(isDark);
+    final borderColor = AppTheme.getBorderColor(isDark);
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: hasPinnedGoal
-              ? goalColor.withValues(alpha: 0.25)
-              : Colors.grey.shade200,
+              ? goalColor.withValues(alpha: 0.35)
+              : borderColor,
           width: hasPinnedGoal ? 1.5 : 1.0,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -288,7 +295,7 @@ class MainGoalCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: goalColor.withValues(alpha: 0.12),
+                  color: goalColor.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(goalIcon, color: goalColor, size: 22),
@@ -303,9 +310,10 @@ class MainGoalCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             displayTitle,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
+                              color: textPrimary,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -326,8 +334,8 @@ class MainGoalCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12,
                         color: isCompleted
-                            ? Colors.green.shade700
-                            : Colors.grey,
+                            ? (isDark ? const Color(0xFF90DB89) : Colors.green.shade700)
+                            : textSecondary,
                         fontWeight: isCompleted
                             ? FontWeight.bold
                             : FontWeight.normal,
@@ -476,7 +484,7 @@ class MainGoalCard extends StatelessWidget {
 
           if (hasPinnedGoal) ...[
             const SizedBox(height: 16),
-            const Divider(height: 1),
+            Divider(height: 1, color: borderColor),
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -484,14 +492,18 @@ class MainGoalCard extends StatelessWidget {
                 _buildGoalStatItem(
                   'สถานะ',
                   isCompleted ? 'ทำสำเร็จแล้ว' : 'กำลังดำเนินการ',
+                  textPrimary,
+                  textSecondary,
                   icon: isCompleted
                       ? Icons.check_circle_outline
                       : Icons.timelapse,
                 ),
-                Container(height: 28, width: 1, color: Colors.grey.shade200),
+                Container(height: 28, width: 1, color: borderColor),
                 _buildGoalStatItem(
                   'เหลือเวลา',
                   remainingValText,
+                  textPrimary,
+                  textSecondary,
                   subValue: deadlineSubText,
                   icon: Icons.calendar_today,
                 ),
@@ -505,7 +517,9 @@ class MainGoalCard extends StatelessWidget {
 
   Widget _buildGoalStatItem(
     String title,
-    String value, {
+    String value,
+    Color primaryColor,
+    Color secondaryColor, {
     IconData? icon,
     String? subValue,
   }) {
@@ -515,12 +529,12 @@ class MainGoalCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 12, color: Colors.grey),
+              Icon(icon, size: 12, color: secondaryColor),
               const SizedBox(width: 4),
             ],
             Text(
               title,
-              style: const TextStyle(fontSize: 10, color: Colors.grey),
+              style: TextStyle(fontSize: 10, color: secondaryColor),
             ),
           ],
         ),
@@ -528,10 +542,10 @@ class MainGoalCard extends StatelessWidget {
         Text(
           value,
           textAlign: TextAlign.center,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.bold,
-            color: Colors.black87,
+            color: primaryColor,
           ),
         ),
         if (subValue != null && subValue.isNotEmpty) ...[
@@ -539,9 +553,9 @@ class MainGoalCard extends StatelessWidget {
           Text(
             subValue,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 10,
-              color: Colors.grey,
+              color: secondaryColor,
               fontWeight: FontWeight.w500,
             ),
           ),

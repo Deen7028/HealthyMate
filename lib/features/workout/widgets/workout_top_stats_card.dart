@@ -10,6 +10,7 @@ class WorkoutTopStatsCard extends StatelessWidget {
   final double caloriesBurned;
   final Animation<double> pulseAnimation;
   final VoidCallback? onChangeCategoryTap;
+  final bool isCountdownMode;
 
   const WorkoutTopStatsCard({
     super.key,
@@ -21,6 +22,7 @@ class WorkoutTopStatsCard extends StatelessWidget {
     required this.caloriesBurned,
     required this.pulseAnimation,
     this.onChangeCategoryTap,
+    this.isCountdownMode = false,
   });
 
   @override
@@ -130,7 +132,7 @@ class WorkoutTopStatsCard extends StatelessWidget {
           const SizedBox(height: 8),
 
           Text(
-            'เวลา',
+            isCountdownMode ? 'เวลานับถอยหลัง' : 'เวลา',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,

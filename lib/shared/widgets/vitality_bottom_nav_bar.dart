@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:healthymate/core/theme/app_theme.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
 
 class VitalityBottomNavBar extends StatelessWidget {
   /// Index ของแท็บที่กำลังเลือกอยู่ (0 ถึง 4)
@@ -59,11 +59,15 @@ class VitalityBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final navBgColor = AppTheme.getBackgroundColor(isDark);
+    final shadowColor = isDark ? Colors.black.withValues(alpha: 0.35) : const Color(0xFF1E2822).withValues(alpha: 0.12);
+
     return BottomAppBar(
-      color: Colors.white,
+      color: navBgColor,
       surfaceTintColor: Colors.transparent,
       elevation: 10,
-      shadowColor: const Color(0xFF1E2822).withValues(alpha: 0.12),
+      shadowColor: shadowColor,
       shape: const CircularNotchedRectangle(),
       notchMargin: 7.0,
       padding: EdgeInsets.zero,
@@ -137,6 +141,10 @@ class _VitalityStandardNavItemWidgetState extends State<_VitalityStandardNavItem
   Widget build(BuildContext context) {
     final isSelected = widget.isSelected;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final unselectedIconColor = isDark ? const Color(0xFFA0ACA0) : const Color(0xFF8C9890);
+    final unselectedTextColor = isDark ? const Color(0xFFA0ACA0) : const Color(0xFF6F7C73);
+
     return GestureDetector(
       onTapDown: (_) => setState(() => _isPressed = true),
       onTapUp: (_) {
@@ -172,7 +180,7 @@ class _VitalityStandardNavItemWidgetState extends State<_VitalityStandardNavItem
                   child: Icon(
                     isSelected ? (widget.item.activeIcon ?? widget.item.icon) : widget.item.icon,
                     size: 24,
-                    color: isSelected ? AppTheme.primaryGreen : const Color(0xFF8C9890),
+                    color: isSelected ? AppTheme.primaryGreen : unselectedIconColor,
                   ),
                 ),
               ),
@@ -183,7 +191,7 @@ class _VitalityStandardNavItemWidgetState extends State<_VitalityStandardNavItem
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  color: isSelected ? AppTheme.primaryGreen : const Color(0xFF6F7C73),
+                  color: isSelected ? AppTheme.primaryGreen : unselectedTextColor,
                   letterSpacing: isSelected ? 0.1 : 0.0,
                 ),
                 maxLines: 1,

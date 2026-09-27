@@ -48,6 +48,9 @@ class DashboardHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final imageProvider = _getImageProvider(profilePath);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryTextColor = isDark ? Colors.white : Colors.black87;
+    final secondaryTextColor = isDark ? const Color(0xFFA0ACA0) : Colors.black54;
 
     return Padding(
       padding: const EdgeInsets.only(top: 16.0),
@@ -97,9 +100,9 @@ class DashboardHeader extends StatelessWidget {
                           const SizedBox(width: 4),
                           Text(
                             'เข้าสู่วัน$thaiDayName • สัปดาห์ที่ $weekOfMonth',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey,
+                              color: isDark ? const Color(0xFFA0ACA0) : Colors.grey,
                             ),
                           ),
                         ],
@@ -115,7 +118,7 @@ class DashboardHeader extends StatelessWidget {
                   IconButton(
                     icon: const Icon(Icons.notifications_outlined),
                     onPressed: () {},
-                    color: Colors.black87,
+                    color: isDark ? Colors.white70 : Colors.black87,
                   ),
                 ],
               ),
@@ -124,15 +127,15 @@ class DashboardHeader extends StatelessWidget {
           const SizedBox(height: 20),
           RichText(
             text: TextSpan(
-              style: const TextStyle(color: Colors.black87, fontSize: 24),
+              style: TextStyle(color: primaryTextColor, fontSize: 24),
               children: [
                 TextSpan(
                   text: '$greetingText, $userName! $greetingEmoji\n',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
-                const TextSpan(
+                TextSpan(
                   text: 'พร้อมออกไปวิ่งรับพลังงานและดูแลสุขภาพที่ดีหรือยัง?',
-                  style: TextStyle(fontSize: 14, color: Colors.black54),
+                  style: TextStyle(fontSize: 14, color: secondaryTextColor),
                 ),
               ],
             ),

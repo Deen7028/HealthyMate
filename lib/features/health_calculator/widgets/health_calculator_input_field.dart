@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:healthymate/core/theme/app_theme.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
 
 class HealthCalculatorInputField extends StatelessWidget {
   final String label;
@@ -23,6 +23,11 @@ class HealthCalculatorInputField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = AppTheme.getTextPrimaryColor(isDark);
+    final textSecondary = AppTheme.getTextSecondaryColor(isDark);
+    final cardBg = AppTheme.getBackgroundColor(isDark);
+    final borderColor = AppTheme.getBorderColor(isDark);
     final hasError = errorText != null;
 
     return Column(
@@ -30,20 +35,20 @@ class HealthCalculatorInputField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w700,
-            color: AppTheme.textPrimary,
+            color: textPrimary,
           ),
         ),
         const SizedBox(height: 8),
         Container(
           height: 50,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: cardBg,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: hasError ? Colors.redAccent : AppTheme.borderLight,
+              color: hasError ? Colors.redAccent : borderColor,
               width: hasError ? 1.5 : 1.2,
             ),
           ),
@@ -55,10 +60,10 @@ class HealthCalculatorInputField extends StatelessWidget {
                   focusNode: focusNode,
                   keyboardType: keyboardType,
                   onChanged: onChanged,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimary,
+                    color: textPrimary,
                   ),
                   decoration: const InputDecoration(
                     border: InputBorder.none,
@@ -70,10 +75,10 @@ class HealthCalculatorInputField extends StatelessWidget {
                 padding: const EdgeInsets.only(right: 16),
                 child: Text(
                   suffixText,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
-                    color: AppTheme.textSecondary,
+                    color: textSecondary,
                   ),
                 ),
               ),

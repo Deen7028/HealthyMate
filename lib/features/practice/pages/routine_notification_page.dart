@@ -1,13 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/services/routine_state_notifier.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
 import '../models/routine_item.dart';
 import '../widgets/index.dart';
 import '../controllers/routine_controller.dart';
 
 class MyRoutinesPage extends StatefulWidget {
   final bool isActive;
-  final Function(String? workoutCategory)? onNavigateToWorkout;
+  final Function(String? workoutCategory, [int? targetDurationMinutes])? onNavigateToWorkout;
 
   const MyRoutinesPage({
     super.key,
@@ -22,10 +23,8 @@ class MyRoutinesPage extends StatefulWidget {
 class _MyRoutinesPageState extends State<MyRoutinesPage> {
   late final RoutineController _controller;
 
-  final Color primaryGreen = const Color(0xFF0F9C58);
-  final Color darkGreen = const Color(0xFF006432);
-  final Color lightBg = const Color(0xFFF7F9FB);
-  final Color cardGreenBg = const Color(0xFFE8F5E9);
+  final Color primaryGreen = AppTheme.primaryGreen;
+  final Color darkGreen = AppTheme.primaryGreenDark;
 
   @override
   void initState() {
@@ -314,13 +313,17 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scaffoldBg = AppTheme.getScaffoldColor(isDark);
+    final cardGreenBg = isDark ? const Color(0xFF1E2822) : const Color(0xFFE8F5E9);
+
     return ListenableBuilder(
       listenable: _controller,
       builder: (context, _) {
         if (_controller.isLoading) {
           return Scaffold(
-            backgroundColor: lightBg,
-            appBar: _buildAppBar(),
+            backgroundColor: scaffoldBg,
+            appBar: _buildAppBar(isDark),
             body: Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -329,7 +332,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
                   const SizedBox(height: 16),
                   Text(
                     'กำลังโหลดกิจวัตร...',
-                    style: TextStyle(color: Colors.grey.shade600),
+                    style: TextStyle(color: isDark ? Colors.white70 : Colors.grey.shade600),
                   ),
                 ],
               ),
@@ -376,8 +379,8 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
         }
 
         return Scaffold(
-          backgroundColor: lightBg,
-          appBar: _buildAppBar(),
+          backgroundColor: scaffoldBg,
+          appBar: _buildAppBar(isDark),
           body: RefreshIndicator(
               color: primaryGreen,
               onRefresh: _controller.loadData,
@@ -401,6 +404,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
                       completedCount: displayCompletedCount,
                       totalRoutinesCount: displayRoutines.length,
                       onSetMainGoal: _openAddMainGoalBottomSheet,
+                      onNavigateToWorkout: widget.onNavigateToWorkout,
                       onUnpin: () async {
                         await _controller.unpinMainGoal();
                         _showSnackBar('ยกเลิกการปักหมุดเป้าหมายหลักแล้ว');
@@ -411,7 +415,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
                     ),
 
 
-                    _buildDailyRoutinesHeader(),
+                    _buildDailyRoutinesHeader(isDark),
                     const SizedBox(height: 16),
                     if (displayRoutines.isEmpty) _buildEmptyState(),
 
@@ -419,6 +423,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
                       _buildTimeBlockHeader(
                         '☀️ ช่วงเช้า (Morning)',
                         '06:00 - 11:00',
+                        isDark,
                       ),
                       ...morningRoutines.map(
                         (r) => Padding(
@@ -433,6 +438,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
                       _buildTimeBlockHeader(
                         '🏃 ระหว่างวัน (Afternoon)',
                         '12:00 - 18:00',
+                        isDark,
                       ),
                       ...afternoonRoutines.map(
                         (r) => Padding(
@@ -444,7 +450,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
                     ],
 
                     if (nightRoutines.isNotEmpty) ...[
-                      _buildTimeBlockHeader('🌙 ก่อนนอน (Night)', '21:00 - 23:00'),
+                      _buildTimeBlockHeader('🌙 ก่อนนอน (Night)', '21:00 - 23:00', isDark),
                       ...nightRoutines.map(
                         (r) => Padding(
                           padding: const EdgeInsets.only(bottom: 12),
@@ -455,7 +461,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
                     ],
 
                     if (otherRoutines.isNotEmpty) ...[
-                      _buildTimeBlockHeader('⭐ กิจวัตรอื่นๆ', 'ตลอดทั้งวัน'),
+                      _buildTimeBlockHeader('⭐ กิจวัตรอื่นๆ', 'ตลอดทั้งวัน', isDark),
                       ...otherRoutines.map(
                         (r) => Padding(
                           padding: const EdgeInsets.only(bottom: 12),
@@ -480,9 +486,10 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
+  PreferredSizeWidget _buildAppBar(bool isDark) {
     final userName = _controller.user?.sFirstName ?? 'ผู้ใช้งาน';
     final profilePath = _controller.user?.sProfileImagePath ?? '';
+    final scaffoldBg = AppTheme.getScaffoldColor(isDark);
 
     ImageProvider? imageProvider;
     if (profilePath.isNotEmpty) {
@@ -492,7 +499,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     }
 
     return AppBar(
-      backgroundColor: lightBg,
+      backgroundColor: scaffoldBg,
       elevation: 0,
       automaticallyImplyLeading: false,
       title: Column(
@@ -501,14 +508,14 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
           Text(
             'กิจวัตรของฉัน',
             style: TextStyle(
-              color: darkGreen,
+              color: isDark ? const Color(0xFF90DB89) : darkGreen,
               fontWeight: FontWeight.bold,
               fontSize: 18,
             ),
           ),
-          const Text(
+          Text(
             '(My Routines)',
-            style: TextStyle(color: Colors.grey, fontSize: 12),
+            style: TextStyle(color: isDark ? const Color(0xFFA0ACA0) : Colors.grey, fontSize: 12),
           ),
         ],
       ),
@@ -540,7 +547,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     return const RoutineEmptyView();
   }
 
-  Widget _buildDailyRoutinesHeader() {
+  Widget _buildDailyRoutinesHeader(bool isDark) {
     int timeBlockCount = 0;
     final times = _controller.routines
         .map((r) => _getTimeBlock(r['sTime']?.toString() ?? ''))
@@ -551,24 +558,25 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        const Text(
+        Text(
           'กิจวัตรประจำวัน (Daily\nRoutines)',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
             height: 1.2,
+            color: isDark ? Colors.white : const Color(0xFF1E2822),
           ),
         ),
         Text(
           _controller.routines.isEmpty ? 'ยังไม่มี' : '$timeBlockCount ช่วง\nเวลา',
           textAlign: TextAlign.right,
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
+          style: TextStyle(fontSize: 12, color: isDark ? const Color(0xFFA0ACA0) : Colors.grey),
         ),
       ],
     );
   }
 
-  Widget _buildTimeBlockHeader(String title, String timeRange) {
+  Widget _buildTimeBlockHeader(String title, String timeRange, bool isDark) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: Row(
@@ -576,15 +584,15 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 14,
-              color: Color(0xFF1C2819),
+              color: isDark ? const Color(0xFF90DB89) : const Color(0xFF1C2819),
             ),
           ),
           Text(
             timeRange,
-            style: const TextStyle(fontSize: 12, color: Colors.grey),
+            style: TextStyle(fontSize: 12, color: isDark ? const Color(0xFFA0ACA0) : Colors.grey),
           ),
         ],
       ),
@@ -608,11 +616,10 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
                      routine['sUnit']?.toString() ?? 'ครั้ง';
     final lowerTitle = title.toLowerCase();
 
-    const workoutKeywords = ['วิ่ง', 'เดิน', 'ปั่นจักรยาน', 'จักรยาน', 'ลู่วิ่ง', 'คาร์ดิโอ', 'ออกกำลังกาย'];
+    const workoutKeywords = ['วิ่ง', 'เดิน', 'ปั่นจักรยาน', 'จักรยาน', 'ลู่วิ่ง', 'คาร์ดิโอ', 'ออกกำลังกาย', 'สมาธิ', 'ทำสมาธิ', 'โยคะ'];
     final bool hasWorkoutKeyword = workoutKeywords.any((kw) => lowerTitle.contains(kw));
     final bool isNonWorkout = !hasWorkoutKeyword && (
         lowerTitle.contains('น้ำ') ||
-        lowerTitle.contains('สมาธิ') ||
         lowerTitle.contains('นอน') ||
         lowerTitle.contains('กิน') ||
         lowerTitle.contains('อาหาร') ||
@@ -630,6 +637,10 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
         matchedType = 'ปั่นจักรยาน';
       } else if (lowerTitle.contains('ลู่วิ่ง')) {
         matchedType = 'ลู่วิ่งในร่ม';
+      } else if (lowerTitle.contains('สมาธิ')) {
+        matchedType = 'ทำสมาธิ';
+      } else if (lowerTitle.contains('โยคะ')) {
+        matchedType = 'โยคะ';
       }
     }
 
@@ -714,7 +725,14 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
       actionButton = ElevatedButton.icon(
         onPressed: () {
           if (widget.onNavigateToWorkout != null) {
-            widget.onNavigateToWorkout!(matchedType);
+            int? durationMin;
+            if (unitText.contains('นาที') ||
+                unitText.contains('min') ||
+                matchedType.contains('สมาธิ') ||
+                matchedType.contains('โยคะ')) {
+              durationMin = targetVal > 0 ? targetVal.toInt() : 15;
+            }
+            widget.onNavigateToWorkout!(matchedType, durationMin);
           }
         },
         icon: const Icon(

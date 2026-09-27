@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
 import '../utils/dashboard_ui_helpers.dart';
 
 class DashboardOtherGoalsCard extends StatelessWidget {
@@ -31,6 +32,12 @@ class DashboardOtherGoalsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = AppTheme.getBackgroundColor(isDark);
+    final borderColor = AppTheme.getBorderColor(isDark);
+    final textPrimary = AppTheme.getTextPrimaryColor(isDark);
+    final textSecondary = AppTheme.getTextSecondaryColor(isDark);
+
     final pinnedRoutineId = (userGoal?['nRoutineId'] as num?)?.toInt() ?? 0;
     final pinnedTitle = userGoal?['sTitle']?.toString() ?? '';
 
@@ -50,11 +57,12 @@ class DashboardOtherGoalsCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -80,9 +88,10 @@ class DashboardOtherGoalsCard extends StatelessWidget {
                       otherRoutines.isNotEmpty
                           ? 'เป้าหมายอื่นๆ (${otherRoutines.length})'
                           : 'เป้าหมายอื่นๆ',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
+                        color: textPrimary,
                       ),
                     ),
                   ],
@@ -104,7 +113,7 @@ class DashboardOtherGoalsCard extends StatelessWidget {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: otherRoutines.length,
-              separatorBuilder: (context, index) => const Divider(height: 12, thickness: 0.5),
+              separatorBuilder: (context, index) => Divider(height: 12, thickness: 0.5, color: borderColor),
               itemBuilder: (context, index) {
                 final routine = otherRoutines[index];
                 final rId = (routine['nRoutineId'] as num?)?.toInt() ?? 0;
@@ -191,7 +200,9 @@ class DashboardOtherGoalsCard extends StatelessWidget {
                           ),
                           child: Icon(
                             isActuallyCompleted ? Icons.check_circle_rounded : icon,
-                            color: isActuallyCompleted ? Colors.green.shade700 : color,
+                            color: isActuallyCompleted
+                                ? (isDark ? const Color(0xFF90DB89) : Colors.green.shade700)
+                                : color,
                             size: 20,
                           ),
                         ),
@@ -207,7 +218,9 @@ class DashboardOtherGoalsCard extends StatelessWidget {
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 15,
-                                  color: isActuallyCompleted ? Colors.grey.shade500 : const Color(0xFF1E293B),
+                                  color: isActuallyCompleted
+                                      ? (isDark ? const Color(0xFF8C968E) : Colors.grey.shade500)
+                                      : textPrimary,
                                   decoration: isActuallyCompleted ? TextDecoration.lineThrough : null,
                                 ),
                                 maxLines: 1,
@@ -220,7 +233,9 @@ class DashboardOtherGoalsCard extends StatelessWidget {
                                     : 'ความคืบหน้า: ${_formatNum(currentVal)} / ${_formatNum(targetVal)} $unitText',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: isActuallyCompleted ? Colors.green.shade600 : Colors.grey.shade500,
+                                  color: isActuallyCompleted
+                                      ? (isDark ? const Color(0xFF90DB89) : Colors.green.shade600)
+                                      : textSecondary,
                                 ),
                               ),
                             ],
@@ -229,18 +244,21 @@ class DashboardOtherGoalsCard extends StatelessWidget {
 
                         // 3. ป้ายกำกับสถานะ
                         if (!isActuallyCompleted)
-
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.orange.shade50,
+                              color: isDark
+                                  ? const Color(0xFF352B1E)
+                                  : Colors.orange.shade50,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
                               'รอทำรายการ',
                               style: TextStyle(
                                 fontSize: 10,
-                                color: Colors.orange.shade700,
+                                color: isDark
+                                    ? const Color(0xFFFFB74D)
+                                    : Colors.orange.shade700,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -257,7 +275,7 @@ class DashboardOtherGoalsCard extends StatelessWidget {
               child: Center(
                 child: Text(
                   'ยังไม่ได้เพิ่มเป้าหมายอื่นๆ',
-                  style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+                  style: TextStyle(color: textSecondary, fontSize: 13),
                 ),
               ),
             ),

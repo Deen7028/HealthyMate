@@ -17,12 +17,14 @@ class WorkoutTrackingPage extends StatefulWidget {
   final bool isActive;
   final VoidCallback? onBackToDashboard;
   final String? initialCategory;
+  final int? targetDurationMinutes;
 
   const WorkoutTrackingPage({
     super.key,
     this.isActive = true,
     this.onBackToDashboard,
     this.initialCategory,
+    this.targetDurationMinutes,
   });
 
   @override
@@ -47,7 +49,7 @@ class _WorkoutTrackingPageState extends State<WorkoutTrackingPage>
         widget.initialCategory != 'selectingCategory' &&
         widget.initialCategory != 'all' &&
         widget.initialCategory != 'selection') {
-      _state.selectCategoryByName(widget.initialCategory);
+      _state.selectCategoryByName(widget.initialCategory, widget.targetDurationMinutes);
     } else {
       _state.returnToCategorySelection();
     }
@@ -64,13 +66,14 @@ class _WorkoutTrackingPageState extends State<WorkoutTrackingPage>
   void didUpdateWidget(covariant WorkoutTrackingPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.initialCategory != oldWidget.initialCategory ||
+        widget.targetDurationMinutes != oldWidget.targetDurationMinutes ||
         (widget.isActive && !oldWidget.isActive)) {
       if (widget.initialCategory != null &&
           widget.initialCategory!.isNotEmpty &&
           widget.initialCategory != 'selectingCategory' &&
           widget.initialCategory != 'all' &&
           widget.initialCategory != 'selection') {
-        _state.selectCategoryByName(widget.initialCategory);
+        _state.selectCategoryByName(widget.initialCategory, widget.targetDurationMinutes);
       } else if (widget.initialCategory == 'selectingCategory' ||
           widget.initialCategory == 'all' ||
           widget.initialCategory == 'selection') {
@@ -385,6 +388,7 @@ class _WorkoutTrackingPageState extends State<WorkoutTrackingPage>
                         distanceKm: _state.distanceKm,
                         caloriesBurned: _state.caloriesBurned,
                         pulseAnimation: _pulseController,
+                        isCountdownMode: _state.isCountdownMode,
                         onChangeCategoryTap: !_state.isRunning
                             ? () => _state.returnToCategorySelection()
                             : null,

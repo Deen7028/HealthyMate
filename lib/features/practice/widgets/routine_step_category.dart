@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
 import '../models/routine_item.dart';
 
 class RoutineStepCategory extends StatelessWidget {
@@ -17,16 +18,23 @@ class RoutineStepCategory extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = AppTheme.getTextPrimaryColor(isDark);
+    final textSecondary = AppTheme.getTextSecondaryColor(isDark);
+    final cardBg = AppTheme.getBackgroundColor(isDark);
+    final borderColor = AppTheme.getBorderColor(isDark);
+    final surfaceBg = AppTheme.getSurfaceColor(isDark);
+
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Step 1: เลือกหมวดหมู่ & ชื่อกิจวัตร 🎯',
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1E281F),
+              color: textPrimary,
             ),
           ),
           const SizedBox(height: 12),
@@ -47,20 +55,20 @@ class RoutineStepCategory extends StatelessWidget {
                       horizontal: 12, vertical: 10),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? const Color(0xFF2E5327)
-                        : const Color(0xFFF4F7F4),
+                        ? (isDark ? const Color(0xFF2E5327) : const Color(0xFF2E5327))
+                        : (isDark ? surfaceBg : const Color(0xFFF4F7F4)),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: isSelected
-                          ? const Color(0xFF2E5327)
-                          : const Color(0xFFE2E9E0),
+                          ? (isDark ? AppTheme.primaryLightGreen : const Color(0xFF2E5327))
+                          : borderColor,
                       width: 1.5,
                     ),
                     boxShadow: isSelected
                         ? [
                             BoxShadow(
                               color: const Color(0xFF2E5327)
-                                  .withValues(alpha: 0.2),
+                                  .withValues(alpha: isDark ? 0.4 : 0.2),
                               blurRadius: 8,
                               offset: const Offset(0, 3),
                             ),
@@ -74,7 +82,7 @@ class RoutineStepCategory extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: isSelected
                               ? Colors.white.withValues(alpha: 0.2)
-                              : const Color(0xFFE8F3EB),
+                              : (isDark ? const Color(0xFF23352A) : const Color(0xFFE8F3EB)),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
@@ -82,7 +90,7 @@ class RoutineStepCategory extends StatelessWidget {
                           size: 20,
                           color: isSelected
                               ? Colors.white
-                              : const Color(0xFF2E5327),
+                              : (isDark ? AppTheme.primaryLightGreen : const Color(0xFF2E5327)),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -94,7 +102,7 @@ class RoutineStepCategory extends StatelessWidget {
                             fontWeight: FontWeight.bold,
                             color: isSelected
                                 ? Colors.white
-                                : const Color(0xFF1E281F),
+                                : textPrimary,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -110,22 +118,33 @@ class RoutineStepCategory extends StatelessWidget {
           TextFormField(
             controller: titleController,
             onChanged: onTitleChanged,
+            style: TextStyle(color: textPrimary),
             decoration: InputDecoration(
               labelText: 'ชื่อกิจวัตร / นิสัย *',
+              labelStyle: TextStyle(color: textSecondary),
               hintText:
                   'เช่น วิ่งสเปรดเช้า, ปั่นจักรยานรอบสวน, ดื่มน้ำ 2000 มล.',
-              prefixIcon:
-                  const Icon(Icons.edit_note_rounded, color: Color(0xFF2E5327)),
+              hintStyle: TextStyle(color: textSecondary.withValues(alpha: 0.6)),
+              prefixIcon: Icon(
+                Icons.edit_note_rounded,
+                color: isDark ? AppTheme.primaryLightGreen : const Color(0xFF2E5327),
+              ),
               filled: true,
-              fillColor: Colors.white,
+              fillColor: cardBg,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: Color(0xFFE2E9E0)),
+                borderSide: BorderSide(color: borderColor),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: borderColor),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
-                borderSide:
-                    const BorderSide(color: Color(0xFF2E5327), width: 1.8),
+                borderSide: BorderSide(
+                  color: isDark ? AppTheme.primaryLightGreen : const Color(0xFF2E5327),
+                  width: 1.8,
+                ),
               ),
             ),
           ),

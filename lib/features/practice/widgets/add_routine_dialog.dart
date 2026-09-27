@@ -1,5 +1,6 @@
 // ignore_for_file: non_const_argument_for_const_parameter
 import 'package:flutter/material.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
 import '../models/routine_item.dart';
 import 'routine_step_category.dart';
 import 'routine_step_goal.dart';
@@ -241,11 +242,10 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
 
   String? _detectLinkedWorkout(String title, RoutineCategory category) {
     final lower = title.toLowerCase();
-    const workoutKeywords = ['วิ่ง', 'เดิน', 'ปั่นจักรยาน', 'จักรยาน', 'ลู่วิ่ง', 'คาร์ดิโอ', 'ออกกำลังกาย', 'run', 'walk', 'bike', 'cycle'];
+    const workoutKeywords = ['วิ่ง', 'เดิน', 'ปั่นจักรยาน', 'จักรยาน', 'ลู่วิ่ง', 'คาร์ดิโอ', 'ออกกำลังกาย', 'run', 'walk', 'bike', 'cycle', 'สมาธิ', 'meditation', 'โยคะ', 'yoga'];
     final bool hasWorkout = workoutKeywords.any((kw) => lower.contains(kw));
     final isNonWorkout = !hasWorkout && (
         lower.contains('น้ำ') ||
-        lower.contains('สมาธิ') ||
         lower.contains('นอน') ||
         lower.contains('กิน') ||
         lower.contains('อาหาร') ||
@@ -263,6 +263,10 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
       return 'เดิน';
     } else if (lower.contains('จักรยาน') || lower.contains('ปั่น') || lower.contains('bike') || lower.contains('cycle')) {
       return 'ปั่นจักรยาน';
+    } else if (lower.contains('สมาธิ') || lower.contains('meditation')) {
+      return 'ทำสมาธิ';
+    } else if (lower.contains('โยคะ') || lower.contains('yoga')) {
+      return 'โยคะ';
     }
     return null;
   }
@@ -301,7 +305,11 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final btnColor = _selectedColor ?? const Color(0xFF2E5327);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = AppTheme.getTextPrimaryColor(isDark);
+    final textSecondary = AppTheme.getTextSecondaryColor(isDark);
+    final borderColor = AppTheme.getBorderColor(isDark);
+    final btnColor = _selectedColor ?? (isDark ? const Color(0xFF388E3C) : const Color(0xFF2E5327));
 
     return Padding(
       padding: EdgeInsets.only(
@@ -322,7 +330,7 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: isDark ? const Color(0xFF4A584E) : Colors.grey.shade300,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -337,14 +345,14 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
                     widget.initialRoutine != null
                         ? 'แก้ไขกิจวัตร (Step ${_currentStep + 1}/3)'
                         : 'สร้างกิจวัตรใหม่ (Step ${_currentStep + 1}/3)',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1E293B),
+                      color: textPrimary,
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close_rounded),
+                    icon: Icon(Icons.close_rounded, color: textSecondary),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -361,7 +369,7 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
                       height: 4,
                       margin: EdgeInsets.only(right: index == 2 ? 0 : 6),
                       decoration: BoxDecoration(
-                        color: isActive ? btnColor : Colors.grey.shade300,
+                        color: isActive ? btnColor : (isDark ? const Color(0xFF2E3D34) : Colors.grey.shade300),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -395,6 +403,8 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
                       child: OutlinedButton(
                         onPressed: _prevStep,
                         style: OutlinedButton.styleFrom(
+                          foregroundColor: textPrimary,
+                          side: BorderSide(color: borderColor),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),

@@ -4,8 +4,8 @@ import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/api_service.dart';
 import 'package:healthymate/core/services/routine_state_notifier.dart';
 import 'package:healthymate/core/services/sync_service.dart';
-import 'package:healthymate/core/theme/app_theme.dart';
 import 'package:healthymate/features/food_recognition/models/food_recognition_models.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:healthymate/shared/widgets/fade_slide_entrance.dart';
 import 'index.dart';
 
@@ -239,13 +239,19 @@ class _FoodRecognitionResultSheetState extends State<FoodRecognitionResultSheet>
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).colorScheme.primary;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = AppTheme.getBackgroundColor(isDark);
+    final textPrimary = AppTheme.getTextPrimaryColor(isDark);
+    final textSecondary = AppTheme.getTextSecondaryColor(isDark);
+    final borderColor = AppTheme.getBorderColor(isDark);
+    final surfaceBg = AppTheme.getSurfaceColor(isDark);
+    final primaryColor = isDark ? AppTheme.primaryLightGreen : AppTheme.primaryGreen;
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.90,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: Column(
         children: [
@@ -255,7 +261,7 @@ class _FoodRecognitionResultSheetState extends State<FoodRecognitionResultSheet>
             width: 44,
             height: 5,
             decoration: BoxDecoration(
-              color: Colors.grey.shade300,
+              color: isDark ? const Color(0xFF4A584E) : Colors.grey.shade300,
               borderRadius: BorderRadius.circular(10),
             ),
           ),
@@ -268,13 +274,13 @@ class _FoodRecognitionResultSheetState extends State<FoodRecognitionResultSheet>
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: primaryColor.withValues(alpha: 0.12),
+                    color: primaryColor.withValues(alpha: isDark ? 0.2 : 0.12),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(Icons.auto_awesome_rounded, color: primaryColor, size: 22),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -283,12 +289,12 @@ class _FoodRecognitionResultSheetState extends State<FoodRecognitionResultSheet>
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF1E2822),
+                          color: textPrimary,
                         ),
                       ),
                       Text(
                         'จำแนกหลายเมนู พร้อมแจกแจงสารอาหารหลัก P/C/F',
-                        style: TextStyle(fontSize: 12, color: Color(0xFF8A958E)),
+                        style: TextStyle(fontSize: 12, color: textSecondary),
                       ),
                     ],
                   ),
@@ -296,16 +302,16 @@ class _FoodRecognitionResultSheetState extends State<FoodRecognitionResultSheet>
                 IconButton(
                   tooltip: 'ตั้งค่า Gemini API Key',
                   onPressed: _openApiKeyDialog,
-                  icon: const Icon(Icons.vpn_key_outlined, color: Color(0xFF6F7A72), size: 20),
+                  icon: Icon(Icons.vpn_key_outlined, color: textSecondary, size: 20),
                 ),
                 IconButton(
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close_rounded, color: Color(0xFF8A958E)),
+                  icon: Icon(Icons.close_rounded, color: textSecondary),
                 ),
               ],
             ),
           ),
-          const Divider(height: 1, color: Color(0xFFEAEFEA)),
+          Divider(height: 1, color: borderColor),
 
           // Scrollable Body
           Expanded(
@@ -324,13 +330,13 @@ class _FoodRecognitionResultSheetState extends State<FoodRecognitionResultSheet>
                         child: Container(
                           width: 88,
                           height: 88,
-                          color: const Color(0xFFF2F5F3),
+                          color: surfaceBg,
                           child: File(_result.imagePath).existsSync()
                               ? Image.file(
                                   File(_result.imagePath),
                                   fit: BoxFit.cover,
                                 )
-                              : const Icon(Icons.restaurant_rounded, size: 36, color: Color(0xFF8A958E)),
+                              : Icon(Icons.restaurant_rounded, size: 36, color: textSecondary),
                         ),
                       ),
                       const SizedBox(width: 14),
@@ -340,12 +346,12 @@ class _FoodRecognitionResultSheetState extends State<FoodRecognitionResultSheet>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'เลือกประเภทมื้ออาหาร',
                               style: TextStyle(
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF5A6559),
+                                color: textSecondary,
                               ),
                             ),
                             const SizedBox(height: 6),
@@ -360,14 +366,14 @@ class _FoodRecognitionResultSheetState extends State<FoodRecognitionResultSheet>
                                     style: TextStyle(
                                       fontSize: 11.5,
                                       fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
-                                      color: isSel ? Colors.white : const Color(0xFF5A6559),
+                                      color: isSel ? Colors.white : textSecondary,
                                     ),
                                   ),
                                   selected: isSel,
-                                  selectedColor: primaryColor,
-                                  backgroundColor: const Color(0xFFF2F5F3),
+                                  selectedColor: isDark ? const Color(0xFF2E5327) : primaryColor,
+                                  backgroundColor: surfaceBg,
                                   side: BorderSide(
-                                    color: isSel ? primaryColor : const Color(0xFFE2E7DF),
+                                    color: isSel ? (isDark ? AppTheme.primaryLightGreen : primaryColor) : borderColor,
                                     width: 1,
                                   ),
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -413,19 +419,19 @@ class _FoodRecognitionResultSheetState extends State<FoodRecognitionResultSheet>
                     children: [
                       Row(
                         children: [
-                          const Text(
+                          Text(
                             'เมนูที่ตรวจพบในภาพ',
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF1E2822),
+                              color: textPrimary,
                             ),
                           ),
                           const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
-                              color: primaryColor.withValues(alpha: 0.12),
+                              color: primaryColor.withValues(alpha: isDark ? 0.2 : 0.12),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
@@ -482,14 +488,14 @@ class _FoodRecognitionResultSheetState extends State<FoodRecognitionResultSheet>
           // Bottom Fixed Save Button
           Container(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              border: Border(top: BorderSide(color: Color(0xFFEAEFEA))),
+            decoration: BoxDecoration(
+              color: cardBg,
+              border: Border(top: BorderSide(color: borderColor)),
               boxShadow: [
                 BoxShadow(
-                  color: Color(0x0A000000),
+                  color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.04),
                   blurRadius: 10,
-                  offset: Offset(0, -3),
+                  offset: const Offset(0, -3),
                 ),
               ],
             ),
@@ -498,7 +504,7 @@ class _FoodRecognitionResultSheetState extends State<FoodRecognitionResultSheet>
               height: 52,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
+                  backgroundColor: isDark ? const Color(0xFF2E5327) : primaryColor,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   elevation: 0,
                 ),

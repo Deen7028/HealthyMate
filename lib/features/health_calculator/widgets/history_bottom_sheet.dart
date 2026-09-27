@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:healthymate/core/theme/app_theme.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:healthymate/features/health_calculator/models/health_record_model.dart';
 
 class HistoryBottomSheet extends StatelessWidget {
@@ -14,11 +14,18 @@ class HistoryBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scaffoldBg = AppTheme.getScaffoldColor(isDark);
+    final cardBg = AppTheme.getBackgroundColor(isDark);
+    final textPrimary = AppTheme.getTextPrimaryColor(isDark);
+    final textSecondary = AppTheme.getTextSecondaryColor(isDark);
+    final borderColor = AppTheme.getBorderColor(isDark);
+
     return Container(
       height: MediaQuery.of(context).size.height * 0.82,
-      decoration: const BoxDecoration(
-        color: AppTheme.scaffoldBackground,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: scaffoldBg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         children: [
@@ -29,7 +36,7 @@ class HistoryBottomSheet extends StatelessWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey.shade300,
+                color: isDark ? const Color(0xFF4A584E) : Colors.grey.shade300,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -42,19 +49,19 @@ class HistoryBottomSheet extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
-                  children: const [
+                  children: [
                     Icon(
                       Icons.history_rounded,
-                      color: AppTheme.primaryGreen,
+                      color: isDark ? AppTheme.primaryLightGreen : AppTheme.primaryGreen,
                       size: 24,
                     ),
-                    SizedBox(width: 8),
+                    const SizedBox(width: 8),
                     Text(
                       'ประวัติการคำนวณย้อนหลัง',
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
-                        color: AppTheme.textPrimary,
+                        color: textPrimary,
                       ),
                     ),
                   ],
@@ -62,43 +69,43 @@ class HistoryBottomSheet extends StatelessWidget {
                 IconButton(
                   onPressed: () => Navigator.of(context).pop(),
                   icon: const Icon(Icons.close_rounded),
-                  color: AppTheme.textSecondary,
+                  color: textSecondary,
                 ),
               ],
             ),
           ),
 
-          const Divider(height: 1, color: AppTheme.borderLight),
+          Divider(height: 1, color: borderColor),
 
           // Content
           Expanded(
             child: historyList.isEmpty
-                ? _buildEmptyState()
+                ? _buildEmptyState(textSecondary)
                 : ListView.builder(
                     padding: const EdgeInsets.all(20),
                     itemCount: historyList.length + 2,
                     itemBuilder: (context, index) {
                       if (index == 0) {
-                        return _buildTrendGraphCard();
+                        return _buildTrendGraphCard(isDark, cardBg, borderColor, textPrimary, textSecondary);
                       } else if (index == 1) {
                         return Padding(
                           padding: const EdgeInsets.only(top: 20, bottom: 12),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
+                              Text(
                                 'รายการบันทึกสุขภาพล่าสุด',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700,
-                                  color: AppTheme.textPrimary,
+                                  color: textPrimary,
                                 ),
                               ),
                               Text(
                                 'ทั้งหมด ${historyList.length} รายการ',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13,
-                                  color: AppTheme.textSecondary,
+                                  color: textSecondary,
                                 ),
                               ),
                             ],
@@ -108,7 +115,7 @@ class HistoryBottomSheet extends StatelessWidget {
                       final record = historyList[index - 2];
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 8.0),
-                        child: _buildHistoryItem(context, record),
+                        child: _buildHistoryItem(context, record, isDark, cardBg, borderColor, textPrimary, textSecondary),
                       );
                     },
                   ),
@@ -118,27 +125,27 @@ class HistoryBottomSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(Color textSecondary) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
-          Icon(
+        children: [
+          const Icon(
             Icons.history_toggle_off_rounded,
             size: 64,
             color: AppTheme.textTertiary,
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           Text(
             'ยังไม่มีประวัติการคำนวณ',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: AppTheme.textSecondary,
+              color: textSecondary,
             ),
           ),
-          SizedBox(height: 4),
-          Text(
+          const SizedBox(height: 4),
+          const Text(
             'เมื่อคุณกดบันทึกข้อมูล ระบบจะซิงก์เข้าฐานข้อมูลและแสดงแนวโน้มที่นี่',
             style: TextStyle(
               fontSize: 13,
@@ -150,7 +157,7 @@ class HistoryBottomSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildTrendGraphCard() {
+  Widget _buildTrendGraphCard(bool isDark, Color cardBg, Color borderColor, Color textPrimary, Color textSecondary) {
     final sortedRecords = List<TbHealthRecord>.from(historyList).reversed.toList();
     final weights = sortedRecords.map((r) => r.nWeight).toList();
     final firstWeight = weights.isNotEmpty ? weights.first : 0.0;
@@ -160,12 +167,12 @@ class HistoryBottomSheet extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.borderLight),
+        border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -180,20 +187,20 @@ class HistoryBottomSheet extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'แนวโน้มการเปลี่ยนแปลงน้ำหนัก',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: AppTheme.textPrimary,
+                      color: textPrimary,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     'เปรียบเทียบจาก ${sortedRecords.length} บันทึก',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: AppTheme.textSecondary,
+                      color: textSecondary,
                     ),
                   ),
                 ],
@@ -201,7 +208,9 @@ class HistoryBottomSheet extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: diff <= 0 ? const Color(0xFFE8F3EB) : const Color(0xFFFFF0E8),
+                  color: diff <= 0
+                      ? (isDark ? const Color(0xFF23352A) : const Color(0xFFE8F3EB))
+                      : (isDark ? const Color(0xFF3E271D) : const Color(0xFFFFF0E8)),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -211,7 +220,9 @@ class HistoryBottomSheet extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: diff <= 0 ? AppTheme.primaryGreen : const Color(0xFFD35400),
+                    color: diff <= 0
+                        ? (isDark ? AppTheme.primaryLightGreen : AppTheme.primaryGreen)
+                        : const Color(0xFFE06D2D),
                   ),
                 ),
               ),
@@ -223,7 +234,7 @@ class HistoryBottomSheet extends StatelessWidget {
             width: double.infinity,
             child: RepaintBoundary(
               child: CustomPaint(
-                painter: _WeightChartPainter(weights: weights),
+                painter: _WeightChartPainter(weights: weights, isDark: isDark),
               ),
             ),
           ),
@@ -233,14 +244,14 @@ class HistoryBottomSheet extends StatelessWidget {
             children: [
               Text(
                 'เริ่มต้น: ${firstWeight.toStringAsFixed(1)} กก.',
-                style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                style: TextStyle(fontSize: 12, color: textSecondary),
               ),
               Text(
                 'ปัจจุบัน: ${latestWeight.toStringAsFixed(1)} กก.',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: AppTheme.primaryGreen,
+                  color: isDark ? AppTheme.primaryLightGreen : AppTheme.primaryGreen,
                 ),
               ),
             ],
@@ -250,7 +261,7 @@ class HistoryBottomSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildHistoryItem(BuildContext context, TbHealthRecord record) {
+  Widget _buildHistoryItem(BuildContext context, TbHealthRecord record, bool isDark, Color cardBg, Color borderColor, Color textPrimary, Color textSecondary) {
     final dateStr =
         '${record.dtRecordedAt.day}/${record.dtRecordedAt.month}/${record.dtRecordedAt.year}  ${record.dtRecordedAt.hour.toString().padLeft(2, '0')}:${record.dtRecordedAt.minute.toString().padLeft(2, '0')}';
 
@@ -258,9 +269,9 @@ class HistoryBottomSheet extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.borderLight),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -270,24 +281,24 @@ class HistoryBottomSheet extends StatelessWidget {
             children: [
               Text(
                 dateStr,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
-                  color: AppTheme.textSecondary,
+                  color: textSecondary,
                 ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE8F3EB),
+                  color: isDark ? const Color(0xFF23352A) : const Color(0xFFE8F3EB),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   record.bmiCategoryObj.badgeText,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: AppTheme.primaryGreen,
+                    color: isDark ? AppTheme.primaryLightGreen : AppTheme.primaryGreen,
                   ),
                 ),
               ),
@@ -296,13 +307,13 @@ class HistoryBottomSheet extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              _buildMetricPill('น้ำหนัก', '${record.nWeight} กก.'),
+              _buildMetricPill('น้ำหนัก', '${record.nWeight} กก.', isDark),
               const SizedBox(width: 8),
-              _buildMetricPill('ส่วนสูง', '${record.nHeight.toInt()} ซม.'),
+              _buildMetricPill('ส่วนสูง', '${record.nHeight.toInt()} ซม.', isDark),
               const SizedBox(width: 8),
-              _buildMetricPill('BMI', record.nBmi.toStringAsFixed(1)),
+              _buildMetricPill('BMI', record.nBmi.toStringAsFixed(1), isDark),
               const SizedBox(width: 8),
-              _buildMetricPill('TDEE', '${record.nTdee.toInt()} kcal'),
+              _buildMetricPill('TDEE', '${record.nTdee.toInt()} kcal', isDark),
             ],
           ),
           const SizedBox(height: 8),
@@ -312,7 +323,7 @@ class HistoryBottomSheet extends StatelessWidget {
               Expanded(
                 child: Text(
                   'กิจกรรม: ${record.activityLevelTitle ?? "ปกติ"}',
-                  style: const TextStyle(fontSize: 11.5, color: AppTheme.textTertiary),
+                  style: TextStyle(fontSize: 11.5, color: textSecondary),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -334,30 +345,34 @@ class HistoryBottomSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildMetricPill(String label, String value) {
+  Widget _buildMetricPill(String label, String value, bool isDark) {
+    final surfaceBg = AppTheme.getSurfaceColor(isDark);
+    final textPrimary = AppTheme.getTextPrimaryColor(isDark);
+    final textSecondary = AppTheme.getTextSecondaryColor(isDark);
+
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
         decoration: BoxDecoration(
-          color: AppTheme.subtleSurface,
+          color: surfaceBg,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
           children: [
             Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 10,
-                color: AppTheme.textSecondary,
+                color: textSecondary,
               ),
             ),
             const SizedBox(height: 2),
             Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
-                color: AppTheme.textPrimary,
+                color: textPrimary,
               ),
             ),
           ],
@@ -369,15 +384,18 @@ class HistoryBottomSheet extends StatelessWidget {
 
 class _WeightChartPainter extends CustomPainter {
   final List<double> weights;
+  final bool isDark;
 
-  _WeightChartPainter({required this.weights});
+  _WeightChartPainter({required this.weights, this.isDark = false});
 
   @override
   void paint(Canvas canvas, Size size) {
     if (weights.isEmpty) return;
 
+    final primaryColor = isDark ? AppTheme.primaryLightGreen : AppTheme.primaryGreen;
+
     final linePaint = Paint()
-      ..color = AppTheme.primaryGreen
+      ..color = primaryColor
       ..strokeWidth = 3.0
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
@@ -388,22 +406,22 @@ class _WeightChartPainter extends CustomPainter {
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          AppTheme.primaryGreen.withValues(alpha: 0.25),
-          AppTheme.primaryGreen.withValues(alpha: 0.0),
+          primaryColor.withValues(alpha: 0.25),
+          primaryColor.withValues(alpha: 0.0),
         ],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
       ..style = PaintingStyle.fill;
 
     final dotPaint = Paint()
-      ..color = AppTheme.primaryGreen
+      ..color = primaryColor
       ..style = PaintingStyle.fill;
 
     final dotInnerPaint = Paint()
-      ..color = Colors.white
+      ..color = isDark ? const Color(0xFF1E2822) : Colors.white
       ..style = PaintingStyle.fill;
 
     final gridPaint = Paint()
-      ..color = AppTheme.borderLight
+      ..color = isDark ? const Color(0xFF2E3D34) : AppTheme.borderLight
       ..strokeWidth = 1.0;
 
     for (int i = 0; i <= 3; i++) {
@@ -456,6 +474,6 @@ class _WeightChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _WeightChartPainter oldDelegate) {
-    return oldDelegate.weights != weights;
+    return oldDelegate.weights != weights || oldDelegate.isDark != isDark;
   }
 }

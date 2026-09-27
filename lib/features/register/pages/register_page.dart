@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:healthymate/core/theme/app_theme.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:healthymate/features/auth/widgets/otp_verification_dialog.dart';
 import '../widgets/index.dart';
 import '../controllers/register_controller.dart';

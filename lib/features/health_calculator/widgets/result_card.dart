@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:healthymate/core/theme/app_theme.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
 
 class EnergyMetricCard extends StatelessWidget {
   final IconData icon;
@@ -19,13 +19,19 @@ class EnergyMetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surfaceBg = AppTheme.getSurfaceColor(isDark);
+    final borderColor = AppTheme.getBorderColor(isDark);
+    final textSecondary = AppTheme.getTextSecondaryColor(isDark);
+    final primaryColor = isDark ? AppTheme.primaryLightGreen : AppTheme.primaryGreen;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.subtleSurface,
+        color: surfaceBg,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppTheme.borderLight,
+          color: borderColor,
           width: 1.0,
         ),
       ),
@@ -37,16 +43,16 @@ class EnergyMetricCard extends StatelessWidget {
               Icon(
                 icon,
                 size: 18,
-                color: AppTheme.textSecondary,
+                color: textSecondary,
               ),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: AppTheme.textSecondary,
+                    color: textSecondary,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -62,19 +68,19 @@ class EnergyMetricCard extends StatelessWidget {
               return RichText(
                 text: TextSpan(
                   text: val.toInt().toString(),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
-                    color: AppTheme.primaryGreen,
+                    color: primaryColor,
                     letterSpacing: -0.5,
                   ),
                   children: [
                     TextSpan(
                       text: ' $unit',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: AppTheme.primaryGreen,
+                        color: primaryColor,
                       ),
                     ),
                   ],
@@ -85,9 +91,9 @@ class EnergyMetricCard extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             description,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11.5,
-              color: AppTheme.textSecondary,
+              color: textSecondary,
               height: 1.2,
             ),
           ),

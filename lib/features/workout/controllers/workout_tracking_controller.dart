@@ -29,6 +29,9 @@ class WorkoutTrackingController extends ChangeNotifier {
   double _distanceKm = 0.0;
   double _caloriesBurned = 0.0;
 
+  // Countdown timer support (e.g. meditation with target minutes)
+  int? _targetDurationSeconds;
+
   double _userWeightKg = 65.0;
   int _userId = 1;
   bool _isDisposed = false;
@@ -50,6 +53,15 @@ class WorkoutTrackingController extends ChangeNotifier {
   bool get showTraffic => _showTraffic;
   bool get isGpsEnabled => _isGpsEnabled;
   int get secondsElapsed => _secondsElapsed;
+  int? get targetDurationSeconds => _targetDurationSeconds;
+  bool get isCountdownMode => _targetDurationSeconds != null && _targetDurationSeconds! > 0;
+  int get displaySeconds {
+    if (isCountdownMode) {
+      final remaining = _targetDurationSeconds! - _secondsElapsed;
+      return remaining > 0 ? remaining : 0;
+    }
+    return _secondsElapsed;
+  }
   double get distanceKm => _distanceKm;
   double get caloriesBurned => _caloriesBurned;
   int get userId => _userId;
@@ -120,16 +132,19 @@ class WorkoutTrackingController extends ChangeNotifier {
   DateTime? _workoutStartTime;
   int _accumulatedSeconds = 0;
 
-  void selectCategoryByName(String? categoryStr) {
+  void selectCategoryByName(String? categoryStr, [int? targetDurationMinutes]) {
     final cat = WorkoutCategory.fromIdOrTitle(categoryStr);
-    selectCategory(cat);
+    selectCategory(cat, targetDurationMinutes);
   }
 
-  void selectCategory(WorkoutCategory category) {
+  void selectCategory(WorkoutCategory category, [int? targetDurationMinutes]) {
     _selectedCategory = category;
     _status = WorkoutState.initial;
     _secondsElapsed = 0;
-    secondsElapsedNotifier.value = 0;
+    _targetDurationSeconds = (targetDurationMinutes != null && targetDurationMinutes > 0)
+        ? targetDurationMinutes * 60
+        : null;
+    secondsElapsedNotifier.value = _targetDurationSeconds ?? 0;
     _accumulatedSeconds = 0;
     _workoutStartTime = null;
     _distanceKm = 0.0;
@@ -142,12 +157,21 @@ class WorkoutTrackingController extends ChangeNotifier {
     _safeNotifyListeners();
   }
 
+  void setTargetDurationMinutes(int? targetMinutes) {
+    _targetDurationSeconds = (targetMinutes != null && targetMinutes > 0)
+        ? targetMinutes * 60
+        : null;
+    secondsElapsedNotifier.value = isCountdownMode ? displaySeconds : _secondsElapsed;
+    _safeNotifyListeners();
+  }
+
   void returnToCategorySelection() {
     _timer?.cancel();
     _workoutStartTime = null;
     LocationBackgroundService.instance.stopTracking();
     _status = WorkoutState.selectingCategory;
     _secondsElapsed = 0;
+    _targetDurationSeconds = null;
     secondsElapsedNotifier.value = 0;
     _distanceKm = 0.0;
     _caloriesBurned = 0.0;
@@ -190,7 +214,7 @@ class WorkoutTrackingController extends ChangeNotifier {
         if (_workoutStartTime != null) {
           _secondsElapsed = _accumulatedSeconds + DateTime.now().difference(_workoutStartTime!).inSeconds;
         }
-        secondsElapsedNotifier.value = _secondsElapsed;
+        secondsElapsedNotifier.value = displaySeconds;
 
         // คำนวณแคลอรีตามสูตรมาตรฐานการกีฬาตามความเร็วไดนามิก (METs * 0.0175 * WeightKg * TimeMinutes)
         final activeMet = _calculateCurrentMet();

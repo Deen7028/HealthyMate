@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:healthymate/core/theme/app_theme.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:healthymate/core/utils/health_calculator.dart';
 
 class GenderSelector extends StatelessWidget {
@@ -14,15 +14,20 @@ class GenderSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = AppTheme.getTextPrimaryColor(isDark);
+    final cardBg = AppTheme.getBackgroundColor(isDark);
+    final borderColor = AppTheme.getBorderColor(isDark);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'เพศ',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w700,
-            color: AppTheme.textPrimary,
+            color: textPrimary,
           ),
         ),
         const SizedBox(height: 8),
@@ -30,6 +35,9 @@ class GenderSelector extends StatelessWidget {
           children: [
             Expanded(
               child: _buildGenderOption(
+                isDark: isDark,
+                cardBg: cardBg,
+                borderColor: borderColor,
                 gender: Gender.male,
                 label: 'ชาย',
                 icon: Icons.male_rounded,
@@ -39,6 +47,9 @@ class GenderSelector extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: _buildGenderOption(
+                isDark: isDark,
+                cardBg: cardBg,
+                borderColor: borderColor,
                 gender: Gender.female,
                 label: 'หญิง',
                 icon: Icons.female_rounded,
@@ -52,11 +63,19 @@ class GenderSelector extends StatelessWidget {
   }
 
   Widget _buildGenderOption({
+    required bool isDark,
+    required Color cardBg,
+    required Color borderColor,
     required Gender gender,
     required String label,
     required IconData icon,
     required bool isSelected,
   }) {
+    final selectedBg = isDark ? const Color(0xFF23352A) : const Color(0xFFF3F8F4);
+    final selectedColor = isDark ? AppTheme.primaryLightGreen : AppTheme.primaryGreen;
+    final unselectedText = AppTheme.getTextPrimaryColor(isDark);
+    final unselectedIcon = AppTheme.getTextSecondaryColor(isDark);
+
     return InkWell(
       onTap: () => onGenderChanged(gender),
       borderRadius: BorderRadius.circular(12),
@@ -64,10 +83,10 @@ class GenderSelector extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         height: 52,
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFF3F8F4) : Colors.white,
+          color: isSelected ? selectedBg : cardBg,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? AppTheme.primaryGreen : AppTheme.borderLight,
+            color: isSelected ? selectedColor : borderColor,
             width: isSelected ? 1.8 : 1.2,
           ),
         ),
@@ -77,7 +96,7 @@ class GenderSelector extends StatelessWidget {
             Icon(
               icon,
               size: 22,
-              color: isSelected ? AppTheme.primaryGreen : AppTheme.textSecondary,
+              color: isSelected ? selectedColor : unselectedIcon,
             ),
             const SizedBox(width: 8),
             Text(
@@ -85,7 +104,7 @@ class GenderSelector extends StatelessWidget {
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isSelected ? AppTheme.primaryGreen : AppTheme.textPrimary,
+                color: isSelected ? selectedColor : unselectedText,
               ),
             ),
           ],
