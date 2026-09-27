@@ -355,7 +355,9 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
                 children: List.generate(3, (index) {
                   final isActive = index <= _currentStep;
                   return Expanded(
-                    child: Container(
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
                       height: 4,
                       margin: EdgeInsets.only(right: index == 2 ? 0 : 6),
                       decoration: BoxDecoration(

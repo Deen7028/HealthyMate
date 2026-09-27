@@ -199,6 +199,7 @@ class RoutineController extends ChangeNotifier {
       isLoading = false;
       notifyListeners();
 
+      _resyncAllActiveNotifications();
       _syncRoutinesFromServer(userId);
     } catch (e) {
       isLoading = false;
@@ -206,41 +207,106 @@ class RoutineController extends ChangeNotifier {
     }
   }
 
+  Future<void> _resyncAllActiveNotifications() async {
+    for (final r in routines) {
+      final routineId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
+      final isNotifyActive = (r['isNotificationActive'] as num?)?.toInt() == 1 ||
+          (r['isNotificationActive'] as bool? ?? false);
+      if (routineId > 0 && isNotifyActive) {
+        final title = r['sTitle']?.toString() ?? r['title']?.toString() ?? '';
+        final timeStr = r['sTime']?.toString() ?? r['time']?.toString() ?? '';
+        final item = RoutineItem(
+          id: routineId.toString(),
+          title: title,
+          category: RoutineCategory.custom,
+          targetValue: (r['targetValue'] as num?)?.toDouble() ?? 1.0,
+          unit: r['unit']?.toString() ?? 'ครั้ง',
+          notificationTime: timeStr,
+          isNotificationEnabled: true,
+          repeatDays: const ['ทุกวัน'],
+          color: const Color(0xFF2E5327),
+          iconData: Icons.check,
+        );
+        await _syncLocalNotification(routineId, item);
+      }
+    }
+  }
+
   Future<void> _syncRoutinesFromServer(int userId) async {
     try {
+      final localRoutines = await AppDatabase.instance.getRoutines(userId: userId);
       final serverResult = await HealthApiService.fetchRoutines(userId: userId);
+
       if (serverResult != null && serverResult['status'] == 'success') {
         final serverRoutines =
             (serverResult['data'] as List?)?.cast<Map<String, dynamic>>() ?? [];
 
-        if (serverRoutines.isNotEmpty) {
-          await AppDatabase.instance.upsertRoutinesFromServer(userId, serverRoutines);
-          routines = await AppDatabase.instance.getRoutines(userId: userId);
+        // 🟢 หากในเครื่องมีกิจวัตรแต่บน Server ยังไม่มี ให้ดันข้อมูลขึ้น Server
+        if (localRoutines.isNotEmpty && serverRoutines.isEmpty) {
+          for (final r in localRoutines) {
+            final title = r['sTitle']?.toString() ?? '';
+            final time = r['sTime']?.toString() ?? '';
+            final targetVal = (r['targetValue'] as num?)?.toDouble() ?? 1.0;
+            final unit = r['unit']?.toString() ?? 'ครั้ง';
+            final linkedWorkout = r['sLinkedWorkout']?.toString() ?? '';
+            final color = (r['color'] as num?)?.toInt();
+            final iconData = (r['iconData'] as num?)?.toInt();
+            final isNotif = ((r['isNotificationActive'] as num?)?.toInt() ?? 1) == 1;
 
-          for (final r in serverRoutines) {
-            final routineId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
-            if (routineId == 0) continue;
-
-            if (r.containsKey('todayCompleted') && r['todayCompleted'] != null) {
-              final isDone = (r['todayCompleted'] as num?)?.toInt() == 1;
-              if (isDone) {
-                todayCompletionMap[routineId] = true;
-              }
-            }
-            if (r.containsKey('todayProgressValue') &&
-                r['todayProgressValue'] != null) {
-              final serverVal = (r['todayProgressValue'] as num?)?.toDouble() ?? 0.0;
-              final currentLocal = todayProgressValues[routineId] ?? 0.0;
-              if (serverVal > currentLocal) {
-                todayProgressValues[routineId] = serverVal;
-              }
+            if (title.isNotEmpty) {
+              await HealthApiService.insertRoutineRemote(
+                userId: userId,
+                title: title,
+                time: time,
+                targetValue: targetVal,
+                unit: unit,
+                linkedWorkout: linkedWorkout,
+                color: color,
+                iconData: iconData,
+                isNotificationActive: isNotif,
+              );
             }
           }
-          completedCount = todayCompletionMap.values.where((v) => v).length;
-          notifyListeners();
+          // ดึงรายการกลับมาอีกครั้งหลังจากดันขึ้น Server
+          final refreshedResult = await HealthApiService.fetchRoutines(userId: userId);
+          if (refreshedResult != null && refreshedResult['status'] == 'success') {
+            final refreshedRoutines =
+                (refreshedResult['data'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+            if (refreshedRoutines.isNotEmpty) {
+              await AppDatabase.instance.upsertRoutinesFromServer(userId, refreshedRoutines);
+            }
+          }
+        } else if (serverRoutines.isNotEmpty) {
+          await AppDatabase.instance.upsertRoutinesFromServer(userId, serverRoutines);
         }
+
+        routines = await AppDatabase.instance.getRoutines(userId: userId);
+
+        for (final r in serverRoutines) {
+          final routineId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
+          if (routineId == 0) continue;
+
+          if (r.containsKey('todayCompleted') && r['todayCompleted'] != null) {
+            final isDone = (r['todayCompleted'] as num?)?.toInt() == 1;
+            if (isDone) {
+              todayCompletionMap[routineId] = true;
+            }
+          }
+          if (r.containsKey('todayProgressValue') &&
+              r['todayProgressValue'] != null) {
+            final serverVal = (r['todayProgressValue'] as num?)?.toDouble() ?? 0.0;
+            final currentLocal = todayProgressValues[routineId] ?? 0.0;
+            if (serverVal > currentLocal) {
+              todayProgressValues[routineId] = serverVal;
+            }
+          }
+        }
+        completedCount = todayCompletionMap.values.where((v) => v).length;
+        notifyListeners();
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[RoutineController] _syncRoutinesFromServer error: $e');
+    }
   }
 
   Future<void> addRoutine(RoutineItem newRoutine) async {
@@ -280,34 +346,64 @@ class RoutineController extends ChangeNotifier {
   Future<void> _syncLocalNotification(int routineId, RoutineItem routine) async {
     if (routineId <= 0) return;
 
+    for (int i = 0; i < 10; i++) {
+      await NotificationService.instance.cancelNotification((routineId * 10) + i);
+    }
+
     if (routine.isNotificationEnabled) {
       final hasPermission = await NotificationService.instance.requestPermission();
       if (hasPermission) {
         final timeStr = routine.notificationTime;
-        if (timeStr.contains('ทุก') || timeStr.contains('ชั่วโมง')) {
+        final intIntervalMatch = RegExp(r'ทุก\s*(\d+)\s*ชั่วโมง').firstMatch(timeStr);
+
+        if (intIntervalMatch != null) {
+          final step = int.parse(intIntervalMatch.group(1)!);
+          int slotIndex = 0;
+          for (int h = 8; h <= 22 && slotIndex < 10; h += step) {
+            await NotificationService.instance.scheduleDailyRoutine(
+              id: (routineId * 10) + slotIndex,
+              title: 'ถึงเวลาทำกิจวัตร! 🎯',
+              body: 'ได้เวลา: ${routine.title} แล้วครับ',
+              hour: h,
+              minute: 0,
+            );
+            slotIndex++;
+          }
+        } else if (timeStr.contains('ทุกชั่วโมง')) {
           await NotificationService.instance.schedulePeriodicRoutine(
-            id: routineId,
+            id: routineId * 10,
             title: 'ถึงเวลาทำกิจวัตร! 🎯',
             body: 'ได้เวลา: ${routine.title} แล้วครับ',
             interval: RepeatInterval.hourly,
           );
         } else {
-          final match = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(timeStr);
-          if (match != null) {
-            final hour = int.parse(match.group(1)!);
-            final minute = int.parse(match.group(2)!);
+          // ดึงเวลาทั้งหมดในข้อความ ไม่ว่าจะคั่นด้วย comma, &, หรือ "และ"
+          final matches = RegExp(r'(\d{1,2})[:\.](\d{2})').allMatches(timeStr).toList();
+          if (matches.isNotEmpty) {
+            for (int i = 0; i < matches.length && i < 10; i++) {
+              final match = matches[i];
+              final hour = int.parse(match.group(1)!);
+              final minute = int.parse(match.group(2)!);
+              await NotificationService.instance.scheduleDailyRoutine(
+                id: (routineId * 10) + i,
+                title: 'กิจวัตรของคุณ 🌟',
+                body: 'อย่าลืมทำ ${routine.title} นะครับ',
+                hour: hour,
+                minute: minute,
+              );
+            }
+          } else {
+            // ค่าเริ่มต้นกรณีระบุเวลาลอยๆ
             await NotificationService.instance.scheduleDailyRoutine(
-              id: routineId,
+              id: routineId * 10,
               title: 'กิจวัตรของคุณ 🌟',
               body: 'อย่าลืมทำ ${routine.title} นะครับ',
-              hour: hour,
-              minute: minute,
+              hour: 8,
+              minute: 0,
             );
           }
         }
       }
-    } else {
-      await NotificationService.instance.cancelNotification(routineId);
     }
   }
 
@@ -519,7 +615,9 @@ class RoutineController extends ChangeNotifier {
 
   Future<void> deleteRoutine(int routineId, String title) async {
     await AppDatabase.instance.deleteRoutine(routineId);
-    await NotificationService.instance.cancelNotification(routineId);
+    for (int i = 0; i < 10; i++) {
+      await NotificationService.instance.cancelNotification((routineId * 10) + i);
+    }
 
     if (userGoal != null) {
       final pinnedId = (userGoal!['nRoutineId'] as num?)?.toInt() ?? 0;

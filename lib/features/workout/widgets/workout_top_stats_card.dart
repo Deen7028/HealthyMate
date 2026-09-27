@@ -156,54 +156,56 @@ class WorkoutTopStatsCard extends StatelessWidget {
 
           Row(
             children: [
-              Expanded(
-                child: Column(
-                  children: [
-                    Text(
-                      'ระยะทาง',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: isDarkModeMap ? const Color(0xFFA0ACA0) : const Color(0xFF677366),
+              if (category.isMoving) ...[
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text(
+                        'ระยะทาง',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: isDarkModeMap ? const Color(0xFFA0ACA0) : const Color(0xFF677366),
+                        ),
                       ),
-                    ),
-                    TweenAnimationBuilder<double>(
-                      tween: Tween<double>(begin: 0, end: distanceKm),
-                      duration: const Duration(milliseconds: 2500),
-                      curve: Curves.easeOutCubic,
-                      builder: (context, val, _) {
-                        return RichText(
-                          text: TextSpan(
-                            text: val.toStringAsFixed(2),
-                            style: TextStyle(
-                              fontSize: 26,
-                              fontWeight: FontWeight.w900,
-                              color: isDarkModeMap ? const Color(0xFF90DB89) : const Color(0xFF2E5327),
-                              letterSpacing: -0.5,
-                            ),
-                            children: [
-                              TextSpan(
-                                text: ' km',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: isDarkModeMap ? const Color(0xFFA0ACA0) : const Color(0xFF5A665A),
-                                ),
+                      TweenAnimationBuilder<double>(
+                        tween: Tween<double>(begin: 0, end: distanceKm),
+                        duration: const Duration(milliseconds: 2500),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, val, _) {
+                          return RichText(
+                            text: TextSpan(
+                              text: val.toStringAsFixed(2),
+                              style: TextStyle(
+                                fontSize: 26,
+                                fontWeight: FontWeight.w900,
+                                color: isDarkModeMap ? const Color(0xFF90DB89) : const Color(0xFF2E5327),
+                                letterSpacing: -0.5,
                               ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ],
+                              children: [
+                                TextSpan(
+                                  text: ' km',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDarkModeMap ? const Color(0xFFA0ACA0) : const Color(0xFF5A665A),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
                 ),
-              ),
 
-              Container(
-                height: 36,
-                width: 1,
-                color: isDarkModeMap ? Colors.white12 : const Color(0xFFE4ECE2),
-              ),
+                Container(
+                  height: 36,
+                  width: 1,
+                  color: isDarkModeMap ? Colors.white12 : const Color(0xFFE4ECE2),
+                ),
+              ],
 
               Expanded(
                 child: Column(

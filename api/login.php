@@ -56,6 +56,12 @@ try {
 
     if (password_verify($password, $storedHash)) {
         $isValidPassword = true;
+    } elseif (password_verify(hash('sha256', $password), $storedHash)) {
+        $isValidPassword = true;
+        $newHash = password_hash($password, PASSWORD_DEFAULT);
+        $rehashStmt = $conn->prepare("UPDATE TbUsers SET sPasswordHash = :h WHERE nUserId = :id");
+        $rehashStmt->execute([':h' => $newHash, ':id' => $user['nUserId']]);
+        $user['sPasswordHash'] = $newHash;
     } elseif ($storedHash === hash('sha256', $password) || $storedHash === $password) {
         $isValidPassword = true;
         // Re-hash เป็น BCRYPT มาตรฐานเพื่อความปลอดภัยในอนาคต

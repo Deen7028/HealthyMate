@@ -176,7 +176,17 @@ class RoutineCardWidget extends StatelessWidget {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  actionButton,
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 400),
+                    transitionBuilder: (child, animation) => ScaleTransition(
+                      scale: animation,
+                      child: FadeTransition(opacity: animation, child: child),
+                    ),
+                    child: KeyedSubtree(
+                      key: ValueKey(percent >= 100 ? 'done_${routine['nRoutineId']}' : 'action_${routine['nRoutineId']}'),
+                      child: actionButton,
+                    ),
+                  ),
                   threeDotsMenu,
                 ],
               ),
@@ -206,13 +216,20 @@ class RoutineCardWidget extends StatelessWidget {
           const SizedBox(height: 6),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: progressRatio,
-              minHeight: 7,
-              backgroundColor: cardColor.withValues(alpha: 0.15),
-              valueColor: AlwaysStoppedAnimation<Color>(
-                cardColor,
-              ),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0.0, end: progressRatio),
+              duration: const Duration(milliseconds: 600),
+              curve: Curves.easeOutCubic,
+              builder: (context, value, child) {
+                return LinearProgressIndicator(
+                  value: value,
+                  minHeight: 7,
+                  backgroundColor: cardColor.withValues(alpha: 0.15),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    cardColor,
+                  ),
+                );
+              },
             ),
           ),
         ],

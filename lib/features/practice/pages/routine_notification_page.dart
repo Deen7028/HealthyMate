@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:healthymate/core/services/notification_service.dart';
 import 'package:healthymate/core/services/routine_state_notifier.dart';
 import '../models/routine_item.dart';
 import '../widgets/index.dart';
@@ -519,7 +520,11 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
             color: Colors.blueGrey,
             size: 20,
           ),
-          onPressed: () {},
+          tooltip: 'ทดสอบตั้งปลุก 10 วินาที',
+          onPressed: () async {
+            _showSnackBar('⏳ สั่งตั้งปลุกทดสอบใน 10 วินาที... พับจอรอดูผลได้เลย!');
+            await NotificationService.instance.testNotificationIn10Seconds();
+          },
         ),
         Padding(
           padding: const EdgeInsets.only(right: 16.0),
@@ -840,7 +845,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
       );
     }
 
-    return RoutineCardWidget(
+    final cardWidget = RoutineCardWidget(
       routine: routine,
       icon: icon,
       title: title,
@@ -856,6 +861,27 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
         onEdit: () => _editRoutine(routine),
         onDelete: () => _deleteRoutine(routineId, title),
       ),
+    );
+
+    return TweenAnimationBuilder<double>(
+      key: ValueKey('routine_anim_$routineId'),
+      tween: Tween<double>(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 500),
+      curve: Interval(
+        (index * 0.08).clamp(0.0, 0.6),
+        1.0,
+        curve: Curves.easeOutCubic,
+      ),
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 30 * (1 - value)),
+            child: child,
+          ),
+        );
+      },
+      child: cardWidget,
     );
   }
 }

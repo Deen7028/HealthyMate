@@ -22,7 +22,6 @@ class RoutineMainGoalCard extends StatelessWidget {
     this.darkGreen = const Color(0xFF006432),
   });
 
-
   @override
   Widget build(BuildContext context) {
     final goalTitle = userGoal?['sTitle']?.toString() ?? '';
@@ -77,7 +76,11 @@ class RoutineMainGoalCard extends StatelessWidget {
               height: 46,
               child: ElevatedButton.icon(
                 onPressed: onSetMainGoal,
-                icon: const Icon(Icons.add_circle_outline, color: Colors.white, size: 20),
+                icon: const Icon(
+                  Icons.add_circle_outline,
+                  color: Colors.white,
+                  size: 20,
+                ),
                 label: const Text(
                   '+ ตั้งเป้าหมายหลัก (Set Main Goal)',
                   style: TextStyle(
@@ -212,47 +215,6 @@ class RoutineMainGoalCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: primaryGreen.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.checklist, size: 18, color: darkGreen),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'วันนี้ทำสำเร็จ $completedCount / $totalRoutinesCount กิจวัตร',
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            color: darkGreen,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (totalRoutinesCount > 0) ...[
-                        const SizedBox(width: 6),
-                        Text(
-                          '${(completedCount / totalRoutinesCount * 100).toInt()}%',
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            color: darkGreen,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-
               ],
             ),
           ),

@@ -7,6 +7,14 @@ extension AppDatabaseRoutineDao on AppDatabase {
     final db = await database;
     if (db == null) return [];
     try {
+      // 🛡️ ซ่อมแซม nUserId ของกิจวัตรในเครื่องหากพบว่าผูกกับ ID เก่า (เช่น 1 หรือ 0)
+      if (userId > 0) {
+        await db.rawUpdate(
+          'UPDATE ${AppDatabase.tableRoutines} SET nUserId = ? WHERE nUserId != ? AND (nUserId = 1 OR nUserId = 0)',
+          [userId, userId],
+        );
+      }
+
       return await db.query(
         AppDatabase.tableRoutines,
         where: 'nUserId = ?',
