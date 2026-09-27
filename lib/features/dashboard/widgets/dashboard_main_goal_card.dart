@@ -27,6 +27,39 @@ class DashboardMainGoalCard extends StatelessWidget {
   String _formatNum(double val) =>
       val == val.toInt() ? val.toInt().toString() : val.toStringAsFixed(1);
 
+  DateTime? _getGoalDeadline(
+    Map<String, dynamic>? goal,
+    Map<String, dynamic>? routine,
+  ) {
+    for (final source in [goal, routine]) {
+      if (source == null) continue;
+      for (final key in ['dtDeadline', 'deadlineDate']) {
+        final value = source[key];
+        if (value is DateTime) return value;
+        if (value != null) {
+          final parsed = DateTime.tryParse(value.toString());
+          if (parsed != null) return parsed;
+        }
+      }
+    }
+
+    final remainingText = goal?['sRemainingText']?.toString() ?? '';
+    final match = RegExp(r'(\d{1,2})/(\d{1,2})/(\d{4})')
+        .firstMatch(remainingText);
+    if (match == null) return null;
+
+    final day = int.parse(match.group(1)!);
+    final month = int.parse(match.group(2)!);
+    var year = int.parse(match.group(3)!);
+    if (year > 2500) {
+      year -= 543;
+    }
+
+    return DateTime.tryParse(
+      '$year-${month.toString().padLeft(2, '0')}-${day.toString().padLeft(2, '0')}',
+    );
+  }
+
   Color _getRoutineColor(Map<String, dynamic> routine, int index) {
     if (routine['color'] != null) {
       return Color((routine['color'] as num).toInt());
@@ -126,7 +159,7 @@ class DashboardMainGoalCard extends StatelessWidget {
 
     final double progress;
     final String displayTitle;
-    final String displayDetail;
+    String displayDetail;
     final Color goalColor;
     final IconData goalIcon;
     bool isCompleted = false;
@@ -206,7 +239,7 @@ class DashboardMainGoalCard extends StatelessWidget {
       displayTitle = userGoal!['sTitle']?.toString() ?? 'เป้าหมายหลัก';
       final remaining = userGoal!['sRemainingText']?.toString() ?? '';
       displayDetail = remaining.isNotEmpty
-          ? remaining
+          ? remaining.replaceAll(RegExp(r'\s*\(\s*เหลือ[^)]*\)'), '').trim()
           : 'ทำสำเร็จแล้ว ${(progress * 100).toInt()}%';
     } else {
       progress = 0.0;
@@ -217,11 +250,32 @@ class DashboardMainGoalCard extends StatelessWidget {
           'เลือกปักหมุดกิจวัตรสำคัญจากหน้ากิจวัตรเพื่อติดตามความคืบหน้า';
     }
 
-    final daysRemaining = DateTime(
-      now.year,
-      now.month + 1,
-      0,
-    ).difference(now).inDays;
+    displayDetail = displayDetail.replaceAll(RegExp(r'\s*\(\s*เหลือ[^)]*\)'), '').trim();
+
+    final deadline = _getGoalDeadline(userGoal, pinnedRoutine);
+    final today = DateTime(now.year, now.month, now.day);
+    final deadlineDay = deadline == null
+        ? null
+        : DateTime(deadline.year, deadline.month, deadline.day);
+    final daysRemaining = deadlineDay?.difference(today).inDays;
+
+    final String remainingValText;
+    if (daysRemaining == null) {
+      remainingValText = 'ไม่กำหนด';
+    } else if (daysRemaining < 0) {
+      remainingValText = 'เลยกำหนด ${daysRemaining.abs()} วัน';
+    } else if (daysRemaining == 0) {
+      remainingValText = 'เหลือวันนี้';
+    } else {
+      remainingValText = 'เหลืออีก $daysRemaining วัน';
+    }
+
+    final thaiYear = deadlineDay != null
+        ? (deadlineDay.year > 2500 ? deadlineDay.year : deadlineDay.year + 543)
+        : 0;
+    final String deadlineSubText = deadlineDay != null
+        ? 'สิ้นสุด ${deadlineDay.day.toString().padLeft(2, '0')}/${deadlineDay.month.toString().padLeft(2, '0')}/$thaiYear'
+        : '';
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -396,7 +450,8 @@ class DashboardMainGoalCard extends StatelessWidget {
                 Container(height: 24, width: 1, color: Colors.grey.shade200),
                 _buildGoalStatItem(
                   'เหลือเวลา',
-                  '$daysRemaining วัน',
+                  remainingValText,
+                  subValue: deadlineSubText,
                   icon: Icons.calendar_today,
                 ),
               ],
@@ -407,7 +462,12 @@ class DashboardMainGoalCard extends StatelessWidget {
     );
   }
 
-  Widget _buildGoalStatItem(String title, String value, {IconData? icon}) {
+  Widget _buildGoalStatItem(
+    String title,
+    String value, {
+    IconData? icon,
+    String? subValue,
+  }) {
     return Column(
       children: [
         Row(
@@ -426,12 +486,25 @@ class DashboardMainGoalCard extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           value,
+          textAlign: TextAlign.center,
           style: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.bold,
             color: Colors.black87,
           ),
         ),
+        if (subValue != null && subValue.isNotEmpty) ...[
+          const SizedBox(height: 2),
+          Text(
+            subValue,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 10,
+              color: Colors.grey,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ],
     );
   }

@@ -105,6 +105,12 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
       initialDate: _customDeadlineDate,
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365 * 3)),
+      locale: const Locale('th', 'TH'),
+      helpText: 'เลือกวันที่',
+      cancelText: 'ยกเลิก',
+      confirmText: 'ตกลง',
+      fieldHintText: 'วัน/เดือน/ปี',
+      fieldLabelText: 'กรอกวันที่',
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -210,7 +216,7 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
                       ),
                     ),
                     Text(
-                      'เป้าหมายระยะยาวพร้อมยอดสะสมและเส้นตาย',
+                      'เป้าหมายระยะยาวพร้อมยอดสะสมและวันสิ้นสุด',
                       style: TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                   ],

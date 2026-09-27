@@ -22,7 +22,6 @@ class RoutineMainGoalCard extends StatelessWidget {
     this.darkGreen = const Color(0xFF006432),
   });
 
-
   @override
   Widget build(BuildContext context) {
     final goalTitle = userGoal?['sTitle']?.toString() ?? '';
@@ -77,7 +76,11 @@ class RoutineMainGoalCard extends StatelessWidget {
               height: 46,
               child: ElevatedButton.icon(
                 onPressed: onSetMainGoal,
-                icon: const Icon(Icons.add_circle_outline, color: Colors.white, size: 20),
+                icon: const Icon(
+                  Icons.add_circle_outline,
+                  color: Colors.white,
+                  size: 20,
+                ),
                 label: const Text(
                   '+ ตั้งเป้าหมายหลัก (Set Main Goal)',
                   style: TextStyle(
@@ -102,9 +105,14 @@ class RoutineMainGoalCard extends StatelessWidget {
 
     final goalProgress = (userGoal?['nProgress'] as num?)?.toDouble() ?? 0.0;
     final goalRemaining = userGoal?['sRemainingText']?.toString() ?? '';
-    final String subtitle = goalRemaining.isNotEmpty
-        ? goalRemaining
-        : 'ทำสำเร็จแล้ว ${(goalProgress * 100).toInt()}%';
+    final String subtitle =
+        (goalRemaining.isNotEmpty
+                ? goalRemaining
+                      .replaceAll(RegExp(r'\s*\(\s*เหลือ[^)]*\)'), '')
+                      .trim()
+                : 'ทำสำเร็จแล้ว ${(goalProgress * 100).toInt()}%')
+            .replaceAll(RegExp(r'\s*\(\s*เหลือ[^)]*\)'), '')
+            .trim();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 24),
@@ -252,7 +260,6 @@ class RoutineMainGoalCard extends StatelessWidget {
                     ],
                   ),
                 ),
-
               ],
             ),
           ),

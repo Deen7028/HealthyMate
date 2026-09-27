@@ -12,6 +12,7 @@ import 'package:healthymate/shared/theme/theme_service.dart';
 import 'package:healthymate/core/services/tts_service.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:healthymate/features/login/pages/login_page.dart';
 import 'package:healthymate/main_app.dart';
 
@@ -63,6 +64,16 @@ class HealthyMateApp extends StatelessWidget {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: ThemeService.instance.themeMode,
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [
+            Locale('th', 'TH'),
+            Locale('en', 'US'),
+          ],
+          locale: const Locale('th', 'TH'),
           home: ListenableBuilder(
             listenable: AuthService.instance,
             builder: (context, _) {
