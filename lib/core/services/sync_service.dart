@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
@@ -196,7 +197,21 @@ class SyncService extends ChangeNotifier {
       final unsyncedUsers = await AppDatabase.instance.getUnsyncedUsers();
       for (final map in unsyncedUsers) {
         try {
-          final user = TbUser.fromMap(map);
+          var user = TbUser.fromMap(map);
+          var finalProfilePath = user.sProfileImagePath;
+
+          // ถ้าเป็นรูปในเครื่อง (Local Path) ให้อัปโหลดขึ้นโฟลเดอร์ uploads/profile บน Server ก่อน
+          if (finalProfilePath.isNotEmpty && !finalProfilePath.startsWith('http') && !finalProfilePath.startsWith('uploads/')) {
+            final localFile = File(finalProfilePath);
+            if (await localFile.exists()) {
+              final remoteUrl = await HealthApiService.uploadImage(finalProfilePath, type: 'profile');
+              if (remoteUrl != null && remoteUrl.isNotEmpty) {
+                finalProfilePath = remoteUrl;
+                user = user.copyWith(sProfileImagePath: finalProfilePath);
+              }
+            }
+          }
+
           final success = await HealthApiService.updateUserProfile(user.toMap());
           if (success) {
             await AppDatabase.instance.markUserAsSynced(user.nUserId);
@@ -229,7 +244,21 @@ class SyncService extends ChangeNotifier {
       for (final nutrition in unsyncedNutrition) {
         try {
           final nutritionId = (nutrition['nNutritionId'] as num?)?.toInt() ?? 0;
-          final success = await HealthApiService.saveNutritionLog(nutrition);
+          final Map<String, dynamic> payload = Map<String, dynamic>.from(nutrition);
+          final localImagePath = payload['sImagePath']?.toString() ?? '';
+
+          // ถ้ามีรูปอาหารที่ถ่ายในเครื่อง ให้อัปโหลดขึ้นโฟลเดอร์ uploads/nutrition บน Server
+          if (localImagePath.isNotEmpty && !localImagePath.startsWith('http') && !localImagePath.startsWith('uploads/')) {
+            final localFile = File(localImagePath);
+            if (await localFile.exists()) {
+              final remoteUrl = await HealthApiService.uploadImage(localImagePath, type: 'nutrition');
+              if (remoteUrl != null && remoteUrl.isNotEmpty) {
+                payload['sImagePath'] = remoteUrl;
+              }
+            }
+          }
+
+          final success = await HealthApiService.saveNutritionLog(payload);
           if (success && nutritionId > 0) {
             await AppDatabase.instance.markNutritionLogAsSynced(nutritionId);
             syncedTotal++;
