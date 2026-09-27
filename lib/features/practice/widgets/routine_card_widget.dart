@@ -14,6 +14,7 @@ class RoutineCardWidget extends StatelessWidget {
   final double progressRatio;
   final Widget actionButton;
   final Widget threeDotsMenu;
+  final Color cardColor;
 
   const RoutineCardWidget({
     super.key,
@@ -28,6 +29,7 @@ class RoutineCardWidget extends StatelessWidget {
     required this.progressRatio,
     required this.actionButton,
     required this.threeDotsMenu,
+    this.cardColor = const Color(0xFF2E5327),
   });
 
   String _formatValue(double val) =>
@@ -62,11 +64,11 @@ class RoutineCardWidget extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE8F3EB),
+                  color: cardColor.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFFCBE3D3)),
+                  border: Border.all(color: cardColor.withValues(alpha: 0.25)),
                 ),
-                child: Icon(icon, color: const Color(0xFF2E5327), size: 22),
+                child: Icon(icon, color: cardColor, size: 22),
               ),
               const SizedBox(width: 12),
 
@@ -95,15 +97,15 @@ class RoutineCardWidget extends StatelessWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF2E5327).withValues(alpha: 0.1),
+                            color: cardColor.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
                             '$percent%',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 10.5,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF2E5327),
+                              color: cardColor,
                             ),
                           ),
                         ),
@@ -193,9 +195,9 @@ class RoutineCardWidget extends StatelessWidget {
               ),
               Text(
                 '${_formatValue(currentVal)} / ${_formatValue(targetVal)} $unitText ($percent%)',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11.5,
-                  color: Color(0xFF2E5327),
+                  color: cardColor,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -207,9 +209,9 @@ class RoutineCardWidget extends StatelessWidget {
             child: LinearProgressIndicator(
               value: progressRatio,
               minHeight: 7,
-              backgroundColor: const Color(0xFFE2E9E0),
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                Color(0xFF2E5327),
+              backgroundColor: cardColor.withValues(alpha: 0.15),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                cardColor,
               ),
             ),
           ),

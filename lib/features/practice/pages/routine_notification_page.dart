@@ -829,6 +829,12 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
       );
     }
 
+    Color cardColor = const Color(0xFF2E5327);
+    final colorVal = (routine['color'] as num?)?.toInt() ?? (routine['nColor'] as num?)?.toInt();
+    if (colorVal != null && colorVal != 0) {
+      cardColor = Color(colorVal);
+    }
+
     return RoutineCardWidget(
       routine: routine,
       icon: icon,
@@ -839,6 +845,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
       isWorkoutRoutine: isWorkoutRoutine,
       percent: percent,
       progressRatio: progressRatio,
+      cardColor: cardColor,
       actionButton: actionButton,
       threeDotsMenu: _buildThreeDotsMenu(
         onEdit: () => _editRoutine(routine),

@@ -166,8 +166,8 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
             _notificationTimeController.text = 'ทุก 2 ชั่วโมง';
             break;
           case RoutineCategory.fitness:
-            _targetController.text = '10000';
-            _unitController.text = 'ก้าว';
+            _targetController.text = '10';
+            _unitController.text = 'กม.';
             _notificationTimeController.text = '12:00 & 18:00';
             break;
           case RoutineCategory.mindfulness:
