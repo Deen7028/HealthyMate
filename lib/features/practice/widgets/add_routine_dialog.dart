@@ -241,13 +241,17 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
 
   String? _detectLinkedWorkout(String title, RoutineCategory category) {
     final lower = title.toLowerCase();
-    final isNonWorkout = lower.contains('น้ำ') ||
+    const workoutKeywords = ['วิ่ง', 'เดิน', 'ปั่นจักรยาน', 'จักรยาน', 'ลู่วิ่ง', 'คาร์ดิโอ', 'ออกกำลังกาย', 'run', 'walk', 'bike', 'cycle'];
+    final bool hasWorkout = workoutKeywords.any((kw) => lower.contains(kw));
+    final isNonWorkout = !hasWorkout && (
+        lower.contains('น้ำ') ||
         lower.contains('สมาธิ') ||
         lower.contains('นอน') ||
         lower.contains('กิน') ||
         lower.contains('อาหาร') ||
         lower.contains('ยา') ||
-        lower.contains('อ่าน');
+        lower.contains('อ่าน')
+    );
 
     if (isNonWorkout) return null;
 
@@ -475,7 +479,7 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
       showGpsSyncOption: showGpsSyncOption,
       onToggleAutoLink: (val) {
         setState(() {
-          _selectedLinkedWorkout = val ? (autoDetected ?? 'วิ่ง') : null;
+          _selectedLinkedWorkout = val ? (autoDetected ?? 'วิ่ง') : '';
         });
       },
       onSelectUnit: (unit) {

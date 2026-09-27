@@ -125,9 +125,14 @@ switch ($method) {
         } else {
             // เพิ่มกิจวัตรใหม่
             $userId = $authUserId;
-            $title = isset($data['sTitle']) ? trim($data['sTitle']) : '';
-            $time = isset($data['sTime']) ? trim($data['sTime']) : '';
+            $title = isset($data['sTitle']) ? trim($data['sTitle']) : (isset($data['title']) ? trim($data['title']) : '');
+            $time = isset($data['sTime']) ? trim($data['sTime']) : (isset($data['notificationTime']) ? trim($data['notificationTime']) : '');
             $isNotif = isset($data['isNotificationActive']) ? intval($data['isNotificationActive']) : 1;
+            $targetVal = isset($data['nTargetValue']) ? floatval($data['nTargetValue']) : (isset($data['targetValue']) ? floatval($data['targetValue']) : 1.0);
+            $unit = isset($data['sUnit']) ? trim($data['sUnit']) : (isset($data['unit']) ? trim($data['unit']) : 'ครั้ง');
+            $linkedWorkout = isset($data['sLinkedWorkout']) ? trim($data['sLinkedWorkout']) : (isset($data['linkedWorkoutType']) ? trim($data['linkedWorkoutType']) : null);
+            $color = isset($data['nColor']) ? intval($data['nColor']) : (isset($data['color']) ? intval($data['color']) : null);
+            $iconData = isset($data['nIconData']) ? intval($data['nIconData']) : (isset($data['iconData']) ? intval($data['iconData']) : null);
 
             if (empty($title)) {
                 echo json_encode(["status" => "error", "message" => "กรุณาระบุชื่อกิจวัตร"]);
@@ -136,14 +141,19 @@ switch ($method) {
 
             try {
                 $stmt = $conn->prepare("
-                    INSERT INTO TbRoutines (nUserId, sTitle, sTime, isNotificationActive, dtCreatedAt) 
-                    VALUES (:userId, :title, :time, :isNotif, NOW())
+                    INSERT INTO TbRoutines (nUserId, sTitle, sTime, isNotificationActive, nTargetValue, sUnit, sLinkedWorkout, nColor, nIconData, dtCreatedAt) 
+                    VALUES (:userId, :title, :time, :isNotif, :targetVal, :unit, :linkedWorkout, :color, :iconData, NOW())
                 ");
                 $stmt->execute([
                     ':userId' => $userId,
                     ':title' => $title,
                     ':time' => $time,
-                    ':isNotif' => $isNotif
+                    ':isNotif' => $isNotif,
+                    ':targetVal' => $targetVal,
+                    ':unit' => $unit,
+                    ':linkedWorkout' => $linkedWorkout,
+                    ':color' => $color,
+                    ':iconData' => $iconData
                 ]);
 
                 $newId = $conn->lastInsertId();
@@ -165,9 +175,14 @@ switch ($method) {
         $authUserId = requireAuth();
 
         $routineId = isset($data['nRoutineId']) ? intval($data['nRoutineId']) : 0;
-        $title = isset($data['sTitle']) ? trim($data['sTitle']) : '';
-        $time = isset($data['sTime']) ? trim($data['sTime']) : '';
+        $title = isset($data['sTitle']) ? trim($data['sTitle']) : (isset($data['title']) ? trim($data['title']) : '');
+        $time = isset($data['sTime']) ? trim($data['sTime']) : (isset($data['notificationTime']) ? trim($data['notificationTime']) : '');
         $isNotif = isset($data['isNotificationActive']) ? intval($data['isNotificationActive']) : 1;
+        $targetVal = isset($data['nTargetValue']) ? floatval($data['nTargetValue']) : (isset($data['targetValue']) ? floatval($data['targetValue']) : 1.0);
+        $unit = isset($data['sUnit']) ? trim($data['sUnit']) : (isset($data['unit']) ? trim($data['unit']) : 'ครั้ง');
+        $linkedWorkout = isset($data['sLinkedWorkout']) ? trim($data['sLinkedWorkout']) : (isset($data['linkedWorkoutType']) ? trim($data['linkedWorkoutType']) : null);
+        $color = isset($data['nColor']) ? intval($data['nColor']) : (isset($data['color']) ? intval($data['color']) : null);
+        $iconData = isset($data['nIconData']) ? intval($data['nIconData']) : (isset($data['iconData']) ? intval($data['iconData']) : null);
 
         if ($routineId <= 0 || empty($title)) {
             echo json_encode(["status" => "error", "message" => "ข้อมูลไม่ครบ"]);
@@ -184,13 +199,26 @@ switch ($method) {
             }
 
             $stmt = $conn->prepare("
-                UPDATE TbRoutines SET sTitle = :title, sTime = :time, isNotificationActive = :isNotif 
+                UPDATE TbRoutines SET 
+                    sTitle = :title, 
+                    sTime = :time, 
+                    isNotificationActive = :isNotif,
+                    nTargetValue = :targetVal,
+                    sUnit = :unit,
+                    sLinkedWorkout = :linkedWorkout,
+                    nColor = :color,
+                    nIconData = :iconData
                 WHERE nRoutineId = :rid
             ");
             $stmt->execute([
                 ':title' => $title,
                 ':time' => $time,
                 ':isNotif' => $isNotif,
+                ':targetVal' => $targetVal,
+                ':unit' => $unit,
+                ':linkedWorkout' => $linkedWorkout,
+                ':color' => $color,
+                ':iconData' => $iconData,
                 ':rid' => $routineId
             ]);
 

@@ -131,13 +131,16 @@ class RoutineController extends ChangeNotifier {
         final unit = (r['unit'] as String? ?? (r['sUnit'] as String? ?? '')).toLowerCase();
 
         const workoutKeywords = ['วิ่ง', 'เดิน', 'ปั่นจักรยาน', 'จักรยาน', 'ลู่วิ่ง', 'คาร์ดิโอ', 'ออกกำลังกาย'];
-        final bool isNonWorkout = title.contains('น้ำ') ||
+        final bool hasWorkoutKeyword = workoutKeywords.any((kw) => title.contains(kw));
+        final bool isNonWorkout = !hasWorkoutKeyword && (
+            title.contains('น้ำ') ||
             title.contains('สมาธิ') ||
             title.contains('นอน') ||
             title.contains('กิน') ||
             title.contains('อาหาร') ||
             title.contains('ยา') ||
-            title.contains('อ่าน');
+            title.contains('อ่าน')
+        );
 
         String matchedType = r['sLinkedWorkout']?.toString() ?? '';
         if (matchedType.isEmpty && !isNonWorkout) {
