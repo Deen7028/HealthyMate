@@ -199,6 +199,22 @@ extension AppDatabaseUserDao on AppDatabase {
     if (db != null) {
       final mapToInsert = Map<String, dynamic>.from(user.toMap());
       mapToInsert['isSynced'] = 1;
+
+      // 🛡️ ป้องกัน Hash พัง: หากผู้ใช้มี Password Hash ใน SQLite อยู่แล้ว ห้ามนำ Hash จาก Server ไปเขียนทับ
+      final existing = await db.query(
+        AppDatabase.tableUsers,
+        where: 'nUserId = ? OR LOWER(sEmail) = ?',
+        whereArgs: [user.nUserId, user.sEmail.toLowerCase()],
+        limit: 1,
+      );
+
+      if (existing.isNotEmpty) {
+        final existingLocalHash = existing.first['sPasswordHash']?.toString();
+        if (existingLocalHash != null && existingLocalHash.isNotEmpty) {
+          mapToInsert['sPasswordHash'] = existingLocalHash;
+        }
+      }
+
       await db.insert(
         AppDatabase.tableUsers,
         mapToInsert,

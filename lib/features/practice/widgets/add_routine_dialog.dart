@@ -166,8 +166,8 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
             _notificationTimeController.text = 'ทุก 2 ชั่วโมง';
             break;
           case RoutineCategory.fitness:
-            _targetController.text = '10000';
-            _unitController.text = 'ก้าว';
+            _targetController.text = '10';
+            _unitController.text = 'กม.';
             _notificationTimeController.text = '12:00 & 18:00';
             break;
           case RoutineCategory.mindfulness:
@@ -241,13 +241,17 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
 
   String? _detectLinkedWorkout(String title, RoutineCategory category) {
     final lower = title.toLowerCase();
-    final isNonWorkout = lower.contains('น้ำ') ||
+    const workoutKeywords = ['วิ่ง', 'เดิน', 'ปั่นจักรยาน', 'จักรยาน', 'ลู่วิ่ง', 'คาร์ดิโอ', 'ออกกำลังกาย', 'run', 'walk', 'bike', 'cycle'];
+    final bool hasWorkout = workoutKeywords.any((kw) => lower.contains(kw));
+    final isNonWorkout = !hasWorkout && (
+        lower.contains('น้ำ') ||
         lower.contains('สมาธิ') ||
         lower.contains('นอน') ||
         lower.contains('กิน') ||
         lower.contains('อาหาร') ||
         lower.contains('ยา') ||
-        lower.contains('อ่าน');
+        lower.contains('อ่าน')
+    );
 
     if (isNonWorkout) return null;
 
@@ -351,7 +355,9 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
                 children: List.generate(3, (index) {
                   final isActive = index <= _currentStep;
                   return Expanded(
-                    child: Container(
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
                       height: 4,
                       margin: EdgeInsets.only(right: index == 2 ? 0 : 6),
                       decoration: BoxDecoration(
@@ -475,7 +481,7 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
       showGpsSyncOption: showGpsSyncOption,
       onToggleAutoLink: (val) {
         setState(() {
-          _selectedLinkedWorkout = val ? (autoDetected ?? 'วิ่ง') : null;
+          _selectedLinkedWorkout = val ? (autoDetected ?? 'วิ่ง') : '';
         });
       },
       onSelectUnit: (unit) {

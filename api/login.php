@@ -56,6 +56,12 @@ try {
 
     if (password_verify($password, $storedHash)) {
         $isValidPassword = true;
+    } elseif (password_verify(hash('sha256', $password), $storedHash)) {
+        $isValidPassword = true;
+        $newHash = password_hash($password, PASSWORD_DEFAULT);
+        $rehashStmt = $conn->prepare("UPDATE TbUsers SET sPasswordHash = :h WHERE nUserId = :id");
+        $rehashStmt->execute([':h' => $newHash, ':id' => $user['nUserId']]);
+        $user['sPasswordHash'] = $newHash;
     } elseif ($storedHash === hash('sha256', $password) || $storedHash === $password) {
         $isValidPassword = true;
         // Re-hash เป็น BCRYPT มาตรฐานเพื่อความปลอดภัยในอนาคต
@@ -76,6 +82,21 @@ try {
     // 3. เข้าสู่ระบบสำเร็จ -> สร้าง Auth Token และส่งข้อมูลผู้ใช้กลับ
     $authToken = generateAuthToken($user['nUserId']);
     $user['token'] = $authToken;
+
+    // บันทึก Session ลง tbsession บน Database Server
+    try {
+        $stmtSession = $conn->prepare("
+            INSERT INTO tbsession (nUserId, sToken, dtExpiresAt, dtCreatedAt)
+            VALUES (:userId, :token, DATE_ADD(NOW(), INTERVAL 30 DAY), NOW())
+            ON DUPLICATE KEY UPDATE sToken = VALUES(sToken), dtExpiresAt = VALUES(dtExpiresAt)
+        ");
+        $stmtSession->execute([
+            ':userId' => $user['nUserId'],
+            ':token' => $authToken
+        ]);
+    } catch (Exception $e) {
+        error_log("Failed to insert tbsession: " . $e->getMessage());
+    }
 
     echo json_encode([
         "status" => "success",

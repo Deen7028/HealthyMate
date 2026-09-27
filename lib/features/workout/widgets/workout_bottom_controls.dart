@@ -57,7 +57,7 @@ class _WorkoutBottomControlsState extends State<WorkoutBottomControls>
 
   @override
   Widget build(BuildContext context) {
-    final double bottomPadding = MediaQuery.of(context).padding.bottom + 90.0;
+    final double bottomPadding = MediaQuery.of(context).padding.bottom + 30.0;
 
     return Container(
       padding: EdgeInsets.only(left: 36, right: 36, top: 20, bottom: bottomPadding),
@@ -141,11 +141,9 @@ class _WorkoutBottomControlsState extends State<WorkoutBottomControls>
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 300),
                   transitionBuilder: (Widget child, Animation<double> animation) {
-                    return RotationTransition(
-                      turns: child.key == const ValueKey('pause')
-                          ? Tween<double>(begin: 0.5, end: 1.0).animate(animation)
-                          : Tween<double>(begin: 0.0, end: 0.5).animate(animation),
-                      child: ScaleTransition(scale: animation, child: child),
+                    return ScaleTransition(
+                      scale: animation,
+                      child: FadeTransition(opacity: animation, child: child),
                     );
                   },
                   child: Icon(

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/api_service.dart';
@@ -224,8 +225,9 @@ class HealthCalculatorController extends ChangeNotifier {
 
       _historyList.insert(0, newRecord);
 
-      // บันทึกลง Local Database (isSynced = 0)
-      _db.insertHealthRecord(newRecord).then((savedRecord) {
+      // บันทึกลง Local Database (isSynced = 0) แล้วซิงค์ขึ้น Cloud
+      try {
+        final savedRecord = await _db.insertHealthRecord(newRecord);
         if (!_isDisposed) {
           final index = _historyList.indexOf(newRecord);
           if (index != -1) {
@@ -233,12 +235,12 @@ class HealthCalculatorController extends ChangeNotifier {
             notifyListeners();
           }
         }
-        // ตรวจสอบและซิงค์ขึ้น Cloud ผ่าน SyncService ในเบื้องหลัง
-        SyncService.instance.updatePendingCount();
-        SyncService.instance.syncPendingData();
-      }).catchError((e) {
+        // ซิงค์ขึ้น Cloud ในเบื้องหลังทันที
+        await SyncService.instance.updatePendingCount();
+        unawaited(SyncService.instance.syncPendingData());
+      } catch (e) {
         debugPrint('Error saving health record to local db: $e');
-      });
+      }
     }
 
     if (syncToDb) {
@@ -258,13 +260,16 @@ class HealthCalculatorController extends ChangeNotifier {
 
       // อัปเดตลง Local Database & ส่งไปอัปเดตบน PHP Database Server
       final userToUpdate = _currentUser!;
-      _db.updateUser(userToUpdate).catchError((e) {
+      try {
+        await _db.updateUser(userToUpdate);
+      } catch (e) {
         debugPrint('Error updating user locally: $e');
-      });
-      HealthApiService.updateUserProfile(userToUpdate).catchError((e) {
+      }
+      try {
+        await HealthApiService.updateUserProfile(userToUpdate);
+      } catch (e) {
         debugPrint('Error updating user profile to API: $e');
-        return false;
-      });
+      }
     }
 
     _safeNotifyListeners();

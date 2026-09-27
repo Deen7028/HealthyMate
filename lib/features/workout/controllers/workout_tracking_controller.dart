@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/auth_service.dart';
+import 'package:healthymate/core/services/api_service.dart';
 import 'package:healthymate/core/services/location_background_service.dart';
 import 'package:healthymate/core/services/sync_service.dart';
 import 'package:healthymate/core/services/tts_service.dart';
@@ -441,7 +442,7 @@ class WorkoutTrackingController extends ChangeNotifier {
     startWorkout();
   }
 
-  /// บันทึกกิจกรรมลงฐานข้อมูลตาราง TbWorkouts
+  /// บันทึกกิจกรรมลงฐานข้อมูลตาราง TbWorkouts (SQLite + Remote Server)
   Future<bool> saveWorkout() async {
     _timer?.cancel();
     _positionStreamSub?.cancel();
@@ -457,6 +458,9 @@ class WorkoutTrackingController extends ChangeNotifier {
     );
 
     if (savedDuration >= 1) {
+      final nowStr = DateTime.now().toIso8601String();
+
+      // 1. บันทึกลง SQLite (isSynced = 0)
       await AppDatabase.instance.insertWorkout(
         userId: _userId,
         type: _selectedCategory.title,
@@ -465,6 +469,38 @@ class WorkoutTrackingController extends ChangeNotifier {
         caloriesBurned: savedCalories,
         routePoints: routePointsJson,
       );
+
+      // 2. บันทึกขึ้น Remote Server โดยตรง (ไม่ต้องรอ SyncService)
+      final workoutPayload = {
+        'nUserId': _userId,
+        'sType': _selectedCategory.title,
+        'nDistance': savedDistance,
+        'nDuration': savedDuration,
+        'nCaloriesBurned': savedCalories,
+        'sRoutePoints': routePointsJson,
+        'dtWorkoutDate': nowStr,
+        'dtUpdatedAt': nowStr,
+      };
+      HealthApiService.saveWorkout(workoutPayload).then((success) {
+        if (success) {
+          debugPrint('☁️ [WORKOUT SAVE] ➜ บันทึกการออกกำลังกาย (${_selectedCategory.title}) ขึ้น Server สำเร็จ');
+        }
+      }).catchError((_) {});
+
+      // 🏆 อัปเดตและปลดล็อกเหรียญรางวัล (TbBadges & TbUserBadges)
+      try {
+        final totalWorkouts = await AppDatabase.instance.getWorkoutCount(userId: _userId);
+        if (totalWorkouts >= 1) {
+          await HealthApiService.unlockBadgeRemote(userId: _userId, badgeName: 'ผู้เริ่มต้นก้าวแรก');
+        }
+        if (savedDistance >= 5.0) {
+          await HealthApiService.unlockBadgeRemote(userId: _userId, badgeName: 'วิ่งสะสม 5 กิโลเมตร');
+        }
+        if (savedCalories >= 500.0) {
+          await HealthApiService.unlockBadgeRemote(userId: _userId, badgeName: 'นักเบิร์นไฟแรง');
+        }
+      } catch (_) {}
+
       // แจ้งเตือน SyncService ให้เริ่มเช็คและส่งข้อมูลขึ้น Cloud ทันทีถ้ามีเน็ต
       unawaited(SyncService.instance.syncPendingData());
     }

@@ -1,12 +1,80 @@
 part of '../app_database.dart';
 
 extension AppDatabaseRoutineDao on AppDatabase {
+  /// ล้างรายการกิจวัตรที่ซ้ำซ้อนในเครื่อง โดยยุบกิจวัตรที่มีชื่อซ้ำกันให้เหลือเพียงรายการเดียว
+  Future<void> deduplicateRoutines({required int userId}) async {
+    if (kIsWeb || userId <= 0) return;
+    final db = await database;
+    if (db == null) return;
+    try {
+      // 1. ค้นหากิจวัตรทั้งหมดของ user
+      final all = await db.query(
+        AppDatabase.tableRoutines,
+        where: 'nUserId = ?',
+        whereArgs: [userId],
+        orderBy: 'nRoutineId DESC', // ให้ ID ล่าสุดมาก่อน (หรือ ID ที่ตรงกับ server)
+      );
+
+      final seenTitles = <String, int>{}; // title -> keeperRoutineId
+      final duplicateIds = <int>[];
+
+      for (final row in all) {
+        final rId = (row['nRoutineId'] as num?)?.toInt() ?? 0;
+        final title = (row['sTitle']?.toString() ?? '').trim().toLowerCase();
+        if (title.isEmpty) continue;
+
+        if (seenTitles.containsKey(title)) {
+          // ซ้ำกับรายการที่มีอยู่แล้ว
+          final keeperId = seenTitles[title]!;
+          duplicateIds.add(rId);
+
+          // โอนย้าย logs จากรายการที่ซ้ำมาหารายการหลัก
+          await db.rawUpdate('''
+            UPDATE OR IGNORE ${AppDatabase.tableRoutineLogs} 
+            SET nRoutineId = ? 
+            WHERE nRoutineId = ?
+          ''', [keeperId, rId]);
+        } else {
+          seenTitles[title] = rId;
+        }
+      }
+
+      if (duplicateIds.isNotEmpty) {
+        for (final dupId in duplicateIds) {
+          await db.delete(
+            AppDatabase.tableRoutineLogs,
+            where: 'nRoutineId = ?',
+            whereArgs: [dupId],
+          );
+          await db.delete(
+            AppDatabase.tableRoutines,
+            where: 'nRoutineId = ?',
+            whereArgs: [dupId],
+          );
+        }
+        debugPrint('[AppDatabase] 🧹 ลบกิจวัตรที่ซ้ำซ้อนในเครื่องเรียบร้อย: ${duplicateIds.length} รายการ');
+      }
+    } catch (e) {
+      debugPrint('[AppDatabase] deduplicateRoutines error: $e');
+    }
+  }
+
   /// ดึงกิจวัตรทั้งหมดของผู้ใช้
   Future<List<Map<String, dynamic>>> getRoutines({required int userId}) async {
     if (kIsWeb) return [];
     final db = await database;
     if (db == null) return [];
     try {
+      // 🛡️ ซ่อมแซม nUserId ของกิจวัตรในเครื่องหากพบว่าผูกกับ ID เก่า (เช่น 1 หรือ 0)
+      if (userId > 0) {
+        await db.rawUpdate(
+          'UPDATE ${AppDatabase.tableRoutines} SET nUserId = ? WHERE nUserId != ? AND (nUserId = 1 OR nUserId = 0)',
+          [userId, userId],
+        );
+        // กวาดล้างรายการที่ชื่อซ้ำกันออกไป
+        await deduplicateRoutines(userId: userId);
+      }
+
       return await db.query(
         AppDatabase.tableRoutines,
         where: 'nUserId = ?',
@@ -30,21 +98,29 @@ extension AppDatabaseRoutineDao on AppDatabase {
       for (final r in serverRoutines) {
         final routineId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
         if (routineId <= 0) continue;
+        final title = r['sTitle']?.toString() ?? 'กิจวัตร';
+
+        // ลบแถวเดิมใน SQLite ที่ชื่อเดียวกันแต่คนละ ID ออกไป เพื่อไม่ให้แสดงซ้ำ
+        await db.delete(
+          AppDatabase.tableRoutines,
+          where: 'nUserId = ? AND LOWER(TRIM(sTitle)) = LOWER(TRIM(?)) AND nRoutineId != ?',
+          whereArgs: [userId, title, routineId],
+        );
 
         batch.insert(
           AppDatabase.tableRoutines,
           {
             'nRoutineId': routineId,
             'nUserId': userId,
-            'sTitle': r['sTitle']?.toString() ?? 'กิจวัตร',
+            'sTitle': title,
             'sTime': r['sTime']?.toString() ?? '',
             'targetValue': (r['targetValue'] as num?)?.toDouble() ??
                 (r['nTargetValue'] as num?)?.toDouble() ??
                 1.0,
             'unit': r['unit']?.toString() ?? (r['sUnit']?.toString() ?? 'ครั้ง'),
             'sLinkedWorkout': r['sLinkedWorkout']?.toString() ?? '',
-            'color': (r['color'] as num?)?.toInt(),
-            'iconData': (r['iconData'] as num?)?.toInt(),
+            'color': (r['nColor'] as num?)?.toInt() ?? (r['color'] as num?)?.toInt(),
+            'iconData': (r['nIconData'] as num?)?.toInt() ?? (r['iconData'] as num?)?.toInt(),
             'isNotificationActive':
                 ((r['isNotificationActive'] as num?)?.toInt() ?? 1) == 1
                     ? 1
@@ -56,6 +132,7 @@ extension AppDatabaseRoutineDao on AppDatabase {
         );
       }
       await batch.commit(noResult: true);
+      await deduplicateRoutines(userId: userId);
       debugPrint(
           '[AppDatabase] ✅ Sync ${serverRoutines.length} routines from server to local DB.');
     } catch (e) {

@@ -513,14 +513,6 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
         ],
       ),
       actions: [
-        IconButton(
-          icon: const Icon(
-            Icons.notifications_active,
-            color: Colors.blueGrey,
-            size: 20,
-          ),
-          onPressed: () {},
-        ),
         Padding(
           padding: const EdgeInsets.only(right: 16.0),
           child: CircleAvatar(
@@ -610,18 +602,23 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
       icon = IconData(codePoint, fontFamily: 'MaterialIcons');
     }
 
-    final targetVal = (routine['targetValue'] as num?)?.toDouble() ?? 1.0;
-    final unitText = routine['unit']?.toString() ?? 'ครั้ง';
+    final targetVal = (routine['targetValue'] as num?)?.toDouble() ?? 
+                      (routine['nTargetValue'] as num?)?.toDouble() ?? 1.0;
+    final unitText = routine['unit']?.toString() ?? 
+                     routine['sUnit']?.toString() ?? 'ครั้ง';
     final lowerTitle = title.toLowerCase();
 
     const workoutKeywords = ['วิ่ง', 'เดิน', 'ปั่นจักรยาน', 'จักรยาน', 'ลู่วิ่ง', 'คาร์ดิโอ', 'ออกกำลังกาย'];
-    final bool isNonWorkout = lowerTitle.contains('น้ำ') ||
+    final bool hasWorkoutKeyword = workoutKeywords.any((kw) => lowerTitle.contains(kw));
+    final bool isNonWorkout = !hasWorkoutKeyword && (
+        lowerTitle.contains('น้ำ') ||
         lowerTitle.contains('สมาธิ') ||
         lowerTitle.contains('นอน') ||
         lowerTitle.contains('กิน') ||
         lowerTitle.contains('อาหาร') ||
         lowerTitle.contains('ยา') ||
-        lowerTitle.contains('อ่าน');
+        lowerTitle.contains('อ่าน')
+    );
 
     String matchedType = routine['sLinkedWorkout']?.toString() ?? '';
     if (matchedType.isEmpty && !isNonWorkout) {
@@ -681,41 +678,18 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
 
     final buttonType = _getRoutineButtonType(routine, isWorkoutRoutine);
 
+    Color cardColor = const Color(0xFF2E5327);
+    final colorVal = (routine['color'] as num?)?.toInt() ?? (routine['nColor'] as num?)?.toInt();
+    if (colorVal != null && colorVal != 0) {
+      cardColor = Color(colorVal);
+    }
+
     Widget actionButton;
-    if (buttonType == RoutineButtonType.workout) {
-      actionButton = ElevatedButton.icon(
-        onPressed: () {
-          if (widget.onNavigateToWorkout != null) {
-            widget.onNavigateToWorkout!(matchedType);
-          }
-        },
-        icon: const Icon(
-          Icons.play_arrow_rounded,
-          size: 16,
-          color: Colors.white,
-        ),
-        label: const Text(
-          'เริ่มเลย',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF2E5327),
-          elevation: 1,
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      );
-    } else if (isActuallyCompleted) {
+    if (isActuallyCompleted) {
       actionButton = Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: const Color(0xFF2E5327),
+          color: cardColor,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
@@ -736,6 +710,35 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
           ],
         ),
       );
+    } else if (buttonType == RoutineButtonType.workout) {
+      actionButton = ElevatedButton.icon(
+        onPressed: () {
+          if (widget.onNavigateToWorkout != null) {
+            widget.onNavigateToWorkout!(matchedType);
+          }
+        },
+        icon: const Icon(
+          Icons.play_arrow_rounded,
+          size: 16,
+          color: Colors.white,
+        ),
+        label: const Text(
+          'เริ่มเลย',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: cardColor,
+          elevation: 1,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
     } else if (buttonType == RoutineButtonType.stepAdd) {
 
       final stepAmount = _calculateStepAmount(targetVal, unitText);
@@ -746,21 +749,21 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
-            color: const Color(0xFFE8F3EB),
+            color: cardColor.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFFCBE3D3)),
+            border: Border.all(color: cardColor.withValues(alpha: 0.25)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.add_rounded, size: 14, color: Color(0xFF2E5327)),
+              Icon(Icons.add_rounded, size: 14, color: cardColor),
               const SizedBox(width: 3),
               Text(
                 '+$stepStr $unitText',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF2E5327),
+                  color: cardColor,
                 ),
               ),
             ],
@@ -775,25 +778,25 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
-            color: const Color(0xFFE8F3EB),
+            color: cardColor.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFFCBE3D3)),
+            border: Border.all(color: cardColor.withValues(alpha: 0.25)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              Icon(
                 Icons.timer_outlined,
                 size: 14,
-                color: Color(0xFF2E5327),
+                color: cardColor,
               ),
               const SizedBox(width: 4),
               Text(
                 '⏱️ $durationMin นาที',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF2E5327),
+                  color: cardColor,
                 ),
               ),
             ],
@@ -807,20 +810,20 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
-            color: const Color(0xFF2E5327).withValues(alpha: 0.1),
+            color: cardColor.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: const Row(
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.add_task_rounded, size: 14, color: Color(0xFF2E5327)),
-              SizedBox(width: 4),
+              Icon(Icons.add_task_rounded, size: 14, color: cardColor),
+              const SizedBox(width: 4),
               Text(
                 'บันทึก',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF2E5327),
+                  color: cardColor,
                 ),
               ),
             ],
@@ -829,7 +832,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
       );
     }
 
-    return RoutineCardWidget(
+    final cardWidget = RoutineCardWidget(
       routine: routine,
       icon: icon,
       title: title,
@@ -839,11 +842,33 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
       isWorkoutRoutine: isWorkoutRoutine,
       percent: percent,
       progressRatio: progressRatio,
+      cardColor: cardColor,
       actionButton: actionButton,
       threeDotsMenu: _buildThreeDotsMenu(
         onEdit: () => _editRoutine(routine),
         onDelete: () => _deleteRoutine(routineId, title),
       ),
+    );
+
+    return TweenAnimationBuilder<double>(
+      key: ValueKey('routine_anim_$routineId'),
+      tween: Tween<double>(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 500),
+      curve: Interval(
+        (index * 0.08).clamp(0.0, 0.6),
+        1.0,
+        curve: Curves.easeOutCubic,
+      ),
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 30 * (1 - value)),
+            child: child,
+          ),
+        );
+      },
+      child: cardWidget,
     );
   }
 }

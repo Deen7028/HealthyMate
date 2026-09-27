@@ -131,13 +131,16 @@ class RoutineController extends ChangeNotifier {
         final unit = (r['unit'] as String? ?? (r['sUnit'] as String? ?? '')).toLowerCase();
 
         const workoutKeywords = ['วิ่ง', 'เดิน', 'ปั่นจักรยาน', 'จักรยาน', 'ลู่วิ่ง', 'คาร์ดิโอ', 'ออกกำลังกาย'];
-        final bool isNonWorkout = title.contains('น้ำ') ||
+        final bool hasWorkoutKeyword = workoutKeywords.any((kw) => title.contains(kw));
+        final bool isNonWorkout = !hasWorkoutKeyword && (
+            title.contains('น้ำ') ||
             title.contains('สมาธิ') ||
             title.contains('นอน') ||
             title.contains('กิน') ||
             title.contains('อาหาร') ||
             title.contains('ยา') ||
-            title.contains('อ่าน');
+            title.contains('อ่าน')
+        );
 
         String matchedType = r['sLinkedWorkout']?.toString() ?? '';
         if (matchedType.isEmpty && !isNonWorkout) {
@@ -170,9 +173,24 @@ class RoutineController extends ChangeNotifier {
           }
           if (workoutVal > 0) {
             todayProgressValues[routineId] = workoutVal;
-            if (workoutVal >= targetVal) {
+            final isDone = workoutVal >= targetVal;
+            if (isDone) {
               todayCompletionMap[routineId] = true;
             }
+
+            // บันทึกลง SQLite และซิงค์ขึ้น Server ตาราง TbRoutineLogs
+            await db.insertOrUpdateRoutineLog(
+              routineId: routineId,
+              dateStr: todayStr,
+              progressValue: workoutVal,
+              isCompleted: isDone,
+            );
+            HealthApiService.updateRoutineProgressRemote(
+              routineId: routineId,
+              date: todayStr,
+              progressValue: workoutVal,
+              isCompleted: isDone,
+            );
           }
         }
       }
@@ -196,6 +214,7 @@ class RoutineController extends ChangeNotifier {
       isLoading = false;
       notifyListeners();
 
+      _resyncAllActiveNotifications();
       _syncRoutinesFromServer(userId);
     } catch (e) {
       isLoading = false;
@@ -203,48 +222,129 @@ class RoutineController extends ChangeNotifier {
     }
   }
 
+  Future<void> _resyncAllActiveNotifications() async {
+    for (final r in routines) {
+      final routineId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
+      final isNotifyActive = (r['isNotificationActive'] as num?)?.toInt() == 1 ||
+          (r['isNotificationActive'] as bool? ?? false);
+      if (routineId > 0 && isNotifyActive) {
+        final title = r['sTitle']?.toString() ?? r['title']?.toString() ?? '';
+        final timeStr = r['sTime']?.toString() ?? r['time']?.toString() ?? '';
+        final item = RoutineItem(
+          id: routineId.toString(),
+          title: title,
+          category: RoutineCategory.custom,
+          targetValue: (r['targetValue'] as num?)?.toDouble() ?? 1.0,
+          unit: r['unit']?.toString() ?? 'ครั้ง',
+          notificationTime: timeStr,
+          isNotificationEnabled: true,
+          repeatDays: const ['ทุกวัน'],
+          color: const Color(0xFF2E5327),
+          iconData: Icons.check,
+        );
+        await _syncLocalNotification(routineId, item);
+      }
+    }
+  }
+
   Future<void> _syncRoutinesFromServer(int userId) async {
     try {
+      final localRoutines = await AppDatabase.instance.getRoutines(userId: userId);
       final serverResult = await HealthApiService.fetchRoutines(userId: userId);
+
       if (serverResult != null && serverResult['status'] == 'success') {
         final serverRoutines =
             (serverResult['data'] as List?)?.cast<Map<String, dynamic>>() ?? [];
 
-        if (serverRoutines.isNotEmpty) {
-          await AppDatabase.instance.upsertRoutinesFromServer(userId, serverRoutines);
-          routines = await AppDatabase.instance.getRoutines(userId: userId);
+        final serverTitles = serverRoutines
+            .map((sr) => (sr['sTitle']?.toString() ?? '').trim().toLowerCase())
+            .toSet();
 
-          for (final r in serverRoutines) {
-            final routineId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
-            if (routineId == 0) continue;
+        // 🟢 ดันกิจวัตรในเครื่องที่ยังไม่มีบน Server ขึ้น MySQL ทันที
+        bool hasNewUploaded = false;
+        for (final r in localRoutines) {
+          final title = (r['sTitle']?.toString() ?? '').trim();
+          if (title.isNotEmpty && !serverTitles.contains(title.toLowerCase())) {
+            final time = r['sTime']?.toString() ?? '';
+            final targetVal = (r['targetValue'] as num?)?.toDouble() ?? 1.0;
+            final unit = r['unit']?.toString() ?? 'ครั้ง';
+            final linkedWorkout = r['sLinkedWorkout']?.toString() ?? '';
+            final color = (r['color'] as num?)?.toInt();
+            final iconData = (r['iconData'] as num?)?.toInt();
+            final isNotif = ((r['isNotificationActive'] as num?)?.toInt() ?? 1) == 1;
 
-            if (r.containsKey('todayCompleted') && r['todayCompleted'] != null) {
-              final isDone = (r['todayCompleted'] as num?)?.toInt() == 1;
-              if (isDone) {
-                todayCompletionMap[routineId] = true;
-              }
-            }
-            if (r.containsKey('todayProgressValue') &&
-                r['todayProgressValue'] != null) {
-              final serverVal = (r['todayProgressValue'] as num?)?.toDouble() ?? 0.0;
-              final currentLocal = todayProgressValues[routineId] ?? 0.0;
-              if (serverVal > currentLocal) {
-                todayProgressValues[routineId] = serverVal;
+            final newId = await HealthApiService.insertRoutineRemote(
+              userId: userId,
+              title: title,
+              time: time,
+              targetValue: targetVal,
+              unit: unit,
+              linkedWorkout: linkedWorkout,
+              color: color,
+              iconData: iconData,
+              isNotificationActive: isNotif,
+            );
+            if (newId > 0) {
+              hasNewUploaded = true;
+              // ถ้า Server สร้าง ID ใหม่ ให้ลบแถว Local เก่าที่ ID ไม่ตรงออก ป้องกันซ้ำ
+              final localId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
+              if (localId > 0 && localId != newId) {
+                await AppDatabase.instance.deleteRoutine(localId);
               }
             }
           }
-          completedCount = todayCompletionMap.values.where((v) => v).length;
-          notifyListeners();
         }
+
+        // หากมีการดันกิจวัตรขึ้นใหม่ ให้ดึงรายการสดล่าสุดจาก Server
+        if (hasNewUploaded) {
+          final refreshedResult = await HealthApiService.fetchRoutines(userId: userId);
+          if (refreshedResult != null && refreshedResult['status'] == 'success') {
+            final refreshedRoutines =
+                (refreshedResult['data'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+            if (refreshedRoutines.isNotEmpty) {
+              await AppDatabase.instance.upsertRoutinesFromServer(userId, refreshedRoutines);
+            }
+          }
+        } else if (serverRoutines.isNotEmpty) {
+          await AppDatabase.instance.upsertRoutinesFromServer(userId, serverRoutines);
+        }
+
+        await AppDatabase.instance.deduplicateRoutines(userId: userId);
+        routines = await AppDatabase.instance.getRoutines(userId: userId);
+
+        for (final r in serverRoutines) {
+          final routineId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
+          if (routineId == 0) continue;
+
+          if (r.containsKey('todayCompleted') && r['todayCompleted'] != null) {
+            final isDone = (r['todayCompleted'] as num?)?.toInt() == 1;
+            if (isDone) {
+              todayCompletionMap[routineId] = true;
+            }
+          }
+          if (r.containsKey('todayProgressValue') &&
+              r['todayProgressValue'] != null) {
+            final serverVal = (r['todayProgressValue'] as num?)?.toDouble() ?? 0.0;
+            final currentLocal = todayProgressValues[routineId] ?? 0.0;
+            if (serverVal > currentLocal) {
+              todayProgressValues[routineId] = serverVal;
+            }
+          }
+        }
+        completedCount = todayCompletionMap.values.where((v) => v).length;
+        notifyListeners();
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[RoutineController] _syncRoutinesFromServer error: $e');
+    }
   }
 
   Future<void> addRoutine(RoutineItem newRoutine) async {
     if (user == null) return;
     final userId = user!.nUserId;
 
-    final routineId = await AppDatabase.instance.insertRoutine(
+    // 1. บันทึกลง SQLite
+    final localId = await AppDatabase.instance.insertRoutine(
       userId: userId,
       title: newRoutine.title,
       time: newRoutine.notificationTime,
@@ -256,7 +356,8 @@ class RoutineController extends ChangeNotifier {
       isNotificationActive: newRoutine.isNotificationEnabled,
     );
 
-    HealthApiService.insertRoutineRemote(
+    // 2. บันทึกขึ้น Remote Server
+    final serverId = await HealthApiService.insertRoutineRemote(
       userId: userId,
       title: newRoutine.title,
       time: newRoutine.notificationTime,
@@ -267,9 +368,15 @@ class RoutineController extends ChangeNotifier {
       iconData: newRoutine.iconData.codePoint,
       isNotificationActive: newRoutine.isNotificationEnabled,
     );
+
+    // หาก Server สร้าง ID ใหม่ที่ต่างจาก Local ให้ลบ Local เก่าป้องกันซ้ำ
+    final notificationRoutineId = serverId > 0 ? serverId : localId;
+    if (serverId > 0 && serverId != localId && localId > 0) {
+      await AppDatabase.instance.deleteRoutine(localId);
+    }
 
     // 🟢 ระบบการแจ้งเตือน Local Notifications
-    await _syncLocalNotification(routineId, newRoutine);
+    await _syncLocalNotification(notificationRoutineId, newRoutine);
 
     await loadData();
   }
@@ -277,34 +384,64 @@ class RoutineController extends ChangeNotifier {
   Future<void> _syncLocalNotification(int routineId, RoutineItem routine) async {
     if (routineId <= 0) return;
 
+    for (int i = 0; i < 10; i++) {
+      await NotificationService.instance.cancelNotification((routineId * 10) + i);
+    }
+
     if (routine.isNotificationEnabled) {
       final hasPermission = await NotificationService.instance.requestPermission();
       if (hasPermission) {
         final timeStr = routine.notificationTime;
-        if (timeStr.contains('ทุก') || timeStr.contains('ชั่วโมง')) {
+        final intIntervalMatch = RegExp(r'ทุก\s*(\d+)\s*ชั่วโมง').firstMatch(timeStr);
+
+        if (intIntervalMatch != null) {
+          final step = int.parse(intIntervalMatch.group(1)!);
+          int slotIndex = 0;
+          for (int h = 8; h <= 22 && slotIndex < 10; h += step) {
+            await NotificationService.instance.scheduleDailyRoutine(
+              id: (routineId * 10) + slotIndex,
+              title: 'ถึงเวลาทำกิจวัตร! 🎯',
+              body: 'ได้เวลา: ${routine.title} แล้วครับ',
+              hour: h,
+              minute: 0,
+            );
+            slotIndex++;
+          }
+        } else if (timeStr.contains('ทุกชั่วโมง')) {
           await NotificationService.instance.schedulePeriodicRoutine(
-            id: routineId,
+            id: routineId * 10,
             title: 'ถึงเวลาทำกิจวัตร! 🎯',
             body: 'ได้เวลา: ${routine.title} แล้วครับ',
             interval: RepeatInterval.hourly,
           );
         } else {
-          final match = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(timeStr);
-          if (match != null) {
-            final hour = int.parse(match.group(1)!);
-            final minute = int.parse(match.group(2)!);
+          // ดึงเวลาทั้งหมดในข้อความ ไม่ว่าจะคั่นด้วย comma, &, หรือ "และ"
+          final matches = RegExp(r'(\d{1,2})[:\.](\d{2})').allMatches(timeStr).toList();
+          if (matches.isNotEmpty) {
+            for (int i = 0; i < matches.length && i < 10; i++) {
+              final match = matches[i];
+              final hour = int.parse(match.group(1)!);
+              final minute = int.parse(match.group(2)!);
+              await NotificationService.instance.scheduleDailyRoutine(
+                id: (routineId * 10) + i,
+                title: 'กิจวัตรของคุณ 🌟',
+                body: 'อย่าลืมทำ ${routine.title} นะครับ',
+                hour: hour,
+                minute: minute,
+              );
+            }
+          } else {
+            // ค่าเริ่มต้นกรณีระบุเวลาลอยๆ
             await NotificationService.instance.scheduleDailyRoutine(
-              id: routineId,
+              id: routineId * 10,
               title: 'กิจวัตรของคุณ 🌟',
               body: 'อย่าลืมทำ ${routine.title} นะครับ',
-              hour: hour,
-              minute: minute,
+              hour: 8,
+              minute: 0,
             );
           }
         }
       }
-    } else {
-      await NotificationService.instance.cancelNotification(routineId);
     }
   }
 
@@ -325,15 +462,24 @@ class RoutineController extends ChangeNotifier {
     notifyListeners();
 
     if (user != null) {
-      await AppDatabase.instance.toggleRoutineLog(
+      await AppDatabase.instance.insertOrUpdateRoutineLog(
         routineId: routineId,
         dateStr: todayStr,
+        progressValue: newStatus ? targetVal : 0.0,
+        isCompleted: newStatus,
       );
 
-      HealthApiService.toggleRoutineLogRemote(
-        routineId: routineId,
-        date: todayStr,
-      );
+      try {
+        final success = await HealthApiService.updateRoutineProgressRemote(
+          routineId: routineId,
+          date: todayStr,
+          progressValue: newStatus ? targetVal : 0.0,
+          isCompleted: newStatus,
+        );
+        debugPrint('☁️ [ROUTINE_LOG] ➤ อัปเดตความสำเร็จกิจวัตร ID: $routineId ($todayStr, isCompleted: $newStatus) ขึ้น Server: $success');
+      } catch (e) {
+        debugPrint('❌ [ROUTINE_LOG] ➤ ซิงค์สถานะกิจวัตร ID: $routineId ขึ้น Server ผิดพลาด: $e');
+      }
 
       RoutineStateNotifier.instance.loadData(userId: user!.nUserId);
     }
@@ -457,6 +603,13 @@ class RoutineController extends ChangeNotifier {
           progress: progress,
           remainingText: remainingText,
         );
+        await HealthApiService.saveMainGoalRemote(
+          userId: user!.nUserId,
+          routineId: routineId,
+          title: title,
+          progress: progress,
+          remainingText: remainingText,
+        );
         RoutineStateNotifier.instance.loadData(userId: user!.nUserId);
       } catch (_) {}
     }
@@ -496,6 +649,13 @@ class RoutineController extends ChangeNotifier {
           progress: 0.0,
           remainingText: remainingText,
         );
+        await HealthApiService.saveMainGoalRemote(
+          userId: user!.nUserId,
+          routineId: 0,
+          title: '$icon $title',
+          progress: 0.0,
+          remainingText: remainingText,
+        );
         RoutineStateNotifier.instance.loadData(userId: user!.nUserId);
       } catch (_) {}
     }
@@ -509,6 +669,7 @@ class RoutineController extends ChangeNotifier {
     if (user != null) {
       try {
         await AppDatabase.instance.clearUserGoal(user!.nUserId);
+        await HealthApiService.clearMainGoalRemote(user!.nUserId);
         RoutineStateNotifier.instance.loadData(userId: user!.nUserId);
       } catch (_) {}
     }
@@ -516,7 +677,9 @@ class RoutineController extends ChangeNotifier {
 
   Future<void> deleteRoutine(int routineId, String title) async {
     await AppDatabase.instance.deleteRoutine(routineId);
-    await NotificationService.instance.cancelNotification(routineId);
+    for (int i = 0; i < 10; i++) {
+      await NotificationService.instance.cancelNotification((routineId * 10) + i);
+    }
 
     if (userGoal != null) {
       final pinnedId = (userGoal!['nRoutineId'] as num?)?.toInt() ?? 0;
@@ -528,7 +691,7 @@ class RoutineController extends ChangeNotifier {
       }
     }
 
-    HealthApiService.deleteRoutineRemote(routineId);
+    await HealthApiService.deleteRoutineRemote(routineId);
     await loadData();
   }
 
@@ -545,7 +708,7 @@ class RoutineController extends ChangeNotifier {
       isNotificationActive: updatedRoutine.isNotificationEnabled,
     );
 
-    HealthApiService.updateRoutineRemote(
+    await HealthApiService.updateRoutineRemote(
       routineId: routineId,
       title: updatedRoutine.title,
       time: updatedRoutine.notificationTime,

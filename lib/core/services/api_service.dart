@@ -187,7 +187,10 @@ class HealthApiService {
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
-        return body['status'] == 'success';
+        if (body['status'] == 'success') {
+          debugPrint('☁️ [API SUCCESS] [TbHealthRecords] ➜ บันทึกประวัติสุขภาพสำเร็จ (BMI: ${record.nBmi.toStringAsFixed(1)}, TDEE: ${record.nTdee.round()} kcal)');
+          return true;
+        }
       } else {
         debugPrint('[API ERROR] saveHealthRecord HTTP ${response.statusCode}: ${response.body}');
       }
@@ -222,7 +225,10 @@ class HealthApiService {
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
-        return body['status'] == 'success';
+        if (body['status'] == 'success') {
+          debugPrint('☁️ [API SUCCESS] [TbUsers] ➜ อัปเดตข้อมูลผู้ใช้สำเร็จ');
+          return true;
+        }
       } else {
         debugPrint('[API ERROR] updateUserProfile HTTP ${response.statusCode}: ${response.body}');
       }
@@ -280,7 +286,10 @@ class HealthApiService {
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
-        return body['status'] == 'success';
+        if (body['status'] == 'success') {
+          debugPrint('☁️ [API SUCCESS] [TbWorkouts] ➜ บันทึกการออกกำลังกายขึ้น Server สำเร็จ (${workout['sType']}, ${workout['nDistance']} กม.)');
+          return true;
+        }
       } else {
         debugPrint('[API ERROR] saveWorkout HTTP ${response.statusCode}: ${response.body}');
       }
@@ -305,7 +314,10 @@ class HealthApiService {
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
-        return body['status'] == 'success';
+        if (body['status'] == 'success') {
+          debugPrint('☁️ [API SUCCESS] [TbNutritionLogs] ➜ บันทึกมื้ออาหาร "${log['sFoodName']}" (${log['nCalories']} kcal) ขึ้น Server สำเร็จ');
+          return true;
+        }
       } else {
         debugPrint('[API ERROR] saveNutritionLog HTTP ${response.statusCode}: ${response.body}');
       }
@@ -485,10 +497,14 @@ class HealthApiService {
               'sTitle': title,
               'sTime': time,
               'targetValue': targetValue,
+              'nTargetValue': targetValue,
               'unit': unit,
+              'sUnit': unit,
               'sLinkedWorkout': linkedWorkout,
               'color': color,
+              'nColor': color,
               'iconData': iconData,
+              'nIconData': iconData,
               'isNotificationActive': isNotificationActive ? 1 : 0,
             }),
           )
@@ -594,7 +610,45 @@ class HealthApiService {
     return false;
   }
 
-  /// 14. ลบ/ปลดเป้าหมายหลักของผู้ใช้บน Server
+  /// 14. บันทึกหรืออัปเดตเป้าหมายหลักของผู้ใช้บน Server
+  static Future<bool> saveMainGoalRemote({
+    required int userId,
+    int routineId = 0,
+    required String title,
+    required double progress,
+    required String remainingText,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl/goals.php');
+      final headers = await getAuthHeaders();
+      final response = await http
+          .post(
+            uri,
+            headers: headers,
+            body: jsonEncode({
+              'nUserId': userId,
+              'nRoutineId': routineId,
+              'sTitle': title,
+              'nProgress': progress,
+              'sRemainingText': remainingText,
+            }),
+          )
+          .timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body['status'] == 'success') {
+          debugPrint('☁️ [API SUCCESS] [TbGoals] ➜ บันทึกเป้าหมายหลัก "$title" ขึ้น Server สำเร็จ (ความคืบหน้า: ${(progress * 100).toInt()}%)');
+          return true;
+        }
+      }
+    } catch (e) {
+      debugPrint('[API EXCEPTION] saveMainGoalRemote failed: $e');
+    }
+    return false;
+  }
+
+  /// 15. ลบ/ปลดเป้าหมายหลักของผู้ใช้บน Server
   static Future<bool> clearMainGoalRemote(int userId) async {
     try {
       final uri = Uri.parse('$baseUrl/goals.php');
@@ -612,10 +666,82 @@ class HealthApiService {
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
-        return body['status'] == 'success';
+        if (body['status'] == 'success') {
+          debugPrint('☁️ [API SUCCESS] [TbGoals] ➜ ลบ/ปลดเป้าหมายหลักบน Server สำเร็จ');
+          return true;
+        }
       }
     } catch (e) {
       debugPrint('[API EXCEPTION] clearMainGoalRemote failed: $e');
+    }
+    return false;
+  }
+
+  /// 16. ซิงค์ค่าการตั้งค่าผู้ใช้ขึ้น Server (TbUserPreferences)
+  static Future<bool> saveUserPreferencesRemote({
+    required int userId,
+    required String unitLabel,
+    String? geminiApiKey,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl/user_preferences.php');
+      final headers = await getAuthHeaders();
+      final response = await http
+          .post(
+            uri,
+            headers: headers,
+            body: jsonEncode({
+              'nUserId': userId,
+              'sUnitSystem': unitLabel.startsWith('Kilo') ? 'metric' : 'imperial',
+              'sUnitLabel': unitLabel,
+              'sGeminiApiKey': ?geminiApiKey,
+            }),
+          )
+          .timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body['status'] == 'success') {
+          debugPrint('☁️ [API SUCCESS] [TbUserPreferences] ➜ บันทึกการตั้งค่าหน่วยวัด ($unitLabel) ขึ้น Server สำเร็จ');
+          return true;
+        }
+      }
+    } catch (e) {
+      debugPrint('[API EXCEPTION] saveUserPreferencesRemote failed: $e');
+    }
+    return false;
+  }
+
+  /// 17. ซิงค์หรือปลดล็อกเหรียญรางวัล (TbUserBadges)
+  static Future<bool> unlockBadgeRemote({
+    required int userId,
+    int? badgeId,
+    String? badgeName,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl/badges.php');
+      final headers = await getAuthHeaders();
+      final response = await http
+          .post(
+            uri,
+            headers: headers,
+            body: jsonEncode({
+              'nUserId': userId,
+              if (badgeId != null && badgeId > 0) 'nBadgeId': badgeId,
+              'sBadgeName': ?badgeName,
+            }),
+          )
+          .timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body['status'] == 'success' || body['status'] == 'already_earned') {
+          debugPrint('🏆 [API SUCCESS] [TbUserBadges] ➜ ปลดล็อก/ซิงค์เหรียญรางวัล "${badgeName ?? 'Badge #$badgeId'}" ขึ้น Server สำเร็จ');
+          return true;
+        }
+      }
+    } catch (e) {
+      debugPrint('[API EXCEPTION] unlockBadgeRemote failed: $e');
     }
     return false;
   }

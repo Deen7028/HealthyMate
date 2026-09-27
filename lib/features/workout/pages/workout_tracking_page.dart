@@ -9,6 +9,7 @@ import 'package:healthymate/features/workout/widgets/workout_top_stats_card.dart
 import 'package:healthymate/features/workout/widgets/workout_bottom_controls.dart';
 import 'package:healthymate/features/workout/widgets/map_floating_buttons.dart';
 import 'package:healthymate/features/workout/widgets/workout_map_view.dart';
+import 'package:healthymate/features/workout/widgets/zen_focus_background.dart';
 
 /// หน้าจอ Workout Tracking 
 /// Logic การคำนวณและ State ทั้งหมดจะถูก Delegate ไปยัง [WorkoutTrackingController]
@@ -280,81 +281,84 @@ class _WorkoutTrackingPageState extends State<WorkoutTrackingPage>
           backgroundColor: const Color(0xFFEBF2EA),
           body: Stack(
             children: [
-              // 1. พื้นหลังแผนที่ Google Maps จริง (แสดงเมื่อมีพิกัดจริงเท่านั้น ป้องกันแผนที่กระพริบโผล่ที่กรุงเทพฯ)
+              // 1. พื้นหลัง (สลับระหว่าง แผนที่ GPS กับ Zen Focus Mode สำหรับกิจกรรมไม่เคลื่อนที่)
               Positioned.fill(
-                child: activePosition != null
-                    ? WorkoutMapView(
-                        mapType: _state.currentMapType,
-                        showTraffic: _state.showTraffic,
-                        isGpsEnabled: _state.isGpsEnabled,
-                        routePoints: _state.routePoints,
-                        initialPosition: activePosition,
-                        onMapCreated: (controller) {
-                          _mapController = controller;
-                          _moveToCurrentLocation();
-                        },
-                      )
-                    : Container(
-                        color: const Color(0xFFEBF2EA),
-                        child: const Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              CircularProgressIndicator(color: Color(0xFF2E5327)),
-                              SizedBox(height: 16),
-                              Text(
-                                'กำลังค้นหาสัญญาณ GPS ของคุณ...',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF2E5327),
-                                ),
+                child: _state.selectedCategory.isMoving
+                    ? (activePosition != null
+                        ? WorkoutMapView(
+                            mapType: _state.currentMapType,
+                            showTraffic: _state.showTraffic,
+                            isGpsEnabled: _state.isGpsEnabled,
+                            routePoints: _state.routePoints,
+                            initialPosition: activePosition,
+                            onMapCreated: (controller) {
+                              _mapController = controller;
+                              _moveToCurrentLocation();
+                            },
+                          )
+                        : Container(
+                            color: const Color(0xFFEBF2EA),
+                            child: const Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  CircularProgressIndicator(color: Color(0xFF2E5327)),
+                                  SizedBox(height: 16),
+                                  Text(
+                                    'กำลังค้นหาสัญญาณ GPS ของคุณ...',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF2E5327),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                        ),
-                      ),
+                            ),
+                          ))
+                    : const ZenFocusBackground(),
               ),
 
-              // 2. ปุ่มลอยเลือกประเภทแผนที่ (Layers) & ตำแหน่งปัจจุบัน (My Location)
-              Positioned(
-                right: 20,
-                top: 250,
-                child: MapFloatingButtons(
-                  mapTypeBadgeText:
-                      WorkoutDialogUtils.getShortMapName(_state.currentMapType),
-                  onLayersTap: () => WorkoutDialogUtils.openMapTypeSelector(
-                    context: context,
-                    currentType: _state.currentMapType,
-                    showTraffic: _state.showTraffic,
-                    onSelectType: (type) => _state.setMapType(type),
-                    onToggleTraffic: (val) => _state.toggleTraffic(val),
+              // 2. ปุ่มลอยเลือกประเภทแผนที่ (แสดงเฉพาะกิจกรรมที่มีการเคลื่อนที่)
+              if (_state.selectedCategory.isMoving)
+                Positioned(
+                  right: 20,
+                  top: 250,
+                  child: MapFloatingButtons(
+                    mapTypeBadgeText:
+                        WorkoutDialogUtils.getShortMapName(_state.currentMapType),
+                    onLayersTap: () => WorkoutDialogUtils.openMapTypeSelector(
+                      context: context,
+                      currentType: _state.currentMapType,
+                      showTraffic: _state.showTraffic,
+                      onSelectType: (type) => _state.setMapType(type),
+                      onToggleTraffic: (val) => _state.toggleTraffic(val),
+                    ),
+                    onMyLocationTap: () async {
+                      await _moveToCurrentLocation();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Row(
+                              children: [
+                                Icon(Icons.gps_fixed_rounded, color: Colors.white, size: 18),
+                                SizedBox(width: 8),
+                                Text('จัดตำแหน่งปัจจุบันอยู่กึ่งกลางแล้ว'),
+                              ],
+                            ),
+                            backgroundColor: const Color(0xFF2E5327),
+                            behavior: SnackBarBehavior.floating,
+                            duration: const Duration(seconds: 1),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        );
+                      }
+                    },
                   ),
-                  onMyLocationTap: () async {
-                    await _moveToCurrentLocation();
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Row(
-                            children: [
-                              Icon(Icons.gps_fixed_rounded, color: Colors.white, size: 18),
-                              SizedBox(width: 8),
-                              Text('จัดตำแหน่งปัจจุบันอยู่กึ่งกลางแล้ว'),
-                            ],
-                          ),
-                          backgroundColor: const Color(0xFF2E5327),
-                          behavior: SnackBarBehavior.floating,
-                          duration: const Duration(seconds: 1),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      );
-                    }
-                  },
                 ),
-              ),
 
               // 3. กล่องแสดงสถิติด้านบน (แอนิเมชัน Slide-in เลื่อนลงมาจากด้านบน)
               TweenAnimationBuilder<double>(

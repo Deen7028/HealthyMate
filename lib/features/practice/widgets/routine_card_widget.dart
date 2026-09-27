@@ -14,6 +14,7 @@ class RoutineCardWidget extends StatelessWidget {
   final double progressRatio;
   final Widget actionButton;
   final Widget threeDotsMenu;
+  final Color cardColor;
 
   const RoutineCardWidget({
     super.key,
@@ -28,6 +29,7 @@ class RoutineCardWidget extends StatelessWidget {
     required this.progressRatio,
     required this.actionButton,
     required this.threeDotsMenu,
+    this.cardColor = const Color(0xFF2E5327),
   });
 
   String _formatValue(double val) =>
@@ -62,11 +64,11 @@ class RoutineCardWidget extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE8F3EB),
+                  color: cardColor.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFFCBE3D3)),
+                  border: Border.all(color: cardColor.withValues(alpha: 0.25)),
                 ),
-                child: Icon(icon, color: const Color(0xFF2E5327), size: 22),
+                child: Icon(icon, color: cardColor, size: 22),
               ),
               const SizedBox(width: 12),
 
@@ -95,15 +97,15 @@ class RoutineCardWidget extends StatelessWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF2E5327).withValues(alpha: 0.1),
+                            color: cardColor.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
                             '$percent%',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 10.5,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF2E5327),
+                              color: cardColor,
                             ),
                           ),
                         ),
@@ -174,7 +176,17 @@ class RoutineCardWidget extends StatelessWidget {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  actionButton,
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 400),
+                    transitionBuilder: (child, animation) => ScaleTransition(
+                      scale: animation,
+                      child: FadeTransition(opacity: animation, child: child),
+                    ),
+                    child: KeyedSubtree(
+                      key: ValueKey(percent >= 100 ? 'done_${routine['nRoutineId']}' : 'action_${routine['nRoutineId']}'),
+                      child: actionButton,
+                    ),
+                  ),
                   threeDotsMenu,
                 ],
               ),
@@ -193,9 +205,9 @@ class RoutineCardWidget extends StatelessWidget {
               ),
               Text(
                 '${_formatValue(currentVal)} / ${_formatValue(targetVal)} $unitText ($percent%)',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11.5,
-                  color: Color(0xFF2E5327),
+                  color: cardColor,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -204,13 +216,20 @@ class RoutineCardWidget extends StatelessWidget {
           const SizedBox(height: 6),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: progressRatio,
-              minHeight: 7,
-              backgroundColor: const Color(0xFFE2E9E0),
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                Color(0xFF2E5327),
-              ),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0.0, end: progressRatio),
+              duration: const Duration(milliseconds: 600),
+              curve: Curves.easeOutCubic,
+              builder: (context, value, child) {
+                return LinearProgressIndicator(
+                  value: value,
+                  minHeight: 7,
+                  backgroundColor: cardColor.withValues(alpha: 0.15),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    cardColor,
+                  ),
+                );
+              },
             ),
           ),
         ],

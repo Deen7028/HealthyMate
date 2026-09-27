@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:healthymate/core/database/app_database.dart';
+import 'package:healthymate/core/services/api_service.dart';
 
 /// RoutineStateNotifier จัดการ State สำหรับ กิจวัตรประจำวัน (Routines) และ เป้าหมายหลัก (Main Goal)
 /// ช่วยให้ DashboardPage และ MyRoutinesPage ซิงค์ข้อมูล Real-time ทันทีโดยไม่ต้องรอ re-load หน้าใหม่
@@ -99,16 +100,26 @@ class RoutineStateNotifier extends ChangeNotifier {
     );
     _todayCompletionMap[routineId] = newStatus;
 
+    final r = _routines.firstWhere(
+      (item) => ((item['nRoutineId'] as num?)?.toInt() ?? 0) == routineId,
+      orElse: () => {},
+    );
+    final targetVal = (r['targetValue'] as num?)?.toDouble() ?? 1.0;
+    final progressVal = newStatus ? targetVal : 0.0;
+
+    // ซิงค์ขึ้นเซิร์ฟเวอร์ทันที
+    HealthApiService.updateRoutineProgressRemote(
+      routineId: routineId,
+      date: todayStr,
+      progressValue: progressVal,
+      isCompleted: newStatus,
+    );
+
     // อัปเดต Goal Real-time ถ้าตัวนี้เป็น Goal หลัก
     if (_userGoal != null) {
       final pinnedId = (_userGoal!['nRoutineId'] as num?)?.toInt() ?? 0;
       if (pinnedId == routineId) {
-        final r = _routines.firstWhere(
-          (item) => ((item['nRoutineId'] as num?)?.toInt() ?? 0) == routineId,
-          orElse: () => {},
-        );
         if (r.isNotEmpty) {
-          final targetVal = (r['targetValue'] as num?)?.toDouble() ?? 1.0;
           final unitText = r['unit']?.toString() ?? 'ครั้ง';
           final currentVal = newStatus ? targetVal : 0.0;
           final progress = newStatus ? 1.0 : 0.0;

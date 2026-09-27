@@ -39,6 +39,8 @@ switch ($method) {
         $bmi = isset($data['nBmi']) ? floatval($data['nBmi']) : null;
         $tdee = isset($data['nTdee']) ? floatval($data['nTdee']) : null;
         $recordedAt = isset($data['dtRecordedAt']) ? $data['dtRecordedAt'] : date('Y-m-d H:i:s');
+        $computedBmr = isset($data['computedBmr']) ? floatval($data['computedBmr']) : null;
+        $activityLevelTitle = isset($data['activityLevelTitle']) ? trim($data['activityLevelTitle']) : null;
 
         if ($weight === null || $height === null) {
             echo json_encode([
@@ -49,9 +51,15 @@ switch ($method) {
         }
 
         try {
+            // Check if columns exist, if not, create them
+            try {
+                $conn->exec("ALTER TABLE TbHealthRecords ADD COLUMN IF NOT EXISTS computedBmr FLOAT");
+                $conn->exec("ALTER TABLE TbHealthRecords ADD COLUMN IF NOT EXISTS activityLevelTitle VARCHAR(255)");
+            } catch (Exception $e) {}
+
             $stmt = $conn->prepare("
-                INSERT INTO TbHealthRecords (nUserId, nWeight, nHeight, nBmi, nTdee, isSynced, dtUpdatedAt, dtRecordedAt)
-                VALUES (:userId, :weight, :height, :bmi, :tdee, 1, NOW(), :recordedAt)
+                INSERT INTO TbHealthRecords (nUserId, nWeight, nHeight, nBmi, nTdee, computedBmr, activityLevelTitle, isSynced, dtUpdatedAt, dtRecordedAt)
+                VALUES (:userId, :weight, :height, :bmi, :tdee, :computedBmr, :activityLevelTitle, 1, NOW(), :recordedAt)
             ");
             $stmt->execute([
                 ':userId' => $userId,
@@ -59,6 +67,8 @@ switch ($method) {
                 ':height' => $height,
                 ':bmi' => $bmi,
                 ':tdee' => $tdee,
+                ':computedBmr' => $computedBmr,
+                ':activityLevelTitle' => $activityLevelTitle,
                 ':recordedAt' => $recordedAt
             ]);
 

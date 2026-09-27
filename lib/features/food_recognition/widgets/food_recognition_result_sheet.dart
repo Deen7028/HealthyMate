@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/database/app_database.dart';
+import 'package:healthymate/core/services/api_service.dart';
+import 'package:healthymate/core/services/routine_state_notifier.dart';
 import 'package:healthymate/core/services/sync_service.dart';
 import 'package:healthymate/core/theme/app_theme.dart';
 import 'package:healthymate/features/food_recognition/models/food_recognition_models.dart';
@@ -24,11 +26,23 @@ class FoodRecognitionResultSheet extends StatefulWidget {
 class _FoodRecognitionResultSheetState extends State<FoodRecognitionResultSheet> {
   late MealNutritionScanResult _result;
   bool _isSaving = false;
+  double _userWeight = 65.0;
 
   @override
   void initState() {
     super.initState();
     _result = widget.scanResult;
+    _loadUserWeight();
+  }
+
+  Future<void> _loadUserWeight() async {
+    final user = await AppDatabase.instance.getUser();
+    final weight = user?.nWeight ?? 0.0;
+    if (weight > 0) {
+      setState(() {
+        _userWeight = weight;
+      });
+    } 
   }
 
   void _editItem(int index) {
@@ -119,24 +133,91 @@ class _FoodRecognitionResultSheetState extends State<FoodRecognitionResultSheet>
         );
       }
 
+      // 🟢 Auto-Routine Sync: ตรวจจับและอัปเดตเป้าหมายกิจวัตรให้อัตโนมัติ (Protein & Meals)
+      final autoSyncedRoutines = <String>[];
+      final routines = await AppDatabase.instance.getRoutines(userId: userId);
+      final todayStr = DateTime.now().toIso8601String().substring(0, 10);
+
+      for (final r in routines) {
+        final routineId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
+        final title = (r['sTitle']?.toString() ?? '').toLowerCase();
+        final unit = (r['unit']?.toString() ?? (r['sUnit']?.toString() ?? '')).toLowerCase();
+
+        if (routineId <= 0) continue;
+
+        // 1. ซิงค์โปรตีน
+        if (title.contains('โปรตีน') || unit.contains('g') || unit.contains('กรัม') || unit.contains('โปรตีน')) {
+          if (_result.totalProtein > 0) {
+            final targetVal = (r['targetValue'] as num?)?.toDouble() ?? 1.0;
+            final existingLogs = await AppDatabase.instance.getRoutineLogsForDate(userId: userId, dateStr: todayStr);
+            final currentLog = existingLogs.firstWhere((l) => (l['nRoutineId'] as num?)?.toInt() == routineId, orElse: () => {});
+            final currentProgress = (currentLog['nProgressValue'] as num?)?.toDouble() ?? 0.0;
+            final newProgress = currentProgress + _result.totalProtein;
+            final isDone = newProgress >= targetVal;
+
+            await AppDatabase.instance.insertOrUpdateRoutineLog(
+              routineId: routineId,
+              dateStr: todayStr,
+              progressValue: newProgress,
+              isCompleted: isDone,
+            );
+            // ซิงค์ขึ้น Server
+            HealthApiService.updateRoutineProgressRemote(
+              routineId: routineId,
+              date: todayStr,
+              progressValue: newProgress,
+              isCompleted: isDone,
+            );
+            autoSyncedRoutines.add('โปรตีน (+${_result.totalProtein.toStringAsFixed(1)}g)');
+          }
+        }
+        // 2. ซิงค์มื้ออาหาร / ผัก / ผลไม้
+        else if (title.contains('มื้อ') || title.contains('อาหาร') || title.contains('ผัก') || title.contains('สลัด') || title.contains('ผลไม้')) {
+          await AppDatabase.instance.insertOrUpdateRoutineLog(
+            routineId: routineId,
+            dateStr: todayStr,
+            progressValue: 1.0,
+            isCompleted: true,
+          );
+          // ซิงค์ขึ้น Server
+          HealthApiService.updateRoutineProgressRemote(
+            routineId: routineId,
+            date: todayStr,
+            progressValue: 1.0,
+            isCompleted: true,
+          );
+          autoSyncedRoutines.add('${r['sTitle']} (เสร็จแล้ว)');
+        }
+      }
+
+      // Notify RoutineStateNotifier to reload state across the app
+      RoutineStateNotifier.instance.loadData(userId: userId);
+
       // ส่งสัญญาณให้อัปเดตสถานะค้างซิงค์ และซิงค์ขึ้น Cloud ในเบื้องหลังทันที
       SyncService.instance.updatePendingCount();
       SyncService.instance.syncPendingData();
 
       if (mounted) {
         Navigator.pop(context);
+        final String syncMsg = autoSyncedRoutines.isNotEmpty
+            ? '\n🎯 ซิงค์กิจวัตรสำเร็จ: ${autoSyncedRoutines.join(', ')}'
+            : '';
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
               children: [
                 const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
                 const SizedBox(width: 10),
-                Text('บันทึกมื้อ${_result.category.label} (${_result.totalCalories} kcal) สำเร็จ!'),
+                Expanded(
+                  child: Text('บันทึกมื้อ${_result.category.label} (${_result.totalCalories} kcal) สำเร็จ!$syncMsg'),
+                ),
               ],
             ),
             backgroundColor: AppTheme.primaryGreen,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            duration: const Duration(seconds: 4),
           ),
         );
         widget.onSavedSuccessfully?.call();
@@ -306,12 +387,21 @@ class _FoodRecognitionResultSheetState extends State<FoodRecognitionResultSheet>
 
                   const SizedBox(height: 18),
 
-                  // Macronutrients Summary Banner Card
+                  // Macronutrients Summary Banner Card (Idea 1: TDEE Energy Balance)
                   FoodNutritionSummaryCard(
                     totalCalories: _result.totalCalories,
                     totalProtein: _result.totalProtein,
                     totalCarbs: _result.totalCarbs,
                     totalFat: _result.totalFat,
+                    primaryColor: primaryColor,
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // 🔥 Burn-It-Off AI Advisor Card (Idea 3: Burn-It-Off Advisor)
+                  BurnItOffAdvisorCard(
+                    totalCalories: _result.totalCalories,
+                    userWeight: _userWeight,
                     primaryColor: primaryColor,
                   ),
 
