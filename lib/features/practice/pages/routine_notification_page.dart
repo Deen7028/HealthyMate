@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:healthymate/core/services/notification_service.dart';
 import 'package:healthymate/core/services/routine_state_notifier.dart';
 import '../models/routine_item.dart';
 import '../widgets/index.dart';
@@ -514,18 +513,6 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
         ],
       ),
       actions: [
-        IconButton(
-          icon: const Icon(
-            Icons.notifications_active,
-            color: Colors.blueGrey,
-            size: 20,
-          ),
-          tooltip: 'ทดสอบตั้งปลุก 10 วินาที',
-          onPressed: () async {
-            _showSnackBar('⏳ สั่งตั้งปลุกทดสอบใน 10 วินาที... พับจอรอดูผลได้เลย!');
-            await NotificationService.instance.testNotificationIn10Seconds();
-          },
-        ),
         Padding(
           padding: const EdgeInsets.only(right: 16.0),
           child: CircleAvatar(

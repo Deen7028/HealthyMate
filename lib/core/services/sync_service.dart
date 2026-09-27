@@ -163,6 +163,16 @@ class SyncService extends ChangeNotifier {
     int syncedTotal = 0;
 
     try {
+      // ดึงข้อมูล User ที่ล็อกอินอยู่ในปัจจุบัน
+      final db = AppDatabase.instance;
+      final loggedInEmail = await db.getLoggedInUserEmail();
+      TbUser? activeUser;
+      if (loggedInEmail != null && loggedInEmail.isNotEmpty) {
+        activeUser = await db.getUserByEmail(loggedInEmail);
+      }
+      activeUser ??= await db.getUser();
+      final currentUserId = activeUser?.nUserId ?? 1;
+
       // 1. ซิงค์ตาราง TbHealthRecords
       final unsyncedHealthRecords = await AppDatabase.instance.getUnsyncedHealthRecords();
       for (final map in unsyncedHealthRecords) {
@@ -174,6 +184,7 @@ class SyncService extends ChangeNotifier {
             if (recordId > 0) {
               await AppDatabase.instance.markHealthRecordAsSynced(recordId);
               syncedTotal++;
+              debugPrint('☁️ [SYNC SUCCESS] [TbHealthRecords] ➜ อัปโหลดประวัติสุขภาพ ID: $recordId ขึ้น Server สำเร็จ (BMI: ${record.nBmi.toStringAsFixed(1)}, TDEE: ${record.nTdee.round()} kcal)');
             }
           }
         } catch (e) {
@@ -190,6 +201,7 @@ class SyncService extends ChangeNotifier {
           if (success) {
             await AppDatabase.instance.markUserAsSynced(user.nUserId);
             syncedTotal++;
+            debugPrint('☁️ [SYNC SUCCESS] [TbUsers] ➜ อัปเดตข้อมูลผู้ใช้ ${user.sFirstName} (ID: ${user.nUserId}) ขึ้น Server สำเร็จ');
           }
         } catch (e) {
           debugPrint('SyncService: Error syncing user: $e');
@@ -205,6 +217,7 @@ class SyncService extends ChangeNotifier {
           if (success && workoutId > 0) {
             await AppDatabase.instance.markWorkoutAsSynced(workoutId);
             syncedTotal++;
+            debugPrint('☁️ [SYNC SUCCESS] [TbWorkouts] ➜ อัปโหลดการออกกำลังกาย ID: $workoutId (${workout['sType']}, ${workout['nDistance']} กม.) ขึ้น Server สำเร็จ');
           }
         } catch (e) {
           debugPrint('SyncService: Error syncing workout: $e');
@@ -220,9 +233,120 @@ class SyncService extends ChangeNotifier {
           if (success && nutritionId > 0) {
             await AppDatabase.instance.markNutritionLogAsSynced(nutritionId);
             syncedTotal++;
+            debugPrint('☁️ [SYNC SUCCESS] [TbNutritionLogs] ➜ อัปโหลดมื้ออาหาร ID: $nutritionId (${nutrition['sFoodName']} • ${nutrition['nCalories']} kcal) ขึ้น Server สำเร็จ');
           }
         } catch (e) {
           debugPrint('SyncService: Error syncing nutrition log: $e');
+        }
+      }
+
+      // 5. ซิงค์ตาราง TbRoutines & TbRoutineLogs
+      if (currentUserId > 0) {
+        final localRoutines = await AppDatabase.instance.getRoutines(userId: currentUserId);
+        final serverResult = await HealthApiService.fetchRoutines(userId: currentUserId);
+        if (serverResult != null && serverResult['status'] == 'success') {
+          final serverRoutines = (serverResult['data'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+          final serverTitles = serverRoutines.map((sr) => sr['sTitle']?.toString().trim() ?? '').toSet();
+
+          for (final lr in localRoutines) {
+            final title = lr['sTitle']?.toString().trim() ?? '';
+            if (title.isNotEmpty && !serverTitles.map((t) => t.toLowerCase()).contains(title.toLowerCase())) {
+              final newId = await HealthApiService.insertRoutineRemote(
+                userId: currentUserId,
+                title: title,
+                time: lr['sTime']?.toString() ?? '',
+                targetValue: (lr['targetValue'] as num?)?.toDouble() ?? 1.0,
+                unit: lr['unit']?.toString() ?? 'ครั้ง',
+                linkedWorkout: lr['sLinkedWorkout']?.toString() ?? '',
+                color: (lr['color'] as num?)?.toInt(),
+                iconData: (lr['iconData'] as num?)?.toInt(),
+                isNotificationActive: ((lr['isNotificationActive'] as num?)?.toInt() ?? 1) == 1,
+              );
+              if (newId > 0) {
+                syncedTotal++;
+                final localId = (lr['nRoutineId'] as num?)?.toInt() ?? 0;
+                if (localId > 0 && localId != newId) {
+                  await AppDatabase.instance.deleteRoutine(localId);
+                }
+                debugPrint('☁️ [SYNC SUCCESS] [TbRoutines] ➜ อัปโหลดกิจวัตรใหม่ "$title" (Server ID: $newId) ขึ้น Server สำเร็จ');
+              }
+            }
+          }
+          await AppDatabase.instance.deduplicateRoutines(userId: currentUserId);
+
+          // ดึงรายการกิจวัตรล่าสุดจาก Server มาทำแผนที่ Title -> Server nRoutineId
+          final freshServerRes = await HealthApiService.fetchRoutines(userId: currentUserId);
+          final Map<String, int> titleToServerId = {};
+          final Set<int> validServerRoutineIds = {};
+          if (freshServerRes != null && freshServerRes['status'] == 'success') {
+            final list = (freshServerRes['data'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+            for (final item in list) {
+              final sId = (item['nRoutineId'] as num?)?.toInt() ?? 0;
+              final sTitle = (item['sTitle']?.toString() ?? '').trim().toLowerCase();
+              if (sId > 0) {
+                validServerRoutineIds.add(sId);
+                if (sTitle.isNotEmpty) {
+                  titleToServerId[sTitle] = sId;
+                }
+              }
+            }
+          }
+
+          // ซิงค์ RoutineLogs ของวันนี้ขึ้น Server
+          final todayStr = DateTime.now().toIso8601String().substring(0, 10);
+          final todayLogs = await AppDatabase.instance.getRoutineLogsForDate(userId: currentUserId, dateStr: todayStr);
+          for (final log in todayLogs) {
+            int targetRoutineId = (log['nRoutineId'] as num?)?.toInt() ?? 0;
+            final routineTitle = (log['sTitle']?.toString() ?? '').trim().toLowerCase();
+
+            // หาก ID ในเครื่องยังไม่ใช่ ID ของ Server ให้แปลงโดยอิงจากชื่อกิจวัตร
+            if (!validServerRoutineIds.contains(targetRoutineId) && titleToServerId.containsKey(routineTitle)) {
+              targetRoutineId = titleToServerId[routineTitle]!;
+            }
+
+            final isCompleted = (log['isCompleted'] as num?)?.toInt() == 1;
+            final progressValue = (log['nProgressValue'] as num?)?.toDouble() ?? 0.0;
+            if (targetRoutineId > 0 && validServerRoutineIds.contains(targetRoutineId)) {
+              final ok = await HealthApiService.updateRoutineProgressRemote(
+                routineId: targetRoutineId,
+                date: todayStr,
+                progressValue: progressValue,
+                isCompleted: isCompleted,
+              );
+              if (ok) {
+                syncedTotal++;
+                debugPrint('☁️ [SYNC SUCCESS] [TbRoutineLogs] ➜ อัปเดต Log กิจวัตร "$routineTitle" (Server ID: $targetRoutineId, $todayStr: คืบหน้า $progressValue, เสร็จสิ้น: $isCompleted) ขึ้น Server สำเร็จ');
+              }
+            }
+          }
+        }
+
+        // 6. ซิงค์ตาราง TbGoals
+        final localGoal = await AppDatabase.instance.getUserGoal(currentUserId);
+        if (localGoal != null) {
+          final success = await HealthApiService.saveMainGoalRemote(
+            userId: currentUserId,
+            routineId: (localGoal['nRoutineId'] as num?)?.toInt() ?? 0,
+            title: localGoal['sTitle']?.toString() ?? '',
+            progress: (localGoal['nProgress'] as num?)?.toDouble() ?? 0.0,
+            remainingText: localGoal['sRemainingText']?.toString() ?? '',
+          );
+          if (success) {
+            syncedTotal++;
+            debugPrint('☁️ [SYNC SUCCESS] [TbGoals] ➜ ซิงค์เป้าหมายหลัก "${localGoal['sTitle']}" (ความคืบหน้า: ${(localGoal['nProgress'] * 100).toInt()}%) ขึ้น Server สำเร็จ');
+          }
+        }
+
+        // 7. ซิงค์ตาราง TbUserPreferences
+        final unitPref = await AppDatabase.instance.getUserUnitPreference(currentUserId);
+        final apiKey = await AppDatabase.instance.getGeminiApiKey(currentUserId);
+        final okPref = await HealthApiService.saveUserPreferencesRemote(
+          userId: currentUserId,
+          unitLabel: unitPref,
+          geminiApiKey: apiKey,
+        );
+        if (okPref) {
+          debugPrint('☁️ [SYNC SUCCESS] [TbUserPreferences] ➜ ซิงค์การตั้งค่าหน่วยวัด ($unitPref) ขึ้น Server สำเร็จ');
         }
       }
 
@@ -233,9 +357,11 @@ class SyncService extends ChangeNotifier {
       if (_pendingCount == 0) {
         _status = SyncStatus.synced;
         _statusMessage = 'ข้อมูลทั้งหมดเป็นปัจจุบันแล้ว (ซิงค์แล้ว $syncedTotal รายการ)';
+        debugPrint('🎉 [SYNC COMPLETED] ข้อมูลทั้งหมดในเครื่องซิงค์ขึ้น Server เรียบร้อยแล้ว ($syncedTotal รายการ)');
       } else {
         _status = SyncStatus.idle;
         _statusMessage = 'เหลือข้อมูลคอยซิงค์ $_pendingCount รายการ';
+        debugPrint('ℹ️ [SYNC STATUS] เหลือรายการค้างซิงค์: $_pendingCount รายการ');
       }
     } catch (e) {
       debugPrint('SyncService error: $e');

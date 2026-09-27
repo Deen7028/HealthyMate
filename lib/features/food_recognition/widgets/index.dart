@@ -4,3 +4,4 @@ export 'empty_food_recognition_card.dart';
 export 'food_nutrition_summary_card.dart';
 export 'food_recognition_result_sheet.dart';
 export 'gemini_api_key_dialog.dart';
+export 'burn_it_off_advisor_card.dart';

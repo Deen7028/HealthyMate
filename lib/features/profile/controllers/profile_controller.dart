@@ -234,10 +234,19 @@ class ProfileController extends ChangeNotifier {
   Future<void> saveUserUnitPreference(String unit) async {
     selectedUnit = unit;
     notifyListeners();
+    final uId = currentUser?.nUserId ?? 1;
     await AppDatabase.instance.saveUserUnitPreference(
-      currentUser?.nUserId ?? 1,
+      uId,
       unit,
     );
+    final isSynced = await HealthApiService.saveUserPreferencesRemote(
+      userId: uId,
+      unitLabel: unit,
+      geminiApiKey: geminiApiKey,
+    );
+    if (!isSynced) {
+      await SyncService.instance.updatePendingCount();
+    }
   }
 
   /// บันทึกข้อมูลส่วนตัว (ชื่อ, นามสกุล, เพศ, อายุ, ส่วนสูง, น้ำหนัก)
@@ -355,9 +364,24 @@ class ProfileController extends ChangeNotifier {
     await AuthService.instance.logout();
   }
 
-  /// อัปเดต Gemini API Key
-  void updateGeminiApiKey(String key) {
+  /// อัปเดต Gemini API Key พร้อมบันทึกลง SQLite และซิงค์ขึ้น Server
+  Future<void> updateGeminiApiKey(String key) async {
     geminiApiKey = key;
     notifyListeners();
+
+    final uId = currentUser?.nUserId ?? 1;
+
+    // 1. บันทึกลง SQLite
+    await AppDatabase.instance.saveGeminiApiKey(uId, key);
+
+    // 2. ซิงค์ขึ้น Remote Server
+    final isSynced = await HealthApiService.saveUserPreferencesRemote(
+      userId: uId,
+      unitLabel: selectedUnit,
+      geminiApiKey: key,
+    );
+    if (!isSynced) {
+      await SyncService.instance.updatePendingCount();
+    }
   }
 }

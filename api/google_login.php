@@ -47,6 +47,18 @@ try {
         
         $authToken = generateAuthToken($user['nUserId']);
         $user['token'] = $authToken;
+
+        try {
+            $stmtSession = $conn->prepare("
+                INSERT INTO tbsession (nUserId, sToken, dtExpiresAt, dtCreatedAt)
+                VALUES (:userId, :token, DATE_ADD(NOW(), INTERVAL 30 DAY), NOW())
+                ON DUPLICATE KEY UPDATE sToken = VALUES(sToken), dtExpiresAt = VALUES(dtExpiresAt)
+            ");
+            $stmtSession->execute([
+                ':userId' => $user['nUserId'],
+                ':token' => $authToken
+            ]);
+        } catch (Exception $e) {}
         
         echo json_encode([
             "status" => "success",
@@ -77,6 +89,18 @@ try {
         $newUser = $stmt->fetch();
         $authToken = generateAuthToken($newUser['nUserId']);
         $newUser['token'] = $authToken;
+
+        try {
+            $stmtSession = $conn->prepare("
+                INSERT INTO tbsession (nUserId, sToken, dtExpiresAt, dtCreatedAt)
+                VALUES (:userId, :token, DATE_ADD(NOW(), INTERVAL 30 DAY), NOW())
+                ON DUPLICATE KEY UPDATE sToken = VALUES(sToken), dtExpiresAt = VALUES(dtExpiresAt)
+            ");
+            $stmtSession->execute([
+                ':userId' => $newUser['nUserId'],
+                ':token' => $authToken
+            ]);
+        } catch (Exception $e) {}
 
         echo json_encode([
             "status" => "success",

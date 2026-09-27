@@ -142,40 +142,6 @@ class NotificationService {
     }
   }
 
-  /// 1.6 ทดสอบการแจ้งเตือนในอีก 10 วินาทีข้างหน้า (The 10-Second Test)
-  Future<void> testNotificationIn10Seconds() async {
-    try {
-      await init();
-      final now = tz.TZDateTime.now(tz.local);
-      final scheduledDate = now.add(const Duration(seconds: 10));
-
-      debugPrint('⏳ สั่งตั้งปลุกทดสอบใน 10 วินาที...');
-      await _notificationsPlugin.zonedSchedule(
-        id: 998,
-        title: 'เทสระบบ 🚀',
-        body: 'ถ้านี่เด้ง แปลว่าระบบสมบูรณ์ 100%!',
-        scheduledDate: scheduledDate,
-        notificationDetails: const NotificationDetails(
-          android: AndroidNotificationDetails(
-            'routine_channel_v3',
-            'การแจ้งเตือนกิจวัตร',
-            channelDescription: 'แจ้งเตือนเวลาทำกิจวัตร',
-            importance: Importance.max,
-            priority: Priority.high,
-            playSound: true,
-            enableVibration: true,
-            visibility: NotificationVisibility.public,
-            icon: '@mipmap/ic_launcher',
-          ),
-          iOS: DarwinNotificationDetails(presentSound: true, presentAlert: true),
-        ),
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      );
-      debugPrint('✅ สั่งสำเร็จ พับจอรอดูผลใน 10 วินาทีได้เลย!');
-    } catch (e) {
-      debugPrint('❌ พัง! สาเหตุ: $e');
-    }
-  }
 
   /// 2. ตั้งแจ้งเตือนแบบ "ความถี่วนรอบ" (Periodic Routine - เช่น ทุกชั่วโมง)
   Future<void> schedulePeriodicRoutine({

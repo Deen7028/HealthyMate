@@ -126,12 +126,25 @@ switch ($method) {
             // เพิ่มกิจวัตรใหม่
             $userId = $authUserId;
             $title = isset($data['sTitle']) ? trim($data['sTitle']) : (isset($data['title']) ? trim($data['title']) : '');
-            $time = isset($data['sTime']) ? trim($data['sTime']) : (isset($data['notificationTime']) ? trim($data['notificationTime']) : '');
+            $rawTime = isset($data['sTime']) ? trim($data['sTime']) : (isset($data['notificationTime']) ? trim($data['notificationTime']) : '');
+            // ป้องกัน SQL Error: Data too long for column 'sTime'
+            $time = mb_substr($rawTime, 0, 50);
             $isNotif = isset($data['isNotificationActive']) ? intval($data['isNotificationActive']) : 1;
             $targetVal = isset($data['nTargetValue']) ? floatval($data['nTargetValue']) : (isset($data['targetValue']) ? floatval($data['targetValue']) : 1.0);
             $unit = isset($data['sUnit']) ? trim($data['sUnit']) : (isset($data['unit']) ? trim($data['unit']) : 'ครั้ง');
             $linkedWorkout = isset($data['sLinkedWorkout']) ? trim($data['sLinkedWorkout']) : (isset($data['linkedWorkoutType']) ? trim($data['linkedWorkoutType']) : null);
-            $color = isset($data['nColor']) ? intval($data['nColor']) : (isset($data['color']) ? intval($data['color']) : null);
+            
+            // ป้องกัน SQL Error: Out of range value for column 'nColor' (0xFFxxxxxx เกินค่า MySQL SIGNED INT 2147483647)
+            $rawColor = isset($data['nColor']) ? $data['nColor'] : (isset($data['color']) ? $data['color'] : null);
+            $color = null;
+            if ($rawColor !== null) {
+                $cVal = (float)$rawColor;
+                if ($cVal > 2147483647) {
+                    $color = (int)($cVal - 4294967296);
+                } else {
+                    $color = (int)$cVal;
+                }
+            }
             $iconData = isset($data['nIconData']) ? intval($data['nIconData']) : (isset($data['iconData']) ? intval($data['iconData']) : null);
 
             if (empty($title)) {
@@ -140,6 +153,43 @@ switch ($method) {
             }
 
             try {
+                // พยายามขยาย column ใน MySQL อัตโนมัติถ้ายังเป็น VARCHAR แคบๆ
+                try {
+                    $conn->exec("ALTER TABLE TbRoutines MODIFY COLUMN sTime VARCHAR(255)");
+                    $conn->exec("ALTER TABLE TbRoutines MODIFY COLUMN nColor BIGINT");
+                } catch (Exception $e) {}
+
+                // 🛡️ ตรวจสอบก่อนว่ามีกิจวัตรชื่อนี้ของ user อยู่แล้วหรือไม่ เพื่อป้องกันการสร้างซ้ำซ้อน
+                $stmtCheckExist = $conn->prepare("SELECT nRoutineId FROM TbRoutines WHERE nUserId = :userId AND LOWER(TRIM(sTitle)) = LOWER(TRIM(:title)) ORDER BY nRoutineId ASC LIMIT 1");
+                $stmtCheckExist->execute([':userId' => $userId, ':title' => $title]);
+                $existingRoutine = $stmtCheckExist->fetch();
+
+                if ($existingRoutine) {
+                    $existingId = intval($existingRoutine['nRoutineId']);
+                    $stmtUpdate = $conn->prepare("
+                        UPDATE TbRoutines 
+                        SET sTime = :time, isNotificationActive = :isNotif, nTargetValue = :targetVal, sUnit = :unit, sLinkedWorkout = :linkedWorkout, nColor = :color, nIconData = :iconData
+                        WHERE nRoutineId = :rid
+                    ");
+                    $stmtUpdate->execute([
+                        ':time' => $time,
+                        ':isNotif' => $isNotif,
+                        ':targetVal' => $targetVal,
+                        ':unit' => $unit,
+                        ':linkedWorkout' => $linkedWorkout,
+                        ':color' => $color,
+                        ':iconData' => $iconData,
+                        ':rid' => $existingId
+                    ]);
+
+                    echo json_encode([
+                        "status" => "success",
+                        "message" => "อัปเดตกิจวัตรเดิมสำเร็จ",
+                        "nRoutineId" => $existingId
+                    ], JSON_UNESCAPED_UNICODE);
+                    break;
+                }
+
                 $stmt = $conn->prepare("
                     INSERT INTO TbRoutines (nUserId, sTitle, sTime, isNotificationActive, nTargetValue, sUnit, sLinkedWorkout, nColor, nIconData, dtCreatedAt) 
                     VALUES (:userId, :title, :time, :isNotif, :targetVal, :unit, :linkedWorkout, :color, :iconData, NOW())
@@ -176,12 +226,23 @@ switch ($method) {
 
         $routineId = isset($data['nRoutineId']) ? intval($data['nRoutineId']) : 0;
         $title = isset($data['sTitle']) ? trim($data['sTitle']) : (isset($data['title']) ? trim($data['title']) : '');
-        $time = isset($data['sTime']) ? trim($data['sTime']) : (isset($data['notificationTime']) ? trim($data['notificationTime']) : '');
+        $rawTime = isset($data['sTime']) ? trim($data['sTime']) : (isset($data['notificationTime']) ? trim($data['notificationTime']) : '');
+        $time = mb_substr($rawTime, 0, 50);
         $isNotif = isset($data['isNotificationActive']) ? intval($data['isNotificationActive']) : 1;
         $targetVal = isset($data['nTargetValue']) ? floatval($data['nTargetValue']) : (isset($data['targetValue']) ? floatval($data['targetValue']) : 1.0);
         $unit = isset($data['sUnit']) ? trim($data['sUnit']) : (isset($data['unit']) ? trim($data['unit']) : 'ครั้ง');
         $linkedWorkout = isset($data['sLinkedWorkout']) ? trim($data['sLinkedWorkout']) : (isset($data['linkedWorkoutType']) ? trim($data['linkedWorkoutType']) : null);
-        $color = isset($data['nColor']) ? intval($data['nColor']) : (isset($data['color']) ? intval($data['color']) : null);
+        
+        $rawColor = isset($data['nColor']) ? $data['nColor'] : (isset($data['color']) ? $data['color'] : null);
+        $color = null;
+        if ($rawColor !== null) {
+            $cVal = (float)$rawColor;
+            if ($cVal > 2147483647) {
+                $color = (int)($cVal - 4294967296);
+            } else {
+                $color = (int)$cVal;
+            }
+        }
         $iconData = isset($data['nIconData']) ? intval($data['nIconData']) : (isset($data['iconData']) ? intval($data['iconData']) : null);
 
         if ($routineId <= 0 || empty($title)) {

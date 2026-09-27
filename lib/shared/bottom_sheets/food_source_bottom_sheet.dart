@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:healthymate/core/theme/app_theme.dart';
+import 'package:healthymate/core/services/routine_state_notifier.dart';
 import 'package:healthymate/features/food_recognition/widgets/food_recognition_result_sheet.dart';
 import 'package:healthymate/features/food_recognition/services/food_recognition_service.dart';
 
@@ -57,7 +58,12 @@ class _FoodSourceBottomSheetState extends State<FoodSourceBottomSheet> {
         isScrollControlled: true,
         useRootNavigator: true,
         backgroundColor: Colors.transparent,
-        builder: (ctx) => FoodRecognitionResultSheet(scanResult: result),
+        builder: (ctx) => FoodRecognitionResultSheet(
+          scanResult: result,
+          onSavedSuccessfully: () {
+            RoutineStateNotifier.instance.loadData();
+          },
+        ),
       );
     } catch (e, stack) {
       debugPrint('Error picking image: $e\n$stack');

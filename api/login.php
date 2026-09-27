@@ -83,6 +83,21 @@ try {
     $authToken = generateAuthToken($user['nUserId']);
     $user['token'] = $authToken;
 
+    // บันทึก Session ลง tbsession บน Database Server
+    try {
+        $stmtSession = $conn->prepare("
+            INSERT INTO tbsession (nUserId, sToken, dtExpiresAt, dtCreatedAt)
+            VALUES (:userId, :token, DATE_ADD(NOW(), INTERVAL 30 DAY), NOW())
+            ON DUPLICATE KEY UPDATE sToken = VALUES(sToken), dtExpiresAt = VALUES(dtExpiresAt)
+        ");
+        $stmtSession->execute([
+            ':userId' => $user['nUserId'],
+            ':token' => $authToken
+        ]);
+    } catch (Exception $e) {
+        error_log("Failed to insert tbsession: " . $e->getMessage());
+    }
+
     echo json_encode([
         "status" => "success",
         "message" => "เข้าสู่ระบบสำเร็จ",

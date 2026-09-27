@@ -173,9 +173,24 @@ class RoutineController extends ChangeNotifier {
           }
           if (workoutVal > 0) {
             todayProgressValues[routineId] = workoutVal;
-            if (workoutVal >= targetVal) {
+            final isDone = workoutVal >= targetVal;
+            if (isDone) {
               todayCompletionMap[routineId] = true;
             }
+
+            // บันทึกลง SQLite และซิงค์ขึ้น Server ตาราง TbRoutineLogs
+            await db.insertOrUpdateRoutineLog(
+              routineId: routineId,
+              dateStr: todayStr,
+              progressValue: workoutVal,
+              isCompleted: isDone,
+            );
+            HealthApiService.updateRoutineProgressRemote(
+              routineId: routineId,
+              date: todayStr,
+              progressValue: workoutVal,
+              isCompleted: isDone,
+            );
           }
         }
       }
@@ -241,10 +256,15 @@ class RoutineController extends ChangeNotifier {
         final serverRoutines =
             (serverResult['data'] as List?)?.cast<Map<String, dynamic>>() ?? [];
 
-        // 🟢 หากในเครื่องมีกิจวัตรแต่บน Server ยังไม่มี ให้ดันข้อมูลขึ้น Server
-        if (localRoutines.isNotEmpty && serverRoutines.isEmpty) {
-          for (final r in localRoutines) {
-            final title = r['sTitle']?.toString() ?? '';
+        final serverTitles = serverRoutines
+            .map((sr) => (sr['sTitle']?.toString() ?? '').trim().toLowerCase())
+            .toSet();
+
+        // 🟢 ดันกิจวัตรในเครื่องที่ยังไม่มีบน Server ขึ้น MySQL ทันที
+        bool hasNewUploaded = false;
+        for (final r in localRoutines) {
+          final title = (r['sTitle']?.toString() ?? '').trim();
+          if (title.isNotEmpty && !serverTitles.contains(title.toLowerCase())) {
             final time = r['sTime']?.toString() ?? '';
             final targetVal = (r['targetValue'] as num?)?.toDouble() ?? 1.0;
             final unit = r['unit']?.toString() ?? 'ครั้ง';
@@ -253,21 +273,30 @@ class RoutineController extends ChangeNotifier {
             final iconData = (r['iconData'] as num?)?.toInt();
             final isNotif = ((r['isNotificationActive'] as num?)?.toInt() ?? 1) == 1;
 
-            if (title.isNotEmpty) {
-              await HealthApiService.insertRoutineRemote(
-                userId: userId,
-                title: title,
-                time: time,
-                targetValue: targetVal,
-                unit: unit,
-                linkedWorkout: linkedWorkout,
-                color: color,
-                iconData: iconData,
-                isNotificationActive: isNotif,
-              );
+            final newId = await HealthApiService.insertRoutineRemote(
+              userId: userId,
+              title: title,
+              time: time,
+              targetValue: targetVal,
+              unit: unit,
+              linkedWorkout: linkedWorkout,
+              color: color,
+              iconData: iconData,
+              isNotificationActive: isNotif,
+            );
+            if (newId > 0) {
+              hasNewUploaded = true;
+              // ถ้า Server สร้าง ID ใหม่ ให้ลบแถว Local เก่าที่ ID ไม่ตรงออก ป้องกันซ้ำ
+              final localId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
+              if (localId > 0 && localId != newId) {
+                await AppDatabase.instance.deleteRoutine(localId);
+              }
             }
           }
-          // ดึงรายการกลับมาอีกครั้งหลังจากดันขึ้น Server
+        }
+
+        // หากมีการดันกิจวัตรขึ้นใหม่ ให้ดึงรายการสดล่าสุดจาก Server
+        if (hasNewUploaded) {
           final refreshedResult = await HealthApiService.fetchRoutines(userId: userId);
           if (refreshedResult != null && refreshedResult['status'] == 'success') {
             final refreshedRoutines =
@@ -280,6 +309,7 @@ class RoutineController extends ChangeNotifier {
           await AppDatabase.instance.upsertRoutinesFromServer(userId, serverRoutines);
         }
 
+        await AppDatabase.instance.deduplicateRoutines(userId: userId);
         routines = await AppDatabase.instance.getRoutines(userId: userId);
 
         for (final r in serverRoutines) {
@@ -313,7 +343,8 @@ class RoutineController extends ChangeNotifier {
     if (user == null) return;
     final userId = user!.nUserId;
 
-    final routineId = await AppDatabase.instance.insertRoutine(
+    // 1. บันทึกลง SQLite
+    final localId = await AppDatabase.instance.insertRoutine(
       userId: userId,
       title: newRoutine.title,
       time: newRoutine.notificationTime,
@@ -325,7 +356,8 @@ class RoutineController extends ChangeNotifier {
       isNotificationActive: newRoutine.isNotificationEnabled,
     );
 
-    HealthApiService.insertRoutineRemote(
+    // 2. บันทึกขึ้น Remote Server
+    final serverId = await HealthApiService.insertRoutineRemote(
       userId: userId,
       title: newRoutine.title,
       time: newRoutine.notificationTime,
@@ -336,9 +368,15 @@ class RoutineController extends ChangeNotifier {
       iconData: newRoutine.iconData.codePoint,
       isNotificationActive: newRoutine.isNotificationEnabled,
     );
+
+    // หาก Server สร้าง ID ใหม่ที่ต่างจาก Local ให้ลบ Local เก่าป้องกันซ้ำ
+    final notificationRoutineId = serverId > 0 ? serverId : localId;
+    if (serverId > 0 && serverId != localId && localId > 0) {
+      await AppDatabase.instance.deleteRoutine(localId);
+    }
 
     // 🟢 ระบบการแจ้งเตือน Local Notifications
-    await _syncLocalNotification(routineId, newRoutine);
+    await _syncLocalNotification(notificationRoutineId, newRoutine);
 
     await loadData();
   }
@@ -424,15 +462,24 @@ class RoutineController extends ChangeNotifier {
     notifyListeners();
 
     if (user != null) {
-      await AppDatabase.instance.toggleRoutineLog(
+      await AppDatabase.instance.insertOrUpdateRoutineLog(
         routineId: routineId,
         dateStr: todayStr,
+        progressValue: newStatus ? targetVal : 0.0,
+        isCompleted: newStatus,
       );
 
-      HealthApiService.toggleRoutineLogRemote(
-        routineId: routineId,
-        date: todayStr,
-      );
+      try {
+        final success = await HealthApiService.updateRoutineProgressRemote(
+          routineId: routineId,
+          date: todayStr,
+          progressValue: newStatus ? targetVal : 0.0,
+          isCompleted: newStatus,
+        );
+        debugPrint('☁️ [ROUTINE_LOG] ➤ อัปเดตความสำเร็จกิจวัตร ID: $routineId ($todayStr, isCompleted: $newStatus) ขึ้น Server: $success');
+      } catch (e) {
+        debugPrint('❌ [ROUTINE_LOG] ➤ ซิงค์สถานะกิจวัตร ID: $routineId ขึ้น Server ผิดพลาด: $e');
+      }
 
       RoutineStateNotifier.instance.loadData(userId: user!.nUserId);
     }
@@ -556,6 +603,13 @@ class RoutineController extends ChangeNotifier {
           progress: progress,
           remainingText: remainingText,
         );
+        await HealthApiService.saveMainGoalRemote(
+          userId: user!.nUserId,
+          routineId: routineId,
+          title: title,
+          progress: progress,
+          remainingText: remainingText,
+        );
         RoutineStateNotifier.instance.loadData(userId: user!.nUserId);
       } catch (_) {}
     }
@@ -595,6 +649,13 @@ class RoutineController extends ChangeNotifier {
           progress: 0.0,
           remainingText: remainingText,
         );
+        await HealthApiService.saveMainGoalRemote(
+          userId: user!.nUserId,
+          routineId: 0,
+          title: '$icon $title',
+          progress: 0.0,
+          remainingText: remainingText,
+        );
         RoutineStateNotifier.instance.loadData(userId: user!.nUserId);
       } catch (_) {}
     }
@@ -608,6 +669,7 @@ class RoutineController extends ChangeNotifier {
     if (user != null) {
       try {
         await AppDatabase.instance.clearUserGoal(user!.nUserId);
+        await HealthApiService.clearMainGoalRemote(user!.nUserId);
         RoutineStateNotifier.instance.loadData(userId: user!.nUserId);
       } catch (_) {}
     }
@@ -629,7 +691,7 @@ class RoutineController extends ChangeNotifier {
       }
     }
 
-    HealthApiService.deleteRoutineRemote(routineId);
+    await HealthApiService.deleteRoutineRemote(routineId);
     await loadData();
   }
 
@@ -646,7 +708,7 @@ class RoutineController extends ChangeNotifier {
       isNotificationActive: updatedRoutine.isNotificationEnabled,
     );
 
-    HealthApiService.updateRoutineRemote(
+    await HealthApiService.updateRoutineRemote(
       routineId: routineId,
       title: updatedRoutine.title,
       time: updatedRoutine.notificationTime,

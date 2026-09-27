@@ -151,6 +151,7 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                           latestRecord: _controller.latestRecord,
                           now: _controller.now,
                           totalCaloriesBurned: _controller.totalCaloriesBurned,
+                          todayNutritionCalories: _controller.todayNutritionCalories,
                           onNavigateToCalculator: widget.onNavigateToCalculator,
                           primaryGreen: primaryGreen,
                           darkGreen: darkGreen,
