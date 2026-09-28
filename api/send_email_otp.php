@@ -121,7 +121,7 @@ try {
             $mail->SMTPAuth   = true;
             $mail->Username   = $smtpUser;
             $mail->Password   = $smtpPass;
-            $mail->SMTPSecure = ($smtpPort === 465) ? \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS : \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->SMTPSecure = ($smtpPort === 465) ? 'ssl' : 'tls';
             $mail->Port       = $smtpPort;
             $mail->Timeout    = 15;
             $mail->CharSet    = 'UTF-8';
