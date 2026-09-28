@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/api_service.dart';
+import 'package:healthymate/core/services/audio_service.dart';
 import 'package:healthymate/core/services/notification_service.dart';
 import 'package:healthymate/core/services/routine_state_notifier.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
@@ -464,6 +465,15 @@ class RoutineController extends ChangeNotifier {
     completedCount = todayCompletionMap.values.where((v) => v).length;
     notifyListeners();
 
+    if (newStatus) {
+      final title = (r['sTitle'] ?? r['title'] ?? '').toString().toLowerCase();
+      if (title.contains('น้ำ') || title.contains('water')) {
+        AudioService.instance.playWaterDrop();
+      } else {
+        AudioService.instance.playSuccess();
+      }
+    }
+
     if (user != null) {
       await AppDatabase.instance.insertOrUpdateRoutineLog(
         routineId: routineId,
@@ -506,6 +516,18 @@ class RoutineController extends ChangeNotifier {
     todayCompletionMap[routineId] = isDone;
     completedCount = todayCompletionMap.values.where((v) => v).length;
     notifyListeners();
+
+    final title = (r['sTitle'] ?? r['title'] ?? '').toString().toLowerCase();
+    final unit = (r['unit'] ?? r['sUnit'] ?? '').toString().toLowerCase();
+    if (title.contains('น้ำ') || title.contains('water') || unit.contains('มล') || unit.contains('ml') || unit.contains('ลิตร')) {
+      if (isDone) {
+        AudioService.instance.playSuccess();
+      } else {
+        AudioService.instance.playWaterDrop();
+      }
+    } else {
+      AudioService.instance.playSuccess();
+    }
 
     if (user != null) {
       await AppDatabase.instance.insertOrUpdateRoutineLog(

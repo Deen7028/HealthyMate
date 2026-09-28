@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:healthymate/core/services/audio_service.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 
 /// Mini Countdown Timer Dialog Widget
@@ -54,6 +55,7 @@ class _RoutineCountdownTimerModalState
           _secondsRemaining = 0;
           _isRunning = false;
         });
+        AudioService.instance.playTimerComplete();
         if (mounted) {
           Navigator.of(context).pop();
           widget.onTimerCompleted();
@@ -234,6 +236,7 @@ class _RoutineCountdownTimerModalState
                 OutlinedButton.icon(
                   onPressed: () {
                     _timer?.cancel();
+                    AudioService.instance.playTimerComplete();
                     Navigator.of(context).pop();
                     widget.onTimerCompleted();
                   },
