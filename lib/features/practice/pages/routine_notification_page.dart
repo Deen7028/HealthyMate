@@ -730,7 +730,8 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
                 unitText.contains('min') ||
                 matchedType.contains('สมาธิ') ||
                 matchedType.contains('โยคะ')) {
-              durationMin = targetVal > 0 ? targetVal.toInt() : 15;
+              final double remainingVal = (targetVal - currentVal).clamp(0.0, double.infinity);
+              durationMin = remainingVal > 0 ? remainingVal.ceil() : (targetVal > 0 ? targetVal.toInt() : 15);
             }
             widget.onNavigateToWorkout!(matchedType, durationMin);
           }

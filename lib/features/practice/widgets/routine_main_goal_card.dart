@@ -200,11 +200,14 @@ class RoutineMainGoalCard extends StatelessWidget {
                 }
                 
                 int? durationMinutes;
-                final targetVal = (userGoal?['targetValue'] as num?)?.toInt() ??
-                    (userGoal?['nTargetValue'] as num?)?.toInt();
+                final targetVal = (userGoal?['targetValue'] as num?)?.toDouble() ??
+                    (userGoal?['nTargetValue'] as num?)?.toDouble();
+                final currentVal = (userGoal?['currentValue'] as num?)?.toDouble() ??
+                    (userGoal?['nCurrentValue'] as num?)?.toDouble() ?? 0.0;
                 final unit = (userGoal?['unit'] ?? userGoal?['sUnit'])?.toString().toLowerCase() ?? '';
                 if (targetVal != null && (unit.contains('นาที') || unit.contains('min') || category == 'meditation')) {
-                  durationMinutes = targetVal;
+                  final remaining = (targetVal - currentVal).clamp(0.0, double.infinity);
+                  durationMinutes = remaining > 0 ? remaining.ceil() : targetVal.toInt();
                 }
                 
                 onNavigateToWorkout!(category, durationMinutes);
