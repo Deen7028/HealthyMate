@@ -68,10 +68,11 @@ extension AppDatabaseHealthRecordDao on AppDatabase {
     );
   }
 
-  /// ลบบันทึกจาก `TbHealthRecords` ตาม Record ID
+  /// ลบบันทึกจาก `TbHealthRecords` ตาม Record ID พร้อมซิงค์ลบไปที่ Server
   Future<void> deleteHealthRecord(int recordId) async {
     if (kIsWeb) {
       _webHealthRecords.removeWhere((item) => item['nRecordId'] == recordId);
+      HealthApiService.deleteHealthRecordRemote(recordId);
       return;
     }
 
@@ -82,6 +83,9 @@ extension AppDatabaseHealthRecordDao on AppDatabase {
       where: 'nRecordId = ?',
       whereArgs: [recordId],
     );
+
+    // ซิงค์ลบที่ Server
+    HealthApiService.deleteHealthRecordRemote(recordId);
   }
 
   /// ล้างข้อมูล `TbHealthRecords` ทั้งหมด

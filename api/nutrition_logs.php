@@ -77,6 +77,44 @@ switch ($method) {
         }
         break;
 
+    // 3. DELETE: ลบรายการมื้ออาหารตาม nNutritionId
+    case 'DELETE':
+        $userId = requireAuth();
+        $nutritionId = isset($_GET['nNutritionId']) ? intval($_GET['nNutritionId']) : null;
+
+        if (!$nutritionId) {
+            $data = json_decode(file_get_contents("php://input"), true);
+            $nutritionId = isset($data['nNutritionId']) ? intval($data['nNutritionId']) : null;
+        }
+
+        if (!$nutritionId) {
+            http_response_code(400);
+            echo json_encode([
+                "status" => "error",
+                "message" => "Missing nNutritionId"
+            ]);
+            exit();
+        }
+
+        try {
+            $stmt = $conn->prepare("DELETE FROM TbNutritionLogs WHERE nNutritionId = :nutritionId AND nUserId = :userId");
+            $stmt->execute([
+                ':nutritionId' => $nutritionId,
+                ':userId' => $userId
+            ]);
+
+            echo json_encode([
+                "status" => "success",
+                "message" => "ลบรายการอาหารสำเร็จ"
+            ], JSON_UNESCAPED_UNICODE);
+        } catch (PDOException $e) {
+            echo json_encode([
+                "status" => "error",
+                "message" => $e->getMessage()
+            ]);
+        }
+        break;
+
     default:
         http_response_code(405);
         echo json_encode([

@@ -49,7 +49,10 @@ extension AppDatabaseNutritionDao on AppDatabase {
   }
 
   Future<void> deleteNutritionLog(int nutritionId) async {
-    if (kIsWeb) return;
+    if (kIsWeb) {
+      HealthApiService.deleteNutritionLogRemote(nutritionId);
+      return;
+    }
     final db = await database;
     if (db == null) return;
     await db.delete(
@@ -57,5 +60,8 @@ extension AppDatabaseNutritionDao on AppDatabase {
       where: 'nNutritionId = ?',
       whereArgs: [nutritionId],
     );
+
+    // ซิงค์ลบที่ Server
+    HealthApiService.deleteNutritionLogRemote(nutritionId);
   }
 }

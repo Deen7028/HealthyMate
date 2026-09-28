@@ -332,6 +332,58 @@ class HealthApiService {
     return false;
   }
 
+  /// 5.1 ลบประวัติสุขภาพจาก Server (`health_records.php`)
+  static Future<bool> deleteHealthRecordRemote(int recordId) async {
+    try {
+      final uri = Uri.parse('$baseUrl/health_records.php?nRecordId=$recordId');
+      final headers = await getAuthHeaders();
+      final response = await http
+          .delete(
+            uri,
+            headers: headers,
+            body: jsonEncode({'nRecordId': recordId}),
+          )
+          .timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body['status'] == 'success') {
+          debugPrint('☁️ [API SUCCESS] [TbHealthRecords] ➜ ลบประวัติสุขภาพ ID: $recordId บน Server สำเร็จ');
+          return true;
+        }
+      }
+    } catch (e) {
+      debugPrint('[API EXCEPTION] deleteHealthRecordRemote failed: $e');
+    }
+    return false;
+  }
+
+  /// 5.2 ลบรายการมื้ออาหารจาก Server (`nutrition_logs.php`)
+  static Future<bool> deleteNutritionLogRemote(int nutritionId) async {
+    try {
+      final uri = Uri.parse('$baseUrl/nutrition_logs.php?nNutritionId=$nutritionId');
+      final headers = await getAuthHeaders();
+      final response = await http
+          .delete(
+            uri,
+            headers: headers,
+            body: jsonEncode({'nNutritionId': nutritionId}),
+          )
+          .timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body['status'] == 'success') {
+          debugPrint('☁️ [API SUCCESS] [TbNutritionLogs] ➜ ลบรายการมื้ออาหาร ID: $nutritionId บน Server สำเร็จ');
+          return true;
+        }
+      }
+    } catch (e) {
+      debugPrint('[API EXCEPTION] deleteNutritionLogRemote failed: $e');
+    }
+    return false;
+  }
+
   /// 6. อัปโหลดรูปภาพขึ้น Server (/uploads) และรับ path กลับมาบันทึกลง Database
   static Future<String?> uploadImage(
     String localFilePath, {

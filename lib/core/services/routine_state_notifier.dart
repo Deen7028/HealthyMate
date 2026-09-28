@@ -215,6 +215,17 @@ class RoutineStateNotifier extends ChangeNotifier {
       remainingText: remainingText,
     );
 
+    // ซิงค์เป้าหมายหลักขึ้นเซิร์ฟเวอร์
+    try {
+      await HealthApiService.saveMainGoalRemote(
+        userId: _userId,
+        routineId: routineId,
+        title: title,
+        progress: progress,
+        remainingText: remainingText,
+      );
+    } catch (_) {}
+
     notifyListeners();
   }
 
@@ -251,6 +262,17 @@ class RoutineStateNotifier extends ChangeNotifier {
       remainingText: remainingText,
     );
 
+    // ซิงค์ Custom Goal ขึ้นเซิร์ฟเวอร์
+    try {
+      await HealthApiService.saveMainGoalRemote(
+        userId: _userId,
+        routineId: 0,
+        title: '$icon $title',
+        progress: 0.0,
+        remainingText: remainingText,
+      );
+    } catch (_) {}
+
     notifyListeners();
   }
 
@@ -258,6 +280,9 @@ class RoutineStateNotifier extends ChangeNotifier {
   Future<void> unpinMainGoal() async {
     _userGoal = null;
     await AppDatabase.instance.clearUserGoal(_userId);
+    try {
+      await HealthApiService.clearMainGoalRemote(_userId);
+    } catch (_) {}
     notifyListeners();
   }
 }
