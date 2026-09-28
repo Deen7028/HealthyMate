@@ -14,11 +14,11 @@ class AppConfig {
 
   /// Base URL ของ PHP Remote Server API
   static String get baseUrl =>
-      dotenv.env['BASE_URL'] ?? 'https://172.18.111.30/6620310001/html/HealthyMate/api';
+      dotenv.env['BASE_URL'] ?? 'https://healthymate-api.onrender.com/api';
 
-  /// Host Header สำหรับ Virtual Host Apache ม.อ.
+  /// Host Header สำหรับ Virtual Host (ถ้ามี)
   static String get hostHeader =>
-      dotenv.env['HOST_HEADER'] ?? 'std.mcs.psu.ac.th';
+      dotenv.env['HOST_HEADER'] ?? '';
 
   /// Secure App Key สำหรับยืนยันการเข้าถึง API
   static String get appKey =>

@@ -115,13 +115,23 @@ try {
             $smtpPass = getenv('SMTP_PASS') ?: 'mhpg aeqh plii ptas';
 
             $mail->isSMTP();
-            $mail->Host       = getenv('SMTP_HOST') ?: 'smtp.gmail.com';
+            $smtpHost = getenv('SMTP_HOST') ?: 'smtp.gmail.com';
+            $smtpPort = (int)(getenv('SMTP_PORT') ?: 465);
+            $mail->Host       = $smtpHost;
             $mail->SMTPAuth   = true;
             $mail->Username   = $smtpUser;
             $mail->Password   = $smtpPass;
-            $mail->SMTPSecure = 'tls';
-            $mail->Port       = (int)(getenv('SMTP_PORT') ?: 587);
+            $mail->SMTPSecure = ($smtpPort === 465) ? \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS : \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->Port       = $smtpPort;
+            $mail->Timeout    = 15;
             $mail->CharSet    = 'UTF-8';
+            $mail->SMTPOptions = [
+                'ssl' => [
+                    'verify_peer' => false,
+                    'verify_peer_name' => false,
+                    'allow_self_signed' => true
+                ]
+            ];
 
             $mail->setFrom($smtpUser, 'HealthyMate');
             $mail->addAddress($email);

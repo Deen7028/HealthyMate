@@ -105,7 +105,7 @@ class HealthApiService {
             headers: defaultHeaders,
             body: jsonEncode({'sEmail': sEmail}),
           )
-          .timeout(const Duration(seconds: 8));
+          .timeout(const Duration(seconds: 25));
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
@@ -760,13 +760,16 @@ class HealthApiService {
   /// ส่งคำขอ OTP สำหรับลืมรหัสผ่าน
   static Future<Map<String, dynamic>> sendForgotPasswordOtp(String sEmail) async {
     try {
+      debugPrint('[API] sendForgotPasswordOtp: $baseUrl/send_forgot_password_otp.php (email: $sEmail)');
       final response = await http
           .post(
             Uri.parse('$baseUrl/send_forgot_password_otp.php'),
             headers: defaultHeaders,
             body: jsonEncode({'sEmail': sEmail}),
           )
-          .timeout(const Duration(seconds: 8));
+          .timeout(const Duration(seconds: 60));
+
+      debugPrint('[API] sendForgotPasswordOtp response: HTTP ${response.statusCode}, Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
@@ -779,6 +782,7 @@ class HealthApiService {
         'message': 'ตอบกลับจากเซิร์ฟเวอร์ไม่ถูกต้อง (HTTP ${response.statusCode})',
       };
     } catch (e) {
+      debugPrint('[API ERROR] sendForgotPasswordOtp: $e');
       return {'status': 'error', 'message': 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้: $e'};
     }
   }
@@ -792,7 +796,7 @@ class HealthApiService {
             headers: defaultHeaders,
             body: jsonEncode({'sEmail': sEmail, 'sNewPassword': sNewPassword}),
           )
-          .timeout(const Duration(seconds: 8));
+          .timeout(const Duration(seconds: 60));
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
