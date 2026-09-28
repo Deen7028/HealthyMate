@@ -114,21 +114,36 @@ function requireAuth(): int {
 
 $host = getenv('DB_HOST') ?: "127.0.0.1";   
 $port = getenv('DB_PORT') ?: "3306";
-$db_name = getenv('DB_NAME') ?: "6620310001_HealthMateDB";
+$db_name = getenv('DB_NAME') ?: "HealthyMate";
 $username = getenv('DB_USER') ?: "root";
 $password = getenv('DB_PASS') ?: "";        
 
+$options = [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    PDO::ATTR_EMULATE_PREPARES => false,
+];
+
+// รองรับ SSL สำหรับ Aiven MySQL / Cloud Databases
+$caCertPath = __DIR__ . '/ca.pem';
+if (file_exists($caCertPath)) {
+    $options[PDO::MYSQL_ATTR_SSL_CA] = $caCertPath;
+} elseif (getenv('DB_SSL_CA')) {
+    // รองรับการส่ง CA Cert ผ่าน Environment Variable
+    $tempCa = sys_get_temp_dir() . '/aiven_ca.pem';
+    if (!file_exists($tempCa)) {
+        file_put_contents($tempCa, getenv('DB_SSL_CA'));
+    }
+    $options[PDO::MYSQL_ATTR_SSL_CA] = $tempCa;
+}
+
 try {
-    $conn = new PDO("mysql:host={$host};port={$port};dbname={$db_name};charset=utf8mb4", $username, $password, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES => false,
-    ]);
+    $conn = new PDO("mysql:host={$host};port={$port};dbname={$db_name};charset=utf8mb4", $username, $password, $options);
 } catch (PDOException $e) {
     error_log("db_connect.php Connection error: " . $e->getMessage());
     echo json_encode([
         "status" => "error",
-        "message" => "เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูลระบบ"
+        "message" => "เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูลระบบ: " . $e->getMessage()
     ], JSON_UNESCAPED_UNICODE);
     exit();
 }
