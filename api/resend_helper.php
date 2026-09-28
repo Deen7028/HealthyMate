@@ -3,7 +3,7 @@
  * ฟังก์ชันสำหรับส่งอีเมลผ่าน Resend HTTPS API (Port 443)
  * แก้ปัญหา Cloud / PaaS เช่น Render บล็อก Outbound SMTP Ports (25, 465, 587)
  */
-function sendEmailViaResend($toEmail, $subject, $htmlContent, &$errorMessage = '') {
+function sendEmailViaResend(string $toEmail, string $subject, string $htmlContent, string &$errorMessage = ''): bool {
     $apiKey = getenv('RESEND_API_KEY');
     if (empty($apiKey)) {
         return false;
