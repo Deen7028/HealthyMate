@@ -4,6 +4,7 @@ import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:healthymate/shared/widgets/fade_slide_entrance.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/features/practice/widgets/add_main_goal_bottom_sheet.dart';
+import 'package:healthymate/shared/bottom_sheets/food_source_bottom_sheet.dart';
 import '../widgets/index.dart';
 import '../controllers/dashboard_controller.dart';
 
@@ -45,7 +46,7 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
 
   void _onRoutineStateChanged() {
     if (mounted) {
-      _controller.loadDashboardData();
+      _controller.loadDashboardData(silent: true);
     }
   }
 
@@ -53,7 +54,7 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
   void didUpdateWidget(covariant DashboardPageUpdated oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.isActive && !oldWidget.isActive) {
-      _controller.loadDashboardData();
+      _controller.loadDashboardData(silent: true);
     }
   }
 
@@ -180,7 +181,7 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
           body: SafeArea(
             child: RefreshIndicator(
               color: primaryGreen,
-              onRefresh: _controller.loadDashboardData,
+              onRefresh: () => _controller.loadDashboardData(silent: true),
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: Padding(
@@ -229,7 +230,15 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
                           now: _controller.now,
                           totalCaloriesBurned: _controller.totalCaloriesBurned,
                           todayNutritionCalories: _controller.todayNutritionCalories,
+                          todayScannedFoodCount: _controller.todayScannedFoodCount,
+                          todayNutritionLogs: _controller.todayNutritionLogs,
                           onNavigateToCalculator: widget.onNavigateToCalculator,
+                          onOpenFoodScanner: () async {
+                            await FoodSourceBottomSheet.show(context);
+                            if (mounted) {
+                              _controller.loadDashboardData(silent: true);
+                            }
+                          },
                           primaryGreen: primaryGreen,
                           darkGreen: darkGreen,
                         ),
