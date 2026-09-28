@@ -201,6 +201,43 @@ class RoutineController extends ChangeNotifier {
 
       completedCount = todayCompletionMap.values.where((v) => v).length;
 
+      // Real-time Goal Sync: อัปเดตความคืบหน้าของเป้าหมายหลักให้ตรงกับ Routine หรือ Workout ล่าสุด
+      if (userGoal != null) {
+        final pinnedRoutineId = (userGoal!['nRoutineId'] as num?)?.toInt() ?? 0;
+        if (pinnedRoutineId > 0) {
+          final matchedRoutine = routines.firstWhere(
+            (item) => ((item['nRoutineId'] as num?)?.toInt() ?? 0) == pinnedRoutineId,
+            orElse: () => {},
+          );
+          if (matchedRoutine.isNotEmpty) {
+            final targetVal = (matchedRoutine['targetValue'] as num?)?.toDouble() ??
+                (matchedRoutine['nTargetValue'] as num?)?.toDouble() ?? 1.0;
+            final currentVal = todayProgressValues[pinnedRoutineId] ?? 0.0;
+            final isDone = todayCompletionMap[pinnedRoutineId] ?? false;
+            final effectiveVal = isDone ? targetVal : currentVal;
+            final progress = targetVal > 0 ? (effectiveVal / targetVal).clamp(0.0, 1.0) : 0.0;
+            final percent = (progress * 100).toInt();
+            final unitText = (matchedRoutine['unit'] ?? matchedRoutine['sUnit'])?.toString() ?? 'ครั้ง';
+            final remainingText =
+                'ความคืบหน้า: ${effectiveVal == effectiveVal.toInt() ? effectiveVal.toInt() : effectiveVal.toStringAsFixed(1)} / ${targetVal == targetVal.toInt() ? targetVal.toInt() : targetVal.toStringAsFixed(1)} $unitText ($percent%)';
+
+            userGoal = {
+              ...userGoal!,
+              'nProgress': progress,
+              'sRemainingText': remainingText,
+            };
+
+            await db.saveUserGoal(
+              userId: userId,
+              nRoutineId: pinnedRoutineId,
+              title: matchedRoutine['sTitle']?.toString() ?? userGoal!['sTitle'],
+              progress: progress,
+              remainingText: remainingText,
+            );
+          }
+        }
+      }
+
       double totalRatioSum = 0.0;
       for (final r in routines) {
         final routineId = (r['nRoutineId'] as num?)?.toInt() ?? 0;

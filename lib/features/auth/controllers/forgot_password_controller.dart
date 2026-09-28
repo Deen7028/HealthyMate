@@ -43,9 +43,39 @@ class ForgotPasswordController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> resetPassword(String email, String newPassword) async {
+  Future<bool> resetPassword(String email, String newPassword, String confirmPassword) async {
+    if (newPassword.isEmpty) {
+      errorMessage = 'กรุณากรอกรหัสผ่านใหม่';
+      notifyListeners();
+      return false;
+    }
+
     if (newPassword.length < 8) {
       errorMessage = 'รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร';
+      notifyListeners();
+      return false;
+    }
+
+    if (!RegExp(r'[A-Z]').hasMatch(newPassword)) {
+      errorMessage = 'รหัสผ่านต้องมีตัวพิมพ์ใหญ่ (A-Z) อย่างน้อย 1 ตัว';
+      notifyListeners();
+      return false;
+    }
+
+    if (!RegExp(r'[a-z]').hasMatch(newPassword)) {
+      errorMessage = 'รหัสผ่านต้องมีตัวพิมพ์เล็ก (a-z) อย่างน้อย 1 ตัว';
+      notifyListeners();
+      return false;
+    }
+
+    if (!RegExp(r'[0-9]').hasMatch(newPassword)) {
+      errorMessage = 'รหัสผ่านต้องมีตัวเลข (0-9) อย่างน้อย 1 ตัว';
+      notifyListeners();
+      return false;
+    }
+
+    if (newPassword != confirmPassword) {
+      errorMessage = 'รหัสผ่านทั้งสองช่องไม่ตรงกัน';
       notifyListeners();
       return false;
     }

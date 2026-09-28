@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:healthymate/core/services/auth_service.dart';
+import 'package:healthymate/core/services/routine_state_notifier.dart';
 import 'package:healthymate/core/services/theme_service.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:healthymate/features/profile/controllers/profile_controller.dart';
@@ -35,12 +36,19 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _controller = ProfileController();
     _controller.addListener(_onControllerChanged);
+    RoutineStateNotifier.instance.addListener(_onRoutineStateChanged);
     _initData();
   }
 
   void _onControllerChanged() {
     if (mounted) {
       setState(() {});
+    }
+  }
+
+  void _onRoutineStateChanged() {
+    if (mounted) {
+      _controller.loadUserData();
     }
   }
 
@@ -63,6 +71,7 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    RoutineStateNotifier.instance.removeListener(_onRoutineStateChanged);
     _controller.removeListener(_onControllerChanged);
     _controller.dispose();
     super.dispose();

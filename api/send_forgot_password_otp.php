@@ -1,19 +1,16 @@
 <?php
 require_once "db_connect.php";
 
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
-
 // นำเข้า PHPMailer
 $hasPHPMailer = false;
 if (file_exists(__DIR__ . '/vendor/autoload.php')) {
     require_once __DIR__ . '/vendor/autoload.php';
-    $hasPHPMailer = true;
+    $hasPHPMailer = class_exists('PHPMailer\PHPMailer\PHPMailer');
 } elseif (file_exists(__DIR__ . '/PHPMailer/src/PHPMailer.php')) {
     require_once __DIR__ . '/PHPMailer/src/Exception.php';
     require_once __DIR__ . '/PHPMailer/src/PHPMailer.php';
     require_once __DIR__ . '/PHPMailer/src/SMTP.php';
-    $hasPHPMailer = true;
+    $hasPHPMailer = class_exists('PHPMailer\PHPMailer\PHPMailer');
 }
 
 $method = $_SERVER['REQUEST_METHOD'];
@@ -77,17 +74,21 @@ try {
     $errorMessage = '';
 
     if ($hasPHPMailer) {
-        $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
         try {
+            $mailClass = '\PHPMailer\PHPMailer\PHPMailer';
+            $mail = new $mailClass(true);
+            $smtpUser = getenv('SMTP_USER') ?: 'kamaruding7028@gmail.com';
+            $smtpPass = getenv('SMTP_PASS') ?: 'mhpg aeqh plii ptas';
+
             $mail->isSMTP();
             $mail->Host       = getenv('SMTP_HOST') ?: 'smtp.gmail.com';
             $mail->SMTPAuth   = true;
-            $mail->Username   = getenv('SMTP_USER') ?: 'kamaruding7028@gmail.com';
-            $mail->Password   = getenv('SMTP_PASS') ?: 'mhpg aeqh plii ptas';
+            $mail->Username   = $smtpUser;
+            $mail->Password   = $smtpPass;
             $mail->SMTPSecure = 'tls';
             $mail->Port       = (int)(getenv('SMTP_PORT') ?: 587);
             $mail->CharSet    = 'UTF-8';
-            $mail->setFrom('noreply.healthymate@gmail.com', 'HealthyMate');
+            $mail->setFrom($smtpUser, 'HealthyMate');
             $mail->addAddress($email);
             $mail->isHTML(true);
             $mail->Subject = "รหัสรีเซ็ตรหัสผ่าน HealthyMate: $otpCode";
@@ -95,7 +96,19 @@ try {
             $mail->send();
             $isSent = true;
         } catch (\Throwable $e) {
-            $errorMessage = $mail->ErrorInfo ?? $e->getMessage();
+            $errorMessage = isset($mail) && isset($mail->ErrorInfo) ? $mail->ErrorInfo : $e->getMessage();
+        }
+    } else {
+        // Fallback ใช้ mail() มาตรฐานของ PHP
+        $subject = "=?UTF-8?B?" . base64_encode("รหัสรีเซ็ตรหัสผ่าน HealthyMate: $otpCode") . "?=";
+        $headers = "MIME-Version: 1.0\r\n";
+        $headers .= "Content-type: text/html; charset=UTF-8\r\n";
+        $headers .= "From: HealthyMate <kamaruding7028@gmail.com>\r\n";
+        $headers .= "X-Mailer: PHP/" . phpversion();
+
+        $isSent = @mail($email, $subject, $htmlBody, $headers);
+        if (!$isSent) {
+            $errorMessage = 'ระบบส่งอีเมลพื้นฐานยังไม่พร้อมใช้งาน กรุณาติดตั้ง PHPMailer หรือตรวจสอบการตั้งค่า SMTP';
         }
     }
 
@@ -105,7 +118,8 @@ try {
         echo json_encode(["status" => "error", "message" => "ส่งอีเมลไม่สำเร็จ: $errorMessage"], JSON_UNESCAPED_UNICODE);
     }
 
-} catch (Exception $e) {
+} catch (\Throwable $e) {
+    error_log("send_forgot_password_otp.php Throwable: " . $e->getMessage());
     echo json_encode(["status" => "error", "message" => "เกิดข้อผิดพลาดของระบบ"], JSON_UNESCAPED_UNICODE);
 }
 ?>

@@ -1,9 +1,6 @@
 <?php
 require_once "db_connect.php";
 
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
-
 // นำเข้าไฟล์ PHPMailer หากมีติดตั้งไว้ (Composer หรือ โฟลเดอร์ PHPMailer)
 $hasPHPMailer = false;
 if (file_exists(__DIR__ . '/vendor/autoload.php')) {
@@ -93,7 +90,7 @@ try {
         ':ip' => $clientIp
     ]);
 
-    // 5. ส่งอีเมลผ่าน PHPMailer (Gmail SMTP) หรือ PHP mail() fallback
+    // 6. ส่งอีเมลผ่าน PHPMailer (Gmail SMTP) หรือ PHP mail() fallback
     $htmlBody = "
         <div style='font-family: Arial, sans-serif; background-color: #F4F8F3; padding: 24px;'>
             <div style='max-width: 480px; margin: auto; background-color: #ffffff; padding: 32px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.06);'>
@@ -111,19 +108,22 @@ try {
     $errorMessage = '';
 
     if ($hasPHPMailer) {
-        $mailClass = '\PHPMailer\PHPMailer\PHPMailer';
-        $mail = new $mailClass(true);
         try {
+            $mailClass = '\PHPMailer\PHPMailer\PHPMailer';
+            $mail = new $mailClass(true);
+            $smtpUser = getenv('SMTP_USER') ?: 'kamaruding7028@gmail.com';
+            $smtpPass = getenv('SMTP_PASS') ?: 'mhpg aeqh plii ptas';
+
             $mail->isSMTP();
             $mail->Host       = getenv('SMTP_HOST') ?: 'smtp.gmail.com';
             $mail->SMTPAuth   = true;
-            $mail->Username   = getenv('SMTP_USER') ?: 'kamaruding7028@gmail.com';
-            $mail->Password   = getenv('SMTP_PASS') ?: 'mhpg aeqh plii ptas';
+            $mail->Username   = $smtpUser;
+            $mail->Password   = $smtpPass;
             $mail->SMTPSecure = 'tls';
             $mail->Port       = (int)(getenv('SMTP_PORT') ?: 587);
             $mail->CharSet    = 'UTF-8';
 
-            $mail->setFrom('noreply.healthymate@gmail.com', 'HealthyMate');
+            $mail->setFrom($smtpUser, 'HealthyMate');
             $mail->addAddress($email);
 
             $mail->isHTML(true);
@@ -140,7 +140,7 @@ try {
         $subject = "=?UTF-8?B?" . base64_encode("รหัสยืนยันการลงทะเบียน HealthyMate: $otpCode") . "?=";
         $headers = "MIME-Version: 1.0\r\n";
         $headers .= "Content-type: text/html; charset=UTF-8\r\n";
-        $headers .= "From: HealthyMate <noreply.healthymate@gmail.com>\r\n";
+        $headers .= "From: HealthyMate <kamaruding7028@gmail.com>\r\n";
         $headers .= "X-Mailer: PHP/" . phpversion();
 
         $isSent = @mail($email, $subject, $htmlBody, $headers);
@@ -157,7 +157,7 @@ try {
     } else {
         echo json_encode([
             "status" => "error",
-            "message" => "ไม่สามารถส่งอีเมลได้ กรุณาลองใหม่อีกครั้ง"
+            "message" => "ไม่สามารถส่งอีเมลได้: " . ($errorMessage ?: "กรุณาลองใหม่อีกครั้ง")
         ], JSON_UNESCAPED_UNICODE);
     }
 

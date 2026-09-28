@@ -461,13 +461,6 @@ class DashboardHealthSummaryCard extends StatelessWidget {
                                 : Colors.redAccent,
                           ),
                         ),
-                        Text(
-                          'เบิร์นเพิ่ม +${totalCaloriesBurned.round()} kcal',
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            color: textSecondary,
-                          ),
-                        ),
                       ],
                     ),
 

@@ -19,6 +19,31 @@ if (empty($email) || empty($newPassword)) {
     exit();
 }
 
+// ตรวจสอบความปลอดภัยของรหัสผ่านให้ตรงกับหน้า Register:
+// 1. ความยาวอย่างน้อย 8 ตัวอักษร
+// 2. มีตัวพิมพ์ใหญ่ (A-Z)
+// 3. มีตัวพิมพ์เล็ก (a-z)
+// 4. มีตัวเลข (0-9)
+if (strlen($newPassword) < 8) {
+    echo json_encode(["status" => "error", "message" => "รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร"], JSON_UNESCAPED_UNICODE);
+    exit();
+}
+
+if (!preg_match('/[A-Z]/', $newPassword)) {
+    echo json_encode(["status" => "error", "message" => "รหัสผ่านต้องมีตัวพิมพ์ใหญ่ (A-Z) อย่างน้อย 1 ตัว"], JSON_UNESCAPED_UNICODE);
+    exit();
+}
+
+if (!preg_match('/[a-z]/', $newPassword)) {
+    echo json_encode(["status" => "error", "message" => "รหัสผ่านต้องมีตัวพิมพ์เล็ก (a-z) อย่างน้อย 1 ตัว"], JSON_UNESCAPED_UNICODE);
+    exit();
+}
+
+if (!preg_match('/[0-9]/', $newPassword)) {
+    echo json_encode(["status" => "error", "message" => "รหัสผ่านต้องมีตัวเลข (0-9) อย่างน้อย 1 ตัว"], JSON_UNESCAPED_UNICODE);
+    exit();
+}
+
 try {
     // แฮชรหัสผ่านใหม่ด้วย BCRYPT (Best Practice)
     $passwordHash = password_hash($newPassword, PASSWORD_BCRYPT);
