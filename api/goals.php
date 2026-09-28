@@ -53,12 +53,22 @@ switch ($method) {
         $remainingText = isset($data['sRemainingText']) ? trim($data['sRemainingText']) : '';
 
         try {
-            // ตรวจสอบว่ามีเป้าหมายอยู่แล้วหรือไม่
-            $stmtCheck = $conn->prepare("SELECT nGoalId FROM TbGoals WHERE nUserId = :userId ORDER BY nGoalId DESC LIMIT 1");
+            // ตรวจสอบเป้าหมายล่าสุดของผู้ใช้
+            $stmtCheck = $conn->prepare("SELECT nGoalId, sTitle, nRoutineId, nProgress, sRemainingText FROM TbGoals WHERE nUserId = :userId ORDER BY nGoalId DESC LIMIT 1");
             $stmtCheck->execute([':userId' => $userId]);
             $existing = $stmtCheck->fetch();
 
+            $isExistingCompleted = false;
+            $isSameGoal = false;
+
             if ($existing) {
+                $existingProgress = floatval($existing['nProgress']);
+                $existingRemaining = strval($existing['sRemainingText']);
+                $isExistingCompleted = ($existingProgress >= 1.0 || strpos($existingRemaining, '100%') !== false);
+                $isSameGoal = ($existing['sTitle'] === $title && intval($existing['nRoutineId']) === $routineId);
+            }
+
+            if ($existing && ($isSameGoal || !$isExistingCompleted)) {
                 $stmtUpdate = $conn->prepare("
                     UPDATE TbGoals 
                     SET nRoutineId = :rid, sTitle = :title, nProgress = :progress, sRemainingText = :remainingText, dtUpdatedAt = NOW()

@@ -5,6 +5,7 @@ import 'package:healthymate/shared/theme/app_theme.dart';
 import '../models/routine_item.dart';
 import '../widgets/index.dart';
 import '../controllers/routine_controller.dart';
+import 'completed_goals_and_routines_page.dart';
 
 class MyRoutinesPage extends StatefulWidget {
   final bool isActive;
@@ -520,8 +521,27 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
         ],
       ),
       actions: [
+        IconButton(
+          icon: Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: primaryGreen.withValues(alpha: isDark ? 0.25 : 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.emoji_events_rounded, color: Color(0xFFE6A23C), size: 20),
+          ),
+          tooltip: 'ประวัติความสำเร็จ (Completed History)',
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const CompletedGoalsAndRoutinesPage(),
+              ),
+            );
+          },
+        ),
         Padding(
-          padding: const EdgeInsets.only(right: 16.0),
+          padding: const EdgeInsets.only(right: 16.0, left: 4.0),
           child: CircleAvatar(
             radius: 16,
             backgroundColor: primaryGreen,

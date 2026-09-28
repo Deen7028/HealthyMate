@@ -437,8 +437,11 @@ class RoutineController extends ChangeNotifier {
           final routineId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
           if (routineId == 0) continue;
 
+          bool isDone = false;
+          double progVal = 0.0;
+
           if (r.containsKey('todayCompleted') && r['todayCompleted'] != null) {
-            final isDone = (r['todayCompleted'] as num?)?.toInt() == 1;
+            isDone = (r['todayCompleted'] as num?)?.toInt() == 1;
             if (isDone) {
               todayCompletionMap[routineId] = true;
             }
@@ -447,9 +450,19 @@ class RoutineController extends ChangeNotifier {
               r['todayProgressValue'] != null) {
             final serverVal = (r['todayProgressValue'] as num?)?.toDouble() ?? 0.0;
             final currentLocal = todayProgressValues[routineId] ?? 0.0;
+            progVal = serverVal > currentLocal ? serverVal : currentLocal;
             if (serverVal > currentLocal) {
               todayProgressValues[routineId] = serverVal;
             }
+          }
+
+          if (isDone || progVal > 0) {
+            await AppDatabase.instance.insertOrUpdateRoutineLog(
+              routineId: routineId,
+              dateStr: todayStr,
+              progressValue: progVal,
+              isCompleted: isDone,
+            );
           }
         }
         completedCount = todayCompletionMap.values.where((v) => v).length;

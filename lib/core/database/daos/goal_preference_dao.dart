@@ -15,6 +15,18 @@ extension AppDatabaseGoalPreferenceDao on AppDatabase {
     return null;
   }
 
+  /// ดึงประวัติเป้าหมายหลักทั้งหมดของผู้ใช้ (รวมเป้าหมายที่เคยสำเร็จ)
+  Future<List<Map<String, dynamic>>> getAllUserGoalsHistory(int userId) async {
+    final db = await database;
+    if (db == null) return [];
+    return await db.query(
+      'TbGoals',
+      where: 'nUserId = ?',
+      whereArgs: [userId],
+      orderBy: 'dtUpdatedAt DESC, nGoalId DESC',
+    );
+  }
+
   Future<void> saveUserGoal({
     required int userId,
     int nRoutineId = 0,
@@ -24,30 +36,42 @@ extension AppDatabaseGoalPreferenceDao on AppDatabase {
   }) async {
     final db = await database;
     if (db == null) return;
+    
     final existing = await getUserGoal(userId);
     if (existing != null) {
-      await db.update(
-        'TbGoals',
-        {
-          'nRoutineId': nRoutineId,
-          'sTitle': title,
-          'nProgress': progress,
-          'sRemainingText': remainingText,
-          'dtUpdatedAt': DateTime.now().toIso8601String(),
-        },
-        where: 'nGoalId = ?',
-        whereArgs: [existing['nGoalId']],
-      );
-    } else {
-      await db.insert('TbGoals', {
-        'nUserId': userId,
-        'nRoutineId': nRoutineId,
-        'sTitle': title,
-        'nProgress': progress,
-        'sRemainingText': remainingText,
-        'dtUpdatedAt': DateTime.now().toIso8601String(),
-      });
+      final existingProgress = (existing['nProgress'] as num?)?.toDouble() ?? 0.0;
+      final existingRemaining = existing['sRemainingText']?.toString() ?? '';
+      final isExistingCompleted = existingProgress >= 1.0 || existingRemaining.contains('100%');
+      final isSameGoal = existing['sTitle'] == title &&
+          ((existing['nRoutineId'] as num?)?.toInt() ?? 0) == nRoutineId;
+
+      // หากเป็นเป้าหมายเดิม หรือเป้าหมายเดิมยังไม่สำเร็จ ให้ Update ได้
+      if (isSameGoal || !isExistingCompleted) {
+        await db.update(
+          'TbGoals',
+          {
+            'nRoutineId': nRoutineId,
+            'sTitle': title,
+            'nProgress': progress,
+            'sRemainingText': remainingText,
+            'dtUpdatedAt': DateTime.now().toIso8601String(),
+          },
+          where: 'nGoalId = ?',
+          whereArgs: [existing['nGoalId']],
+        );
+        return;
+      }
     }
+
+    // หากยังไม่มี หรือเป้าหมายเดิมทำสำเร็จ 100% แล้ว ให้ Insert เป็นเป้าหมายใหม่ (ไม่ทับประวัติเดิม)
+    await db.insert('TbGoals', {
+      'nUserId': userId,
+      'nRoutineId': nRoutineId,
+      'sTitle': title,
+      'nProgress': progress,
+      'sRemainingText': remainingText,
+      'dtUpdatedAt': DateTime.now().toIso8601String(),
+    });
   }
 
   Future<void> clearUserGoal(int userId) async {
