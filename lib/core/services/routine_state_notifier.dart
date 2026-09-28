@@ -133,6 +133,21 @@ class RoutineStateNotifier extends ChangeNotifier {
             targetVal = (_userGoal!['targetValue'] as num?)?.toDouble() ?? 1.0;
           }
 
+          // กรองกิจกรรมไม่ให้นับข้อมูลที่เกิดขึ้นก่อนเวลาที่สร้างเป้าหมาย (Goal Creation Time Condition)
+          DateTime? goalCreatedAt;
+          final rawCreatedAt = _userGoal!['dtCreatedAt']?.toString();
+          if (rawCreatedAt != null && rawCreatedAt.isNotEmpty) {
+            goalCreatedAt = DateTime.tryParse(rawCreatedAt);
+          }
+
+          final validWorkouts = workouts.where((w) {
+            if (goalCreatedAt == null) return true;
+            final wDateStr = w['dtWorkoutDate']?.toString() ?? '';
+            final wDate = DateTime.tryParse(wDateStr);
+            if (wDate == null) return true;
+            return wDate.isAfter(goalCreatedAt) || wDate.isAtSameMomentAs(goalCreatedAt);
+          }).toList();
+
           double currentVal = 0.0;
           String unitText = '';
 
@@ -140,13 +155,18 @@ class RoutineStateNotifier extends ChangeNotifier {
             unitText = 'กก.';
             final records = await db.getHealthRecords(userId: _userId);
             final user = await db.getUser();
-            if (records.length >= 2) {
-              final startWeight = records.last.nWeight;
-              final curWeight = records.first.nWeight;
+            final validRecords = records.where((r) {
+              if (goalCreatedAt == null) return true;
+              return r.dtRecordedAt.isAfter(goalCreatedAt) || r.dtRecordedAt.isAtSameMomentAs(goalCreatedAt);
+            }).toList();
+
+            if (validRecords.length >= 2) {
+              final startWeight = validRecords.last.nWeight;
+              final curWeight = validRecords.first.nWeight;
               final diff = startWeight - curWeight;
               currentVal = diff > 0 ? diff : 0.0;
-            } else if (records.isNotEmpty && user != null) {
-              final curWeight = records.first.nWeight;
+            } else if (validRecords.isNotEmpty && user != null) {
+              final curWeight = validRecords.first.nWeight;
               final userWeight = user.nWeight ?? 0.0;
               final diff = (userWeight > curWeight && userWeight > 0) ? (userWeight - curWeight) : 0.0;
               currentVal = diff;
@@ -154,14 +174,14 @@ class RoutineStateNotifier extends ChangeNotifier {
           } else if (lowerTitle.contains('แคลอรี') || lowerTitle.contains('เผาผลาญ')) {
             unitText = 'แคล';
             double totalBurned = 0.0;
-            for (final w in workouts) {
+            for (final w in validWorkouts) {
               totalBurned += (w['nCaloriesBurned'] as num?)?.toDouble() ?? 0.0;
             }
             currentVal = totalBurned;
           } else if (lowerTitle.contains('ปั่น') || lowerTitle.contains('จักรยาน')) {
             unitText = 'กม.';
             double totalCycling = 0.0;
-            for (final w in workouts) {
+            for (final w in validWorkouts) {
               final type = (w['sType']?.toString() ?? '').toLowerCase();
               if (type.contains('ปั่น') || type.contains('จักรยาน') || type.contains('cycling')) {
                 totalCycling += (w['nDistance'] as num?)?.toDouble() ?? 0.0;
@@ -171,7 +191,7 @@ class RoutineStateNotifier extends ChangeNotifier {
           } else if (lowerTitle.contains('วิ่ง')) {
             unitText = 'กม.';
             double totalRunning = 0.0;
-            for (final w in workouts) {
+            for (final w in validWorkouts) {
               final type = (w['sType']?.toString() ?? '').toLowerCase();
               if (type.contains('วิ่ง') || type.contains('running')) {
                 totalRunning += (w['nDistance'] as num?)?.toDouble() ?? 0.0;

@@ -70,6 +70,7 @@ extension AppDatabaseGoalPreferenceDao on AppDatabase {
       'sTitle': title,
       'nProgress': progress,
       'sRemainingText': remainingText,
+      'dtCreatedAt': DateTime.now().toIso8601String(),
       'dtUpdatedAt': DateTime.now().toIso8601String(),
     });
   }

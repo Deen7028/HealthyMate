@@ -123,6 +123,8 @@ class AppDatabase {
     await _safeAddColumn(db, tableWorkouts, 'isSynced', 'INTEGER DEFAULT 0');
     await _safeAddColumn(db, tableWorkouts, 'sRoutePoints', 'TEXT DEFAULT ""');
 
+    await _safeAddColumn(db, 'TbGoals', 'dtCreatedAt', 'TEXT');
+
     debugPrint('AppDatabase: Schema migrated successfully from v$oldVersion to v$newVersion');
   }
 
@@ -170,6 +172,7 @@ class AppDatabase {
         sTitle TEXT NOT NULL,
         nProgress REAL DEFAULT 0.0,
         sRemainingText TEXT,
+        dtCreatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
         dtUpdatedAt TEXT
       );
     ''');

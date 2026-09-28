@@ -84,8 +84,8 @@ switch ($method) {
                 $goalId = $existing['nGoalId'];
             } else {
                 $stmtInsert = $conn->prepare("
-                    INSERT INTO TbGoals (nUserId, nRoutineId, sTitle, nProgress, sRemainingText, dtUpdatedAt)
-                    VALUES (:userId, :rid, :title, :progress, :remainingText, NOW())
+                    INSERT INTO TbGoals (nUserId, nRoutineId, sTitle, nProgress, sRemainingText, dtCreatedAt, dtUpdatedAt)
+                    VALUES (:userId, :rid, :title, :progress, :remainingText, NOW(), NOW())
                 ");
                 $stmtInsert->execute([
                     ':userId' => $userId,

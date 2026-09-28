@@ -75,9 +75,10 @@ class DashboardController extends ChangeNotifier {
         }
       }
 
-      // ดึงข้อมูลแคลอรี่จากบันทึกอาหารด้วย AI Food Scanner ในวันนี้
+      // ดึงข้อมูลแคลอรี่จากบันทึกอาหารด้วย AI Food Scanner ในวันนี้ (อิงเวลาปัจจุบันสดใหม่เสมอ)
+      final currentNow = DateTime.now();
       final dbInstance = await db.database;
-      final todayStr = DateFormat('yyyy-MM-dd').format(now);
+      final todayStr = DateFormat('yyyy-MM-dd').format(currentNow);
       List<Map<String, dynamic>> nutritionToday = [];
 
       if (dbInstance != null) {
