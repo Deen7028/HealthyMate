@@ -10,12 +10,17 @@ class HealthApiService {
   // Base URL ของเซิร์ฟเวอร์ PHP API ดึงจาก .env (AppConfig)
   static String get baseUrl => AppConfig.baseUrl;
 
-  /// Headers พื้นฐานสำหรับ Virtual Host Apache ของ ม.อ. และระบบความปลอดภัยป้องกันการเข้าถึงตรง
-  static Map<String, String> get defaultHeaders => {
-    'Host': AppConfig.hostHeader,
-    'Content-Type': 'application/json; charset=utf-8',
-    'X-App-Key': AppConfig.appKey,
-  };
+  /// Headers พื้นฐานสำหรับระบบความปลอดภัยและการเรียก API
+  static Map<String, String> get defaultHeaders {
+    final headers = <String, String>{
+      'Content-Type': 'application/json; charset=utf-8',
+      'X-App-Key': AppConfig.appKey,
+    };
+    if (AppConfig.hostHeader.isNotEmpty) {
+      headers['Host'] = AppConfig.hostHeader;
+    }
+    return headers;
+  }
 
   /// ดึง Headers พร้อม Authorization Bearer Token
   static Future<Map<String, String>> getAuthHeaders() async {
