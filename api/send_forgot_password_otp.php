@@ -73,7 +73,15 @@ try {
     $isSent = false;
     $errorMessage = '';
 
-    if ($hasPHPMailer) {
+    // 1. ลองส่งผ่าน Resend REST API ก่อน (HTTPS Port 443 ทำงานได้ 100% บน Render/Cloud)
+    require_once __DIR__ . '/resend_helper.php';
+    if (getenv('RESEND_API_KEY')) {
+        $subject = "รหัสรีเซ็ตรหัสผ่าน HealthyMate: $otpCode";
+        $isSent = sendEmailViaResend($email, $subject, $htmlBody, $errorMessage);
+    }
+
+    // 2. หากไม่ได้ตั้งค่า Resend หรือส่งไม่ผ่าน ให้ลอง PHPMailer (SMTP)
+    if (!$isSent && $hasPHPMailer) {
         try {
             $mailClass = '\PHPMailer\PHPMailer\PHPMailer';
             $mail = new $mailClass(true);
@@ -89,7 +97,7 @@ try {
             $mail->Password   = $smtpPass;
             $mail->SMTPSecure = ($smtpPort === 465) ? 'ssl' : 'tls';
             $mail->Port       = $smtpPort;
-            $mail->Timeout    = 15;
+            $mail->Timeout    = 10;
             $mail->CharSet    = 'UTF-8';
             $mail->SMTPOptions = [
                 'ssl' => [
@@ -109,8 +117,10 @@ try {
         } catch (\Throwable $e) {
             $errorMessage = isset($mail) && isset($mail->ErrorInfo) ? $mail->ErrorInfo : $e->getMessage();
         }
-    } else {
-        // Fallback ใช้ mail() มาตรฐานของ PHP
+    }
+
+    // 3. Fallback ใช้ mail() มาตรฐานของ PHP หากไม่มีตัวเลือกอื่น
+    if (!$isSent && !$hasPHPMailer && !getenv('RESEND_API_KEY')) {
         $subject = "=?UTF-8?B?" . base64_encode("รหัสรีเซ็ตรหัสผ่าน HealthyMate: $otpCode") . "?=";
         $headers = "MIME-Version: 1.0\r\n";
         $headers .= "Content-type: text/html; charset=UTF-8\r\n";
@@ -119,7 +129,7 @@ try {
 
         $isSent = @mail($email, $subject, $htmlBody, $headers);
         if (!$isSent) {
-            $errorMessage = 'ระบบส่งอีเมลพื้นฐานยังไม่พร้อมใช้งาน กรุณาติดตั้ง PHPMailer หรือตรวจสอบการตั้งค่า SMTP';
+            $errorMessage = 'ระบบส่งอีเมลพื้นฐานยังไม่พร้อมใช้งาน กรุณาตั้งค่า RESEND_API_KEY หรือ SMTP';
         }
     }
 
