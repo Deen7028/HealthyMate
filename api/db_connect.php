@@ -28,10 +28,22 @@ if (file_exists($envFile)) {
 }
 
 // ตรวจสอบ APP_KEY บังคับสำหรับทุก Request ป้องกันการ Bypass
-$headers = getallheaders();
+$headers = function_exists('getallheaders') ? getallheaders() : [];
 $normalizedHeaders = [];
-foreach ($headers as $key => $val) {
-    $normalizedHeaders[strtolower($key)] = $val;
+if (is_array($headers)) {
+    foreach ($headers as $key => $val) {
+        $normalizedHeaders[strtolower($key)] = $val;
+    }
+}
+
+// Fallback สำหรับ $_SERVER ใน Serverless Environment (เช่น HTTP_X_APP_KEY)
+foreach ($_SERVER as $key => $val) {
+    if (strpos($key, 'HTTP_') === 0) {
+        $headerName = strtolower(str_replace('_', '-', substr($key, 5)));
+        if (!isset($normalizedHeaders[$headerName])) {
+            $normalizedHeaders[$headerName] = $val;
+        }
+    }
 }
 
 $expectedAppKey = getenv('APP_KEY') ?: 'HealthyMate_Secure_App_2026';
