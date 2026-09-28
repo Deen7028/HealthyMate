@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- พื้นหลังไล่เฉดโทนเขียวเข้มพรีเมียม -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1F3A1A"/>
+      <stop offset="100%" stop-color="#0E1C0C"/>
+    </linearGradient>
+
+    <!-- วงริบบิ้นซีกซ้าย (พลังงาน/ความสดใส) -->
+    <linearGradient id="loopLeft" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A3E635"/>
+      <stop offset="100%" stop-color="#22C55E"/>
+    </linearGradient>
+
+    <!-- วงริบบิ้นซีกขวา (ความมั่นคง/สุขภาพ) -->
+    <linearGradient id="loopRight" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#16A34A"/>
+      <stop offset="100%" stop-color="#4ADE80"/>
+    </linearGradient>
+
+    <!-- เงาตกกระทบเพิ่มมิติความลึก -->
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <!-- ฐานไอคอนทรง Squircle -->
+  <rect width="512" height="512" rx="115" fill="url(#bgGrad)"/>
+
+  <!-- สัญลักษณ์ Infinity Loop (The Healthy Mate) -->
+  <g filter="url(#softShadow)" fill="none" stroke-width="48" stroke-linecap="round" stroke-linejoin="round">
+    <!-- เส้นฐานเชื่อมโยงด้านหลัง -->
+    <path d="M 256 256 C 205 180, 130 180, 130 256 C 130 332, 205 332, 256 256 C 307 180, 382 180, 382 256 C 382 332, 307 332, 256 256 Z" 
+          stroke="url(#loopRight)" />
+    
+    <!-- เส้นทับซ้อนด้านหน้าสร้างเอฟเฟกต์พันเกี่ยว (Intertwined Ribbon) -->
+    <path d="M 130 256 C 130 180, 205 180, 256 256 C 280 292, 320 320, 355 300" 
+          stroke="url(#loopLeft)" />
+  </g>
+
+  <!-- จุดกำเนิดประกายชีพจรเล็กๆ กึ่งกลาง -->
+  <circle cx="256" cy="256" r="10" fill="#FFFFFF" opacity="0.9"/>
+</svg>

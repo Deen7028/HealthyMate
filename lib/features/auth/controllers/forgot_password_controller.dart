@@ -1,0 +1,77 @@
+import 'package:flutter/material.dart';
+import 'package:healthymate/core/database/app_database.dart';
+import 'package:healthymate/core/services/api_service.dart';
+
+class ForgotPasswordController extends ChangeNotifier {
+  bool isLoading = false;
+  bool isOtpVerified = false;
+  String? errorMessage;
+
+  Future<bool> sendOtp(String email) async {
+    if (email.isEmpty || !email.contains('@')) {
+      errorMessage = 'กรุณากรอกอีเมลที่ถูกต้อง';
+      notifyListeners();
+      return false;
+    }
+
+    isLoading = true;
+    errorMessage = null;
+    notifyListeners();
+
+    try {
+      final result = await HealthApiService.sendForgotPasswordOtp(email);
+      isLoading = false;
+
+      if (result['status'] == 'success') {
+        notifyListeners();
+        return true;
+      } else {
+        errorMessage = result['message'] ?? 'ไม่สามารถส่งรหัส OTP ได้';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      isLoading = false;
+      errorMessage = 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  void markOtpVerified() {
+    isOtpVerified = true;
+    notifyListeners();
+  }
+
+  Future<bool> resetPassword(String email, String newPassword) async {
+    if (newPassword.length < 8) {
+      errorMessage = 'รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร';
+      notifyListeners();
+      return false;
+    }
+
+    isLoading = true;
+    errorMessage = null;
+    notifyListeners();
+
+    try {
+      final result = await HealthApiService.resetPassword(email, newPassword);
+      if (result['status'] == 'success') {
+        await AppDatabase.instance.updateLocalPassword(email, newPassword);
+        isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        isLoading = false;
+        errorMessage = result['message'] ?? 'เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      isLoading = false;
+      errorMessage = 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์';
+      notifyListeners();
+      return false;
+    }
+  }
+}
