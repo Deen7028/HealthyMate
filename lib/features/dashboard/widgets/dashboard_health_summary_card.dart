@@ -10,7 +10,10 @@ class DashboardHealthSummaryCard extends StatelessWidget {
   final DateTime now;
   final double totalCaloriesBurned;
   final int todayNutritionCalories;
+  final int todayScannedFoodCount;
+  final List<Map<String, dynamic>> todayNutritionLogs;
   final VoidCallback? onNavigateToCalculator;
+  final VoidCallback? onOpenFoodScanner;
   final Color primaryGreen;
   final Color darkGreen;
 
@@ -21,7 +24,10 @@ class DashboardHealthSummaryCard extends StatelessWidget {
     required this.now,
     required this.totalCaloriesBurned,
     this.todayNutritionCalories = 0,
+    this.todayScannedFoodCount = 0,
+    this.todayNutritionLogs = const [],
     this.onNavigateToCalculator,
+    this.onOpenFoodScanner,
     this.primaryGreen = const Color(0xFF0F9C58),
     this.darkGreen = const Color(0xFF006432),
   });
@@ -237,97 +243,275 @@ class DashboardHealthSummaryCard extends StatelessWidget {
           const SizedBox(height: 14),
 
           // --- ⚡ AI Food & Energy Balance Ring / Tracker Card ---
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  primaryGreen.withValues(alpha: 0.08),
-                  Colors.amber.shade50.withValues(alpha: 0.5),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onOpenFoodScanner,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: primaryGreen.withValues(alpha: 0.2),
-                width: 1,
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Ink(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      primaryGreen.withValues(alpha: 0.08),
+                      Colors.amber.shade50.withValues(alpha: 0.5),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: primaryGreen.withValues(alpha: 0.25),
+                    width: 1,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Row 1: Header + Scanner Badge + Scan Button
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Icon(Icons.restaurant, size: 16, color: darkGreen),
-                        const SizedBox(width: 6),
-                        const Text(
-                          'สมดุลแคลอรีประจำวัน (AI Tracker)',
+                        Expanded(
+                          child: Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: [
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.restaurant_rounded, size: 16, color: darkGreen),
+                                  const SizedBox(width: 6),
+                                  const Text(
+                                    'สมดุลแคลอรี่ประจำวัน',
+                                    style: TextStyle(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: primaryGreen.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.camera_alt_rounded, size: 10, color: darkGreen),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      'AI Food Scanner',
+                                      style: TextStyle(
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: darkGreen,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (onOpenFoodScanner != null)
+                          Material(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            elevation: 0.5,
+                            child: InkWell(
+                              onTap: onOpenFoodScanner,
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: primaryGreen.withValues(alpha: 0.3)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.add_a_photo_rounded, size: 12, color: darkGreen),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'ถ่ายบันทึก',
+                                      style: TextStyle(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: darkGreen,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Row 2: Animated Calorie Stats
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            TweenAnimationBuilder<double>(
+                              tween: Tween<double>(begin: 0, end: todayNutritionCalories.toDouble()),
+                              duration: const Duration(milliseconds: 1500),
+                              curve: Curves.easeOutCubic,
+                              builder: (context, val, _) => Text(
+                                '${val.round()}',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: todayNutritionCalories > targetTdee
+                                      ? Colors.red.shade700
+                                      : darkGreen,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              ' / ${targetTdee.round()} kcal',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black54,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          todayScannedFoodCount > 0
+                              ? 'สแกนแล้ว $todayScannedFoodCount รายการ'
+                              : 'ยังไม่ได้สแกน',
                           style: TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: todayScannedFoodCount > 0 ? primaryGreen : Colors.grey,
                           ),
                         ),
                       ],
                     ),
-                    Text(
-                      '$todayNutritionCalories / ${targetTdee.round()} kcal',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: todayNutritionCalories > targetTdee
-                            ? Colors.red.shade700
-                            : darkGreen,
+                    const SizedBox(height: 8),
+
+                    // Progress Bar
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: LinearProgressIndicator(
+                        value: netEnergyRatio,
+                        minHeight: 8,
+                        backgroundColor: Colors.black.withValues(alpha: 0.06),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          todayNutritionCalories > targetTdee
+                              ? Colors.redAccent
+                              : (netEnergyRatio > 0.85
+                                  ? Colors.orangeAccent
+                                  : primaryGreen),
+                        ),
                       ),
                     ),
+                    const SizedBox(height: 8),
+
+                    // Row 3: Remaining Quota & Burned
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          remainingEnergyQuota >= 0
+                              ? 'วันนี้กินได้อีก ${remainingEnergyQuota.round()} kcal'
+                              : 'เกินโควตาพลังงาน ${(-remainingEnergyQuota).round()} kcal',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: remainingEnergyQuota >= 0
+                                ? Colors.black87
+                                : Colors.red.shade700,
+                          ),
+                        ),
+                        Text(
+                          'เบิร์นเพิ่ม +${totalCaloriesBurned.round()} kcal',
+                          style: const TextStyle(
+                            fontSize: 10.5,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // Row 4: Food items preview or CTA hint
+                    if (todayNutritionLogs.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: todayNutritionLogs.take(3).map((item) {
+                          final name = item['sFoodName']?.toString() ?? 'อาหาร';
+                          final cal = (item['nCalories'] as num?)?.toInt() ?? 0;
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: primaryGreen.withValues(alpha: 0.2),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text('🍽️ ', style: TextStyle(fontSize: 10)),
+                                Text(
+                                  name.length > 15 ? '${name.substring(0, 14)}...' : name,
+                                  style: const TextStyle(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                                const SizedBox(width: 3),
+                                Text(
+                                  '+$cal kcal',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: darkGreen,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ] else ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(Icons.touch_app_rounded, size: 12, color: primaryGreen),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              'แตะที่นี่เพื่อถ่ายบันทึกอาหารด้วย AI Food Scanner',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                color: Colors.grey.shade600,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: LinearProgressIndicator(
-                    value: netEnergyRatio,
-                    minHeight: 8,
-                    backgroundColor: Colors.black.withValues(alpha: 0.06),
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      todayNutritionCalories > targetTdee
-                          ? Colors.redAccent
-                          : (netEnergyRatio > 0.85
-                              ? Colors.orangeAccent
-                              : primaryGreen),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      remainingEnergyQuota >= 0
-                          ? 'วันนี้กินได้อีก ${remainingEnergyQuota.round()} kcal'
-                          : 'เกินโควตาพลังงาน ${(-remainingEnergyQuota).round()} kcal',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: remainingEnergyQuota >= 0
-                            ? Colors.black87
-                            : Colors.red.shade700,
-                      ),
-                    ),
-                    Text(
-                      'เบิร์นเพิ่ม +${totalCaloriesBurned.round()} kcal',
-                      style: const TextStyle(
-                        fontSize: 10.5,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+              ),
             ),
           ),
           const SizedBox(height: 12),

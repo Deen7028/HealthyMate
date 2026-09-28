@@ -18,6 +18,8 @@ class DashboardController extends ChangeNotifier {
   double totalCaloriesBurned = 0.0;
   int totalWorkoutDurationSec = 0;
   int todayNutritionCalories = 0;
+  int todayScannedFoodCount = 0;
+  List<Map<String, dynamic>> todayNutritionLogs = [];
   Map<String, dynamic>? userGoal;
   List<Map<String, dynamic>> routines = [];
   Map<int, bool> todayCompletionMap = {};
@@ -26,9 +28,12 @@ class DashboardController extends ChangeNotifier {
 
   final DateTime now = DateTime.now();
 
-  Future<void> loadDashboardData() async {
-    isLoading = true;
-    notifyListeners();
+  Future<void> loadDashboardData({bool silent = false}) async {
+    final shouldShowLoading = !silent && user == null;
+    if (shouldShowLoading) {
+      isLoading = true;
+      notifyListeners();
+    }
     try {
       final db = AppDatabase.instance;
       final email = await db.getLoggedInUserEmail();
@@ -70,14 +75,42 @@ class DashboardController extends ChangeNotifier {
         }
       }
 
-      final nutritionToday = await db.getNutritionLogsToday(userId);
+      // ดึงข้อมูลแคลอรี่จากบันทึกอาหารด้วย AI Food Scanner ในวันนี้
+      final dbInstance = await db.database;
+      final todayStr = DateFormat('yyyy-MM-dd').format(now);
+      List<Map<String, dynamic>> nutritionToday = [];
+
+      if (dbInstance != null) {
+        // ค้นหาจาก TbNutritionLogs ที่บันทึกผ่าน AI Food Scanner
+        // ตรวจสอบทั้ง userId ปัจจุบัน และ default userId (1) เพื่อป้องกันกรณี user ID ไม่ตรงกัน
+        nutritionToday = await dbInstance.query(
+          AppDatabase.tableNutritionLogs,
+          where: '(nUserId = ? OR nUserId = 1) AND dtLoggedAt LIKE ?',
+          whereArgs: [userId, '$todayStr%'],
+          orderBy: 'nNutritionId DESC',
+        );
+
+        // หากยังไม่พบ ให้ดึงจากบันทึกอาหารทั้งหมดในวันนี้บนอุปกรณ์
+        if (nutritionToday.isEmpty) {
+          nutritionToday = await dbInstance.query(
+            AppDatabase.tableNutritionLogs,
+            where: 'dtLoggedAt LIKE ?',
+            whereArgs: ['$todayStr%'],
+            orderBy: 'nNutritionId DESC',
+          );
+        }
+      } else {
+        nutritionToday = await db.getNutritionLogsToday(userId);
+      }
+
+      todayNutritionLogs = List<Map<String, dynamic>>.from(nutritionToday);
+      todayScannedFoodCount = todayNutritionLogs.length;
       todayNutritionCalories = 0;
-      for (final n in nutritionToday) {
+      for (final n in todayNutritionLogs) {
         todayNutritionCalories += (n['nCalories'] as num?)?.toInt() ?? 0;
       }
 
       routines = await db.getRoutines(userId: userId);
-      final todayStr = DateFormat('yyyy-MM-dd').format(now);
       todayCompletionMap.clear();
       todayProgressValues.clear();
       for (final r in routines) {
@@ -119,12 +152,16 @@ class DashboardController extends ChangeNotifier {
       }
 
       userGoal = await db.getUserGoal(userId);
-      isLoading = false;
+      if (isLoading) {
+        isLoading = false;
+      }
       notifyListeners();
       _syncFromServer(userId);
     } catch (e) {
       debugPrint('loadDashboardData error: $e');
-      isLoading = false;
+      if (isLoading) {
+        isLoading = false;
+      }
       notifyListeners();
     }
   }
@@ -132,22 +169,33 @@ class DashboardController extends ChangeNotifier {
   Future<void> _syncFromServer(int userId) async {
     try {
       final serverData = await HealthApiService.fetchDashboardData(userId: userId);
-      if (serverData != null && serverData['status'] == 'success') {
-        final wsMap = serverData['data']['workoutStats'] as Map<String, dynamic>?;
-        workoutCount = (wsMap?['totalCount'] as num?)?.toInt() ?? 0;
-        totalDistanceKm = (wsMap?['totalDistance'] as num?)?.toDouble() ?? 0.0;
-        totalCaloriesBurned = (wsMap?['totalCalories'] as num?)?.toDouble() ?? 0.0;
-        totalWorkoutDurationSec = (wsMap?['totalDuration'] as num?)?.toInt() ?? 0;
+      if (serverData != null) {
+        final dataMap = serverData['data'] is Map<String, dynamic>
+            ? serverData['data'] as Map<String, dynamic>
+            : serverData;
 
-        final ntMap = serverData['nutritionToday'] as Map<String, dynamic>?;
-        todayNutritionCalories = (ntMap?['totalCalories'] as num?)?.toInt() ?? 0;
+        final wsMap = dataMap['workoutStats'] as Map<String, dynamic>?;
+        if (wsMap != null) {
+          workoutCount = (wsMap['totalCount'] as num?)?.toInt() ?? workoutCount;
+          totalDistanceKm = (wsMap['totalDistance'] as num?)?.toDouble() ?? totalDistanceKm;
+          totalCaloriesBurned = (wsMap['totalCalories'] as num?)?.toDouble() ?? totalCaloriesBurned;
+          totalWorkoutDurationSec = (wsMap['totalDuration'] as num?)?.toInt() ?? totalWorkoutDurationSec;
+        }
 
-        userGoal = serverData['data']['goal'] as Map<String, dynamic>?;
+        final ntMap = dataMap['nutritionToday'] as Map<String, dynamic>?;
+        final serverCalories = (ntMap?['totalCalories'] as num?)?.toInt() ?? 0;
+        // อัปเดตแคลอรี่จาก server เฉพาะเมื่อ server มีค่ามากกว่า (ป้องกันการเขียนทับข้อมูลจาก AI Food Scanner ในเครื่อง)
+        if (serverCalories > todayNutritionCalories) {
+          todayNutritionCalories = serverCalories;
+        }
 
-        final hrMap = serverData['data']['latestHealthRecord'] as Map<String, dynamic>?;
+        final goalMap = dataMap['goal'] as Map<String, dynamic>?;
+        if (goalMap != null) userGoal = goalMap;
+
+        final hrMap = dataMap['latestHealthRecord'] as Map<String, dynamic>?;
         if (hrMap != null) latestRecord = TbHealthRecord.fromMap(hrMap);
 
-        final userMap = serverData['data']['user'] as Map<String, dynamic>?;
+        final userMap = dataMap['user'] as Map<String, dynamic>?;
         if (userMap != null) user = TbUser.fromMap(userMap);
 
         notifyListeners();
