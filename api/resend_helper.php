@@ -10,12 +10,23 @@ function sendEmailViaResend($toEmail, $subject, $htmlContent, &$errorMessage = '
     }
 
     $fromEmail = getenv('RESEND_FROM_EMAIL') ?: 'HealthyMate <onboarding@resend.dev>';
+    $replyTo = getenv('SMTP_USER') ?: 'kamaruding7028@gmail.com';
+
+    // แปลง HTML เป็น Plain Text สละสลวย เพื่อส่งคู่กันแบบ Multipart (ลดคะแนน Spam Score ใน Gmail)
+    $plainText = strip_tags(str_replace(['<br>', '</div>', '</p>', '</h2>'], "\n", $htmlContent));
+    $plainText = preg_replace("/\n\s+\n/", "\n\n", trim($plainText));
 
     $postData = [
-        'from'    => $fromEmail,
-        'to'      => [$toEmail],
-        'subject' => $subject,
-        'html'    => $htmlContent,
+        'from'     => $fromEmail,
+        'to'       => [$toEmail],
+        'reply_to' => $replyTo,
+        'subject'  => $subject,
+        'html'     => $htmlContent,
+        'text'     => $plainText,
+        'headers'  => [
+            'X-Entity-Ref-ID' => uniqid('hm_', true),
+            'List-Unsubscribe' => '<mailto:' . $replyTo . '?subject=unsubscribe>',
+        ]
     ];
 
     $ch = curl_init('https://api.resend.com/emails');
