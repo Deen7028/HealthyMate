@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS `TbEmailOtps` (
   `isUsed` tinyint(1) DEFAULT 0,
   `dtExpiresAt` datetime NOT NULL,
   `dtCreatedAt` datetime DEFAULT current_timestamp(),
+  `sIpAddress` varchar(45) DEFAULT NULL,
   PRIMARY KEY (`nOtpId`),
   KEY `idx_email_status` (`sEmail`,`isUsed`,`dtExpiresAt`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

@@ -53,18 +53,22 @@ try {
     }
 
     // 2. ตรวจสอบ Rate Limit ป้องกัน Spam / Email Bombing ตาม IP (สูงสุดไม่เกิน 5 ครั้ง ต่อ 10 นาที)
-    $stmtIpCheck = $conn->prepare("
-        SELECT COUNT(*) as cnt FROM TbEmailOtps 
-        WHERE sIpAddress = :ip AND dtCreatedAt > DATE_SUB(NOW(), INTERVAL 10 MINUTE)
-    ");
-    $stmtIpCheck->execute([':ip' => $clientIp]);
-    $ipReqCount = intval($stmtIpCheck->fetch()['cnt'] ?? 0);
-    if ($ipReqCount >= 5) {
-        echo json_encode([
-            "status" => "rate_limited",
-            "message" => "มีการขอ OTP จาก IP ของคุณถี่เกินไป (จำกัดไม่เกิน 5 ครั้ง ต่อ 10 นาที)"
-        ], JSON_UNESCAPED_UNICODE);
-        exit();
+    try {
+        $stmtIpCheck = $conn->prepare("
+            SELECT COUNT(*) as cnt FROM TbEmailOtps 
+            WHERE sIpAddress = :ip AND dtCreatedAt > DATE_SUB(NOW(), INTERVAL 10 MINUTE)
+        ");
+        $stmtIpCheck->execute([':ip' => $clientIp]);
+        $ipReqCount = intval($stmtIpCheck->fetch()['cnt'] ?? 0);
+        if ($ipReqCount >= 5) {
+            echo json_encode([
+                "status" => "rate_limited",
+                "message" => "มีการขอ OTP จาก IP ของคุณถี่เกินไป (จำกัดไม่เกิน 5 ครั้ง ต่อ 10 นาที)"
+            ], JSON_UNESCAPED_UNICODE);
+            exit();
+        }
+    } catch (\Throwable $e) {
+        // Fallback หากตารางยังไม่มีคอลัมน์ sIpAddress
     }
 
     // 3. ยกเลิก (Invalidate) รหัสเดิมที่ยังไม่หมดอายุของอีเมลนี้
@@ -78,17 +82,29 @@ try {
     $otpCode = str_pad(strval(random_int(100000, 999999)), 6, '0', STR_PAD_LEFT);
     $expiresAt = date('Y-m-d H:i:s', strtotime('+5 minutes'));
 
-    // 5. บันทึกรหัส OTP ลงตาราง TbEmailOtps พร้อมบันทึก IP
-    $stmtInsert = $conn->prepare("
-        INSERT INTO TbEmailOtps (sEmail, sOtpCode, isUsed, dtExpiresAt, dtCreatedAt, sIpAddress)
-        VALUES (:email, :otp, 0, :expires, NOW(), :ip)
-    ");
-    $stmtInsert->execute([
-        ':email' => $email,
-        ':otp' => $otpCode,
-        ':expires' => $expiresAt,
-        ':ip' => $clientIp
-    ]);
+    // 5. บันทึกรหัส OTP ลงตาราง TbEmailOtps (Safe Insert)
+    try {
+        $stmtInsert = $conn->prepare("
+            INSERT INTO TbEmailOtps (sEmail, sOtpCode, isUsed, dtExpiresAt, dtCreatedAt, sIpAddress)
+            VALUES (:email, :otp, 0, :expires, NOW(), :ip)
+        ");
+        $stmtInsert->execute([
+            ':email' => $email,
+            ':otp' => $otpCode,
+            ':expires' => $expiresAt,
+            ':ip' => $clientIp
+        ]);
+    } catch (\Throwable $e) {
+        $stmtInsertFallback = $conn->prepare("
+            INSERT INTO TbEmailOtps (sEmail, sOtpCode, isUsed, dtExpiresAt, dtCreatedAt)
+            VALUES (:email, :otp, 0, :expires, NOW())
+        ");
+        $stmtInsertFallback->execute([
+            ':email' => $email,
+            ':otp' => $otpCode,
+            ':expires' => $expiresAt
+        ]);
+    }
 
     // 6. ส่งอีเมลผ่าน PHPMailer (Gmail SMTP) หรือ PHP mail() fallback
     $htmlBody = "

@@ -3,7 +3,7 @@ part of 'app_database.dart';
 extension AppDatabaseSchema on AppDatabase {
   Future<void> _onCreate(Database db, int version) async {
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS $AppDatabase.tableUsers (
+      CREATE TABLE IF NOT EXISTS ${AppDatabase.tableUsers} (
         nUserId INTEGER PRIMARY KEY AUTOINCREMENT,
         sEmail TEXT NOT NULL UNIQUE,
         sPasswordHash TEXT NOT NULL,
@@ -45,7 +45,7 @@ extension AppDatabaseSchema on AppDatabase {
     ''');
 
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS $AppDatabase.tableSession (
+      CREATE TABLE IF NOT EXISTS ${AppDatabase.tableSession} (
         nSessionId INTEGER PRIMARY KEY DEFAULT 1,
         isLoggedIn INTEGER DEFAULT 0,
         sEmail TEXT,
@@ -55,7 +55,7 @@ extension AppDatabaseSchema on AppDatabase {
     ''');
 
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS $AppDatabase.tablePendingDeletions (
+      CREATE TABLE IF NOT EXISTS ${AppDatabase.tablePendingDeletions} (
         nDeletionId INTEGER PRIMARY KEY AUTOINCREMENT,
         nUserId INTEGER NOT NULL,
         sEntity TEXT NOT NULL,
@@ -65,7 +65,7 @@ extension AppDatabaseSchema on AppDatabase {
     ''');
 
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS $AppDatabase.tableBadges (
+      CREATE TABLE IF NOT EXISTS ${AppDatabase.tableBadges} (
         nBadgeId INTEGER PRIMARY KEY AUTOINCREMENT,
         sBadgeName TEXT NOT NULL,
         sDescription TEXT,
@@ -74,18 +74,18 @@ extension AppDatabaseSchema on AppDatabase {
     ''');
 
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS $AppDatabase.tableHealthIntegrations (
+      CREATE TABLE IF NOT EXISTS ${AppDatabase.tableHealthIntegrations} (
         nIntegrationId INTEGER PRIMARY KEY AUTOINCREMENT,
         nUserId INTEGER NOT NULL,
         sProviderName TEXT NOT NULL,
         isSynced INTEGER DEFAULT 0,
         dtLastSyncedAt TEXT,
-        FOREIGN KEY (nUserId) REFERENCES $AppDatabase.tableUsers (nUserId) ON DELETE CASCADE
+        FOREIGN KEY (nUserId) REFERENCES ${AppDatabase.tableUsers} (nUserId) ON DELETE CASCADE
       );
     ''');
 
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS $AppDatabase.tableHealthRecords (
+      CREATE TABLE IF NOT EXISTS ${AppDatabase.tableHealthRecords} (
         nRecordId INTEGER PRIMARY KEY AUTOINCREMENT,
         nUserId INTEGER NOT NULL,
         nWeight REAL,
@@ -97,12 +97,12 @@ extension AppDatabaseSchema on AppDatabase {
         isSynced INTEGER DEFAULT 0,
         dtRecordedAt TEXT DEFAULT CURRENT_TIMESTAMP,
         dtUpdatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (nUserId) REFERENCES $AppDatabase.tableUsers (nUserId) ON DELETE CASCADE
+        FOREIGN KEY (nUserId) REFERENCES ${AppDatabase.tableUsers} (nUserId) ON DELETE CASCADE
       );
     ''');
 
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS $AppDatabase.tableNutritionLogs (
+      CREATE TABLE IF NOT EXISTS ${AppDatabase.tableNutritionLogs} (
         nNutritionId INTEGER PRIMARY KEY AUTOINCREMENT,
         nUserId INTEGER NOT NULL,
         sMealType TEXT NOT NULL,
@@ -116,12 +116,12 @@ extension AppDatabaseSchema on AppDatabase {
         isSynced INTEGER DEFAULT 0,
         dtLoggedAt TEXT DEFAULT CURRENT_TIMESTAMP,
         dtUpdatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (nUserId) REFERENCES $AppDatabase.tableUsers (nUserId) ON DELETE CASCADE
+        FOREIGN KEY (nUserId) REFERENCES ${AppDatabase.tableUsers} (nUserId) ON DELETE CASCADE
       );
     ''');
 
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS $AppDatabase.tableRoutines (
+      CREATE TABLE IF NOT EXISTS ${AppDatabase.tableRoutines} (
         nRoutineId INTEGER PRIMARY KEY AUTOINCREMENT,
         nUserId INTEGER NOT NULL,
         sTitle TEXT NOT NULL,
@@ -133,34 +133,34 @@ extension AppDatabaseSchema on AppDatabase {
         iconData INTEGER,
         isNotificationActive INTEGER DEFAULT 1,
         dtCreatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (nUserId) REFERENCES $AppDatabase.tableUsers (nUserId) ON DELETE CASCADE
+        FOREIGN KEY (nUserId) REFERENCES ${AppDatabase.tableUsers} (nUserId) ON DELETE CASCADE
       );
     ''');
 
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS $AppDatabase.tableRoutineLogs (
+      CREATE TABLE IF NOT EXISTS ${AppDatabase.tableRoutineLogs} (
         nLogId INTEGER PRIMARY KEY AUTOINCREMENT,
         nRoutineId INTEGER NOT NULL,
         isCompleted INTEGER DEFAULT 0,
         nProgressValue REAL DEFAULT 0.0,
         dtLogDate TEXT NOT NULL,
-        FOREIGN KEY (nRoutineId) REFERENCES $AppDatabase.tableRoutines (nRoutineId) ON DELETE CASCADE
+        FOREIGN KEY (nRoutineId) REFERENCES ${AppDatabase.tableRoutines} (nRoutineId) ON DELETE CASCADE
       );
     ''');
 
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS $AppDatabase.tableUserBadges (
+      CREATE TABLE IF NOT EXISTS ${AppDatabase.tableUserBadges} (
         nUserBadgeId INTEGER PRIMARY KEY AUTOINCREMENT,
         nUserId INTEGER NOT NULL,
         nBadgeId INTEGER NOT NULL,
         dtEarnedAt TEXT DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (nUserId) REFERENCES $AppDatabase.tableUsers (nUserId) ON DELETE CASCADE,
-        FOREIGN KEY (nBadgeId) REFERENCES $AppDatabase.tableBadges (nBadgeId) ON DELETE CASCADE
+        FOREIGN KEY (nUserId) REFERENCES ${AppDatabase.tableUsers} (nUserId) ON DELETE CASCADE,
+        FOREIGN KEY (nBadgeId) REFERENCES ${AppDatabase.tableBadges} (nBadgeId) ON DELETE CASCADE
       );
     ''');
 
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS $AppDatabase.tableWorkouts (
+      CREATE TABLE IF NOT EXISTS ${AppDatabase.tableWorkouts} (
         nWorkoutId INTEGER PRIMARY KEY AUTOINCREMENT,
         nUserId INTEGER NOT NULL,
         sType TEXT NOT NULL,
@@ -171,12 +171,12 @@ extension AppDatabaseSchema on AppDatabase {
         isSynced INTEGER DEFAULT 0,
         dtWorkoutDate TEXT DEFAULT CURRENT_TIMESTAMP,
         dtUpdatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (nUserId) REFERENCES $AppDatabase.tableUsers (nUserId) ON DELETE CASCADE
+        FOREIGN KEY (nUserId) REFERENCES ${AppDatabase.tableUsers} (nUserId) ON DELETE CASCADE
       );
     ''');
 
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS $AppDatabase.tableWorkoutCategories (
+      CREATE TABLE IF NOT EXISTS ${AppDatabase.tableWorkoutCategories} (
         nCategoryId INTEGER PRIMARY KEY AUTOINCREMENT,
         sCategoryId TEXT NOT NULL UNIQUE,
         sTitle TEXT NOT NULL,
@@ -191,7 +191,7 @@ extension AppDatabaseSchema on AppDatabase {
 
     // Default seed categories
     await db.execute('''
-      INSERT OR IGNORE INTO $AppDatabase.tableWorkoutCategories 
+      INSERT OR IGNORE INTO ${AppDatabase.tableWorkoutCategories} 
         (nCategoryId, sCategoryId, sTitle, sSubtitle, sIconName, nIconCodePoint, nMetValue, isMoving) 
       VALUES
         (1, 'running', 'วิ่ง (Running)', 'ติดตามเส้นทาง GPS และความเร็ว', 'directions_run', 57904, 8.50, 1),
