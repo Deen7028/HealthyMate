@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+part 'workout_bottom_controls_action.dart';
+
 class WorkoutBottomControls extends StatefulWidget {
   final bool isRunning;
   final bool isPaused;
@@ -60,7 +62,12 @@ class _WorkoutBottomControlsState extends State<WorkoutBottomControls>
     final double bottomPadding = MediaQuery.of(context).padding.bottom + 30.0;
 
     return Container(
-      padding: EdgeInsets.only(left: 36, right: 36, top: 20, bottom: bottomPadding),
+      padding: EdgeInsets.only(
+        left: 36,
+        right: 36,
+        top: 20,
+        bottom: bottomPadding,
+      ),
       decoration: BoxDecoration(
         color: const Color(0xFFF9FAF8).withValues(alpha: 0.97),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
@@ -119,7 +126,9 @@ class _WorkoutBottomControlsState extends State<WorkoutBottomControls>
                       height: 82 + (wave * 34),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: const Color(0xFF2E5327).withValues(alpha: (1.0 - wave) * 0.45),
+                        color: const Color(
+                          0xFF2E5327,
+                        ).withValues(alpha: (1.0 - wave) * 0.45),
                       ),
                     );
                   },
@@ -140,14 +149,20 @@ class _WorkoutBottomControlsState extends State<WorkoutBottomControls>
                 ),
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 300),
-                  transitionBuilder: (Widget child, Animation<double> animation) {
-                    return ScaleTransition(
-                      scale: animation,
-                      child: FadeTransition(opacity: animation, child: child),
-                    );
-                  },
+                  transitionBuilder:
+                      (Widget child, Animation<double> animation) {
+                        return ScaleTransition(
+                          scale: animation,
+                          child: FadeTransition(
+                            opacity: animation,
+                            child: child,
+                          ),
+                        );
+                      },
                   child: Icon(
-                    widget.isRunning ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                    widget.isRunning
+                        ? Icons.pause_rounded
+                        : Icons.play_arrow_rounded,
                     key: ValueKey(widget.isRunning ? 'pause' : 'play'),
                     color: Colors.white,
                     size: 44,
@@ -159,62 +174,13 @@ class _WorkoutBottomControlsState extends State<WorkoutBottomControls>
         ),
         const SizedBox(height: 8),
         Text(
-          widget.isRunning ? 'พักชั่วคราว' : (widget.isPaused ? 'ทำต่อ' : 'เริ่ม'),
+          widget.isRunning
+              ? 'พักชั่วคราว'
+              : (widget.isPaused ? 'ทำต่อ' : 'เริ่ม'),
           style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w800,
             color: Color(0xFF2E5327),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionButton({
-    required String label,
-    required IconData icon,
-    required Color color,
-    required Color iconColor,
-    required double size,
-    required double iconSize,
-    required bool enabled,
-    VoidCallback? onTap,
-  }) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        GestureDetector(
-          onTap: enabled ? onTap : null,
-          child: AnimatedOpacity(
-            duration: const Duration(milliseconds: 200),
-            opacity: enabled ? 1.0 : 0.4,
-            child: Container(
-              width: size,
-              height: size,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: color,
-                boxShadow: enabled
-                    ? [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ]
-                    : null,
-              ),
-              child: Icon(icon, color: iconColor, size: iconSize),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: enabled ? const Color(0xFF5A665A) : const Color(0xFFA0ACA0),
           ),
         ),
       ],

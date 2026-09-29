@@ -38,7 +38,8 @@ extension AppDatabaseNutritionDao on AppDatabase {
     if (db == null) return [];
 
     final now = DateTime.now();
-    final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final todayStr =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
 
     return await db.query(
       AppDatabase.tableNutritionLogs,
@@ -50,7 +51,7 @@ extension AppDatabaseNutritionDao on AppDatabase {
 
   Future<void> deleteNutritionLog(int nutritionId) async {
     if (kIsWeb) {
-      await HealthApiService.deleteNutritionLogRemote(nutritionId);
+      await ActivityApiService.deleteNutritionLogRemote(nutritionId);
       return;
     }
     final db = await database;
@@ -74,10 +75,14 @@ extension AppDatabaseNutritionDao on AppDatabase {
           'dtQueuedAt': DateTime.now().toIso8601String(),
         });
       }
-      await txn.delete(AppDatabase.tableNutritionLogs, where: 'nNutritionId = ?', whereArgs: [nutritionId]);
+      await txn.delete(
+        AppDatabase.tableNutritionLogs,
+        where: 'nNutritionId = ?',
+        whereArgs: [nutritionId],
+      );
     });
     if (wasSynced && userId > 0) {
-      if (await HealthApiService.deleteNutritionLogRemote(nutritionId)) {
+      if (await ActivityApiService.deleteNutritionLogRemote(nutritionId)) {
         final pending = await db.query(
           AppDatabase.tablePendingDeletions,
           where: 'nUserId = ? AND sEntity = ? AND nRemoteId = ?',
@@ -85,8 +90,11 @@ extension AppDatabaseNutritionDao on AppDatabase {
           limit: 1,
         );
         if (pending.isNotEmpty) {
-          await db.delete(AppDatabase.tablePendingDeletions,
-              where: 'nDeletionId = ?', whereArgs: [pending.first['nDeletionId']]);
+          await db.delete(
+            AppDatabase.tablePendingDeletions,
+            where: 'nDeletionId = ?',
+            whereArgs: [pending.first['nDeletionId']],
+          );
         }
       } else {
         unawaited(SyncService.instance.updatePendingCount());

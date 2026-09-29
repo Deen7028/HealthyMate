@@ -60,7 +60,7 @@ class RegisterController extends ChangeNotifier {
         return status;
       }
 
-      final remoteCheck = await HealthApiService.checkEmailRemote(email);
+      final remoteCheck = await EmailApiService.checkEmailRemote(email);
       if (remoteCheck['exists'] == true || remoteCheck['status'] == 'exists') {
         isLoading = false;
         status = RegisterStatus.emailExistsRemote;
@@ -69,7 +69,7 @@ class RegisterController extends ChangeNotifier {
         return status;
       }
 
-      final otpResult = await HealthApiService.sendEmailOtp(email);
+      final otpResult = await EmailApiService.sendEmailOtp(email);
       isLoading = false;
 
       if (otpResult['status'] == 'success') {
@@ -108,7 +108,7 @@ class RegisterController extends ChangeNotifier {
       await AppDatabase.instance.setLoginStatus(true, email: email);
 
       try {
-        final serverSuccess = await HealthApiService.updateUserProfile(newUser.toMap());
+        final serverSuccess = await ProfileApiService.updateUserProfile(newUser.toMap());
         if (serverSuccess) {
           await AppDatabase.instance.markUserAsSynced(newUser.nUserId);
         }

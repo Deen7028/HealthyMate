@@ -6,6 +6,8 @@ import 'package:healthymate/core/services/routine_state_notifier.dart';
 import 'package:healthymate/features/food_recognition/widgets/food_recognition_result_sheet.dart';
 import 'package:healthymate/features/food_recognition/services/food_recognition_service.dart';
 
+part 'food_source_bottom_sheet_option.dart';
+
 class FoodSourceBottomSheet extends StatefulWidget {
   const FoodSourceBottomSheet({super.key});
 
@@ -45,7 +47,9 @@ class _FoodSourceBottomSheetState extends State<FoodSourceBottomSheet> {
       setState(() => _isLoading = true);
 
       // เรียกใช้งาน AI Service
-      final result = await FoodRecognitionService.instance.analyzeFoodImage(file);
+      final result = await FoodRecognitionService.instance.analyzeFoodImage(
+        file,
+      );
 
       if (!mounted) return;
 
@@ -126,13 +130,19 @@ class _FoodSourceBottomSheetState extends State<FoodSourceBottomSheet> {
               child: Column(
                 children: [
                   const CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGreen),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      AppTheme.primaryGreen,
+                    ),
                     strokeWidth: 3,
                   ),
                   const SizedBox(height: 16),
                   Text(
                     'AI กำลังวิเคราะห์รูปภาพอาหาร...',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: textPrimary),
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: textPrimary,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -151,7 +161,9 @@ class _FoodSourceBottomSheetState extends State<FoodSourceBottomSheet> {
                     icon: Icons.camera_alt_rounded,
                     label: 'เปิดกล้องถ่ายสด',
                     sublabel: 'Camera',
-                    color: isDark ? AppTheme.primaryLightGreen : AppTheme.primaryGreen,
+                    color: isDark
+                        ? AppTheme.primaryLightGreen
+                        : AppTheme.primaryGreen,
                     onTap: () => _pickImage(ImageSource.camera),
                   ),
                 ),
@@ -162,7 +174,9 @@ class _FoodSourceBottomSheetState extends State<FoodSourceBottomSheet> {
                     icon: Icons.photo_library_rounded,
                     label: 'เลือกจากแกลเลอรี',
                     sublabel: 'Gallery Import',
-                    color: isDark ? const Color(0xFF5CA86E) : const Color(0xFF3F824E),
+                    color: isDark
+                        ? const Color(0xFF5CA86E)
+                        : const Color(0xFF3F824E),
                     onTap: () => _pickImage(ImageSource.gallery),
                   ),
                 ),
@@ -172,59 +186,4 @@ class _FoodSourceBottomSheetState extends State<FoodSourceBottomSheet> {
       ),
     );
   }
-
-  Widget _buildOptionButton({
-    required BuildContext context,
-    required IconData icon,
-    required String label,
-    required String sublabel,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary = AppTheme.getTextPrimaryColor(isDark);
-    final textSecondary = AppTheme.getTextSecondaryColor(isDark);
-    final surfaceBg = AppTheme.getSurfaceColor(isDark);
-    final borderColor = AppTheme.getBorderColor(isDark);
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
-        decoration: BoxDecoration(
-          color: surfaceBg,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: borderColor, width: 1.2),
-        ),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: isDark ? 0.2 : 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, size: 28, color: color),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: textPrimary,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              sublabel,
-              style: TextStyle(fontSize: 11, color: textSecondary),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
-

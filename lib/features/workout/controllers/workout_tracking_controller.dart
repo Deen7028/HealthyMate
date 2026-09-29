@@ -12,6 +12,12 @@ import 'package:healthymate/core/services/sync_service.dart';
 import 'package:healthymate/core/services/tts_service.dart';
 import '../models/workout_models.dart';
 
+part 'workout_tracking_controller_lifecycle.dart';
+part 'workout_tracking_controller_selection.dart';
+part 'workout_tracking_controller_session.dart';
+part 'workout_tracking_controller_location.dart';
+part 'workout_tracking_controller_persistence.dart';
+
 class WorkoutTrackingController extends ChangeNotifier {
   WorkoutState _status = WorkoutState.selectingCategory;
   WorkoutCategory _selectedCategory = WorkoutCategory.categories.first;
@@ -41,10 +47,18 @@ class WorkoutTrackingController extends ChangeNotifier {
   int _zeroSpeedSeconds = 0;
   bool _isAutoPaused = false;
   int _lastAnnouncedKm = 0;
+  DateTime? _workoutStartTime;
+  int _accumulatedSeconds = 0;
+
+  void _safeNotifyListeners() {
+    if (!_isDisposed && hasListeners) {
+      notifyListeners();
+    }
+  }
 
   WorkoutTrackingController() {
-    _userDataLoad = _loadUserData();
-    _listenBackgroundLocation();
+    _userDataLoad = this._loadUserData();
+    this._listenBackgroundLocation();
   }
 
   // Getters
@@ -55,7 +69,8 @@ class WorkoutTrackingController extends ChangeNotifier {
   bool get isGpsEnabled => _isGpsEnabled;
   int get secondsElapsed => _secondsElapsed;
   int? get targetDurationSeconds => _targetDurationSeconds;
-  bool get isCountdownMode => _targetDurationSeconds != null && _targetDurationSeconds! > 0;
+  bool get isCountdownMode =>
+      _targetDurationSeconds != null && _targetDurationSeconds! > 0;
   int get displaySeconds {
     if (isCountdownMode) {
       final remaining = _targetDurationSeconds! - _secondsElapsed;
@@ -63,12 +78,14 @@ class WorkoutTrackingController extends ChangeNotifier {
     }
     return _secondsElapsed;
   }
+
   double get distanceKm => _distanceKm;
   double get caloriesBurned => _caloriesBurned;
   int get userId => _userId;
   List<LatLng> get routePoints => List.unmodifiable(_routePoints);
-  LatLng? get currentLatLng =>
-      _lastPosition != null ? LatLng(_lastPosition!.latitude, _lastPosition!.longitude) : null;
+  LatLng? get currentLatLng => _lastPosition != null
+      ? LatLng(_lastPosition!.latitude, _lastPosition!.longitude)
+      : null;
   bool get isRunning => _status == WorkoutState.running;
   bool get isPaused => _status == WorkoutState.paused;
   bool get isAutoPaused => _isAutoPaused;
@@ -85,465 +102,5 @@ class WorkoutTrackingController extends ChangeNotifier {
     secondsElapsedNotifier.dispose();
     LocationBackgroundService.instance.stopTracking();
     super.dispose();
-  }
-
-  void _safeNotifyListeners() {
-    if (!_isDisposed && hasListeners) {
-      notifyListeners();
-    }
-  }
-
-  Future<void> _loadUserData() async {
-    try {
-      final email = AuthService.instance.currentUserEmail;
-      final user = email.isNotEmpty
-          ? await AppDatabase.instance.getUserByEmail(email)
-          : await AppDatabase.instance.getCurrentUser();
-      if (user != null) {
-        _userId = user.nUserId;
-        if (user.nWeight != null && user.nWeight! > 0) {
-          _userWeightKg = user.nWeight!;
-        }
-        _safeNotifyListeners();
-      }
-    } catch (_) {
-      debugPrint('WorkoutTrackingController: Failed to load signed-in user.');
-    }
-  }
-
-  void _listenBackgroundLocation() {
-    final service = FlutterBackgroundService();
-    _bgLocationSub = service.on('updateLocation').listen((event) {
-      if (_isDisposed || event == null || _status != WorkoutState.running) return;
-      final lat = (event['latitude'] as num?)?.toDouble();
-      final lng = (event['longitude'] as num?)?.toDouble();
-      final speed = (event['speed'] as num?)?.toDouble() ?? 0.0;
-      final accuracy = (event['accuracy'] as num?)?.toDouble() ?? 10.0;
-
-      DateTime? bgTimestamp;
-      if (event['timestamp'] != null) {
-        bgTimestamp = DateTime.tryParse(event['timestamp'].toString());
-      }
-
-      if (lat != null && lng != null) {
-        _handleNewLocation(
-          latitude: lat,
-          longitude: lng,
-          speedMs: speed,
-          accuracy: accuracy,
-          timestamp: bgTimestamp,
-        );
-      }
-    });
-  }
-
-  DateTime? _workoutStartTime;
-  int _accumulatedSeconds = 0;
-
-  void selectCategoryByName(String? categoryStr, [int? targetDurationMinutes]) {
-    final cat = WorkoutCategory.fromIdOrTitle(categoryStr);
-    selectCategory(cat, targetDurationMinutes);
-  }
-
-  void selectCategory(WorkoutCategory category, [int? targetDurationMinutes]) {
-    _selectedCategory = category;
-    _status = WorkoutState.initial;
-    _secondsElapsed = 0;
-    _targetDurationSeconds = (targetDurationMinutes != null && targetDurationMinutes > 0)
-        ? targetDurationMinutes * 60
-        : null;
-    secondsElapsedNotifier.value = _targetDurationSeconds ?? 0;
-    _accumulatedSeconds = 0;
-    _workoutStartTime = null;
-    _distanceKm = 0.0;
-    _caloriesBurned = 0.0;
-    _zeroSpeedSeconds = 0;
-    _isAutoPaused = false;
-    _lastAnnouncedKm = 0;
-    _routePoints.clear();
-    _lastPosition = null;
-    _safeNotifyListeners();
-  }
-
-  void setTargetDurationMinutes(int? targetMinutes) {
-    _targetDurationSeconds = (targetMinutes != null && targetMinutes > 0)
-        ? targetMinutes * 60
-        : null;
-    secondsElapsedNotifier.value = isCountdownMode ? displaySeconds : _secondsElapsed;
-    _safeNotifyListeners();
-  }
-
-  void returnToCategorySelection() {
-    _timer?.cancel();
-    _workoutStartTime = null;
-    LocationBackgroundService.instance.stopTracking();
-    _status = WorkoutState.selectingCategory;
-    _secondsElapsed = 0;
-    _targetDurationSeconds = null;
-    secondsElapsedNotifier.value = 0;
-    _distanceKm = 0.0;
-    _caloriesBurned = 0.0;
-    _zeroSpeedSeconds = 0;
-    _isAutoPaused = false;
-    _lastAnnouncedKm = 0;
-    _routePoints.clear();
-    _lastPosition = null;
-    _safeNotifyListeners();
-  }
-
-  void setMapType(AppMapType type) {
-    _currentMapType = type;
-    _safeNotifyListeners();
-  }
-
-  void toggleTraffic(bool value) {
-    _showTraffic = value;
-    _safeNotifyListeners();
-  }
-
-  void enableGps() {
-    _isGpsEnabled = true;
-    _safeNotifyListeners();
-  }
-
-  void startWorkout() {
-    if (!_isGpsEnabled || _userId <= 0) {
-      return;
-    }
-    _status = WorkoutState.running;
-    _isAutoPaused = false;
-    _zeroSpeedSeconds = 0;
-    _workoutStartTime = DateTime.now();
-    _safeNotifyListeners();
-
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_status == WorkoutState.running && !_isAutoPaused) {
-        if (_workoutStartTime != null) {
-          _secondsElapsed = _accumulatedSeconds + DateTime.now().difference(_workoutStartTime!).inSeconds;
-        }
-        secondsElapsedNotifier.value = displaySeconds;
-
-        // คำนวณแคลอรีตามสูตรมาตรฐานการกีฬาตามความเร็วไดนามิก (METs * 0.0175 * WeightKg * TimeMinutes)
-        final activeMet = _calculateCurrentMet();
-        final caloriesPerSecond = (activeMet * 0.0175 * _userWeightKg) / 60.0;
-        _caloriesBurned += caloriesPerSecond;
-
-        _checkAutoPauseCondition();
-      }
-    });
-
-    LocationBackgroundService.instance.startTracking();
-    _startLocationUpdates();
-  }
-
-  /// คำนวณค่า METs ไดนามิกตามประเภทกิจกรรมและความเร็วปัจจุบัน (กม./ชม.)
-  double _calculateCurrentMet() {
-    // 1. กิจกรรมไม่อยู่กับที่ (ทำสมาธิ / โยคะ)
-    if (_selectedCategory.id == 'meditation') {
-      return 1.0;
-    }
-    if (_selectedCategory.id == 'yoga') {
-      return 3.3;
-    }
-
-    // 2. กิจกรรมเคลื่อนที่ หากหยุดนิ่งอยู่กับที่ (_zeroSpeedSeconds > 0) คิดเป็น Resting MET = 1.0
-    if (_zeroSpeedSeconds > 0) {
-      return 1.0;
-    }
-
-    // คำนวณความเร็ว (กม./ชม.) จากพิกัดล่าสุด หรือความเร็วเฉลี่ยสะสม
-    double speedKmh = 0.0;
-    if (_lastPosition != null && _lastPosition!.speed > 0) {
-      speedKmh = _lastPosition!.speed * 3.6;
-    } else if (_secondsElapsed > 0 && _distanceKm > 0) {
-      speedKmh = (_distanceKm / (_secondsElapsed / 3600.0));
-    }
-
-    // หากความเร็วเหลือน้อยมาก (< 0.5 กม./ชม.) ถือว่าเป็น Resting MET
-    if (speedKmh <= 0.5) {
-      return 1.0;
-    }
-
-    switch (_selectedCategory.id) {
-      case 'walking':
-        // เดิน (Walking)
-        if (speedKmh <= 4.0) return 2.5;
-        if (speedKmh <= 6.0) return 4.1;
-        if (speedKmh <= 7.0) return 6.2;
-        return 9.6;
-
-      case 'running':
-        // วิ่ง (Running)
-        if (speedKmh <= 7.0) return 7.5;
-        if (speedKmh <= 10.0) return 9.6;
-        if (speedKmh <= 13.0) return 11.5;
-        return 14.0;
-
-      case 'cycling':
-        // ปั่นจักรยาน (Cycling)
-        if (speedKmh < 16.0) return 4.0;
-        if (speedKmh <= 19.0) return 6.0;
-        if (speedKmh <= 22.0) return 8.0;
-        if (speedKmh <= 25.0) return 10.0;
-        if (speedKmh <= 30.0) return 12.0;
-        return 16.0;
-
-      default:
-        return _selectedCategory.metValue;
-    }
-  }
-
-  void _checkAutoPauseCondition() {
-    // หากความเร็วเข้าใกล้ 0 ต่อเนื่องเกิน 12 วินาที เข้าสู่สถานะ Auto-Pause
-    if (_zeroSpeedSeconds >= 12 && !_isAutoPaused) {
-      _isAutoPaused = true;
-      TtsService.instance.speak('หยุดการบันทึกชั่วคราวอัตโนมัติ');
-      _safeNotifyListeners();
-    }
-  }
-
-  void _startLocationUpdates() {
-    _positionStreamSub?.cancel();
-
-    // ดึงพิกัดตั้งต้นเฉพาะเมื่อยังไม่มี _lastPosition เพื่อป้องกัน Race Condition จาก async callback ย้อนหลัง
-    Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
-    ).then((pos) {
-      if (_lastPosition == null && _status == WorkoutState.running) {
-        _lastPosition = pos;
-        if (_routePoints.isEmpty) {
-          _routePoints.add(LatLng(pos.latitude, pos.longitude));
-          _safeNotifyListeners();
-        }
-      }
-    }).catchError((_) {});
-
-    const locationSettings = LocationSettings(
-      accuracy: LocationAccuracy.high,
-      distanceFilter: 5,
-    );
-
-    _positionStreamSub = Geolocator.getPositionStream(
-      locationSettings: locationSettings,
-    ).listen((Position position) {
-      if (_status != WorkoutState.running) return;
-      _handleNewLocation(
-        latitude: position.latitude,
-        longitude: position.longitude,
-        speedMs: position.speed,
-        accuracy: position.accuracy,
-        timestamp: position.timestamp,
-      );
-    });
-  }
-
-  void _handleNewLocation({
-    required double latitude,
-    required double longitude,
-    required double speedMs,
-    required double accuracy,
-    DateTime? timestamp,
-  }) {
-    // 0. หากเป็นกิจกรรมที่ไม่เกี่ยวกับการเคลื่อนที่ (ทำสมาธิ/โยคะ) ไม่ต้องบันทึกระยะทางและเส้นทาง GPS
-    if (!_selectedCategory.isMoving) {
-      return;
-    }
-
-    final newTime = timestamp ?? DateTime.now();
-
-    // 1. ตรวจสอบความเร็วสำหรับ Auto-Pause (ความเร็วน้อยกว่า 0.3 m/s หรือ 1 km/h ถือว่าหยุดนิ่ง)
-    if (speedMs < 0.3) {
-      _zeroSpeedSeconds++;
-    } else {
-      _zeroSpeedSeconds = 0;
-      if (_isAutoPaused) {
-        _isAutoPaused = false;
-        TtsService.instance.speak('เริ่มบันทึกกิจกรรมต่ออัตโนมัติ');
-      }
-    }
-
-    if (_isAutoPaused) return;
-
-    if (_lastPosition != null) {
-      // ป้องกันพิกัดที่ย้อนหลังหรือมาสลับลำดับเวลา (Chronological Check)
-      final timeDifferenceSec = newTime.difference(_lastPosition!.timestamp).inMilliseconds / 1000.0;
-      if (timeDifferenceSec <= 0.3) {
-        return;
-      }
-
-      final distanceInMeters = Geolocator.distanceBetween(
-        _lastPosition!.latitude,
-        _lastPosition!.longitude,
-        latitude,
-        longitude,
-      );
-
-      // คำนวณความเร็วเฉลี่ยระหว่างจุดจริง (Calculated Speed = distance / time)
-      final calculatedSpeedMs = timeDifferenceSec > 0 ? (distanceInMeters / timeDifferenceSec) : 0.0;
-
-      // กรอง GPS Drift เข้มงวดระดับแอปออกกำลังกายมาตรฐาน:
-      // 1. ความแม่นยำสัญญาณ GPS (accuracy) ต้องดีกว่า 15 เมตร
-      // 2. ระยะทางขยับขั้นต่ำต้อง >= 5.0 เมตร (สอดคล้องกับ distanceFilter)
-      // 3. ความเร็วที่คำนวณได้จริงต้องไม่เกิน 15.0 m/s (~54 km/h) สำหรับกีฬาเดิน/วิ่ง/จักรยาน
-      // 4. หากมีค่า speed จากฮาร์ดแวร์ ต้องสอดคล้อง ไม่ก้าวกระโดดผิดธรรมชาติ
-      final bool isAccuracyValid = accuracy <= 15.0;
-      final bool isDistanceValid = distanceInMeters >= 5.0 && distanceInMeters < 120.0;
-      final bool isSpeedValid = calculatedSpeedMs < 15.0 && speedMs < 20.0;
-      
-      // ตรวจสอบว่าพิกัดขยับพ้นจากวงรัศมีคลาดเคลื่อน GPS (Displacement Threshold)
-      final bool isClearDisplacement = distanceInMeters >= (accuracy * 0.8);
-
-      final bool isRealMovement = isAccuracyValid &&
-          isDistanceValid &&
-          isSpeedValid &&
-          isClearDisplacement;
-
-      if (isRealMovement) {
-        final addedKm = distanceInMeters / 1000.0;
-        _distanceKm += addedKm;
-
-        // หากยังไม่มีจุดในเส้นทาง ให้เพิ่มจุดเริ่มต้นก่อน
-        if (_routePoints.isEmpty) {
-          _routePoints.add(LatLng(_lastPosition!.latitude, _lastPosition!.longitude));
-        }
-
-        _lastPosition = Position(
-          longitude: longitude,
-          latitude: latitude,
-          timestamp: newTime,
-          accuracy: accuracy,
-          altitude: 0.0,
-          altitudeAccuracy: 0.0,
-          heading: 0.0,
-          headingAccuracy: 0.0,
-          speed: speedMs,
-          speedAccuracy: 0.0,
-        );
-
-        _routePoints.add(LatLng(latitude, longitude));
-        _safeNotifyListeners();
-
-        // 2. Voice Feedback: ทุกๆ 1 กิโลเมตร ให้ ขานบอกระยะทาง เวลา และ Pace
-        final currentKmFloor = _distanceKm.floor();
-        if (currentKmFloor > _lastAnnouncedKm && currentKmFloor >= 1) {
-          _lastAnnouncedKm = currentKmFloor;
-          final double validDistance = _distanceKm >= 0.05 ? _distanceKm : 0.0;
-          final double paceMinutesPerKm = validDistance > 0 ? ((_secondsElapsed / 60.0) / validDistance).clamp(0.0, 99.0) : 0.0;
-          final int paceMin = paceMinutesPerKm.floor();
-          final int paceSec = ((paceMinutesPerKm - paceMin) * 60).round();
-          final paceStr = '$paceMin นาที ${paceSec.toString().padLeft(2, '0')} วินาที ต่อกิโลเมตร';
-          TtsService.instance.announceWorkoutProgress(
-            distanceKm: _distanceKm,
-            secondsElapsed: _secondsElapsed,
-            paceText: paceStr,
-          );
-        }
-      }
-    } else {
-      _lastPosition = Position(
-        longitude: longitude,
-        latitude: latitude,
-        timestamp: newTime,
-        accuracy: accuracy,
-        altitude: 0.0,
-        altitudeAccuracy: 0.0,
-        heading: 0.0,
-        headingAccuracy: 0.0,
-        speed: speedMs,
-        speedAccuracy: 0.0,
-      );
-      _routePoints.add(LatLng(latitude, longitude));
-      _safeNotifyListeners();
-    }
-  }
-
-  void pauseWorkout() {
-    if (_workoutStartTime != null) {
-      _accumulatedSeconds += DateTime.now().difference(_workoutStartTime!).inSeconds;
-      _workoutStartTime = null;
-    }
-    _timer?.cancel();
-    _positionStreamSub?.cancel();
-    LocationBackgroundService.instance.stopTracking();
-    _status = WorkoutState.paused;
-    _safeNotifyListeners();
-  }
-
-  void resumeWorkout() {
-    startWorkout();
-  }
-
-  /// บันทึกกิจกรรมลงฐานข้อมูลตาราง TbWorkouts (SQLite + Remote Server)
-  Future<bool> saveWorkout() async {
-    _timer?.cancel();
-    _positionStreamSub?.cancel();
-    LocationBackgroundService.instance.stopTracking();
-
-    final savedDuration = _secondsElapsed;
-    final savedDistance = double.parse(_distanceKm.toStringAsFixed(2));
-    final savedCalories = double.parse(_caloriesBurned.toStringAsFixed(1));
-
-    // แปลงพิกัด GPS เส้นทางทั้งหมดเป็น JSON String
-    final routePointsJson = jsonEncode(
-      _routePoints.map((p) => {'lat': p.latitude, 'lng': p.longitude}).toList(),
-    );
-
-    if (savedDuration >= 1 && _userId > 0) {
-      // 1. บันทึกลง SQLite (isSynced = 0)
-      await AppDatabase.instance.insertWorkout(
-        userId: _userId,
-        type: _selectedCategory.title,
-        distanceKm: savedDistance,
-        durationSeconds: savedDuration,
-        caloriesBurned: savedCalories,
-        routePoints: routePointsJson,
-      );
-
-      // 🏆 อัปเดตและปลดล็อกเหรียญรางวัล (TbBadges & TbUserBadges)
-      try {
-        final totalWorkouts = await AppDatabase.instance.getWorkoutCount(userId: _userId);
-        if (totalWorkouts >= 1) {
-          await HealthApiService.unlockBadgeRemote(userId: _userId, badgeName: 'ผู้เริ่มต้นก้าวแรก');
-        }
-        final workouts = await AppDatabase.instance.getWorkouts(userId: _userId);
-        final cumulativeRunningDistance = workouts.fold<double>(0.0, (total, workout) {
-          final type = workout['sType']?.toString().toLowerCase() ?? '';
-          if (!type.contains('วิ่ง') && !type.contains('running')) return total;
-          return total + ((workout['nDistance'] as num?)?.toDouble() ?? 0.0);
-        });
-        final cumulativeCalories = workouts.fold<double>(0.0, (total, workout) =>
-            total + ((workout['nCaloriesBurned'] as num?)?.toDouble() ?? 0.0));
-        if (cumulativeRunningDistance >= 5.0) {
-          await HealthApiService.unlockBadgeRemote(userId: _userId, badgeName: 'วิ่งสะสม 5 กิโลเมตร');
-        }
-        if (cumulativeCalories >= 500.0) {
-          await HealthApiService.unlockBadgeRemote(userId: _userId, badgeName: 'นักเบิร์นไฟแรง');
-        }
-      } catch (_) {}
-
-      // แจ้งเตือน SyncService ให้เริ่มเช็คและส่งข้อมูลขึ้น Cloud ทันทีถ้ามีเน็ต
-      unawaited(SyncService.instance.syncPendingData());
-    }
-
-    returnToCategorySelection();
-    return true;
-  }
-
-  /// ละทิ้งกิจกรรม
-  void discardWorkout() {
-    _timer?.cancel();
-    _positionStreamSub?.cancel();
-    LocationBackgroundService.instance.stopTracking();
-    _lastPosition = null;
-    _routePoints.clear();
-    returnToCategorySelection();
-  }
-
-  String formatTime(int totalSeconds) {
-    final hours = (totalSeconds ~/ 3600).toString().padLeft(2, '0');
-    final minutes = ((totalSeconds % 3600) ~/ 60).toString().padLeft(2, '0');
-    final seconds = (totalSeconds % 60).toString().padLeft(2, '0');
-    return '$hours:$minutes:$seconds';
   }
 }

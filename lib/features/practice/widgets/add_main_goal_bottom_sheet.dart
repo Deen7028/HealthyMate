@@ -1,25 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
-
-class MainGoalTemplate {
-  final String title;
-  final String icon;
-  final String defaultUnit;
-  final String linkedWorkout;
-  final double defaultTarget;
-
-  const MainGoalTemplate({
-    required this.title,
-    required this.icon,
-    required this.defaultUnit,
-    required this.linkedWorkout,
-    required this.defaultTarget,
-  });
-}
+import 'main_goal_template.dart';
+part 'add_main_goal_bottom_sheet_sections.dart';
+part 'add_main_goal_bottom_sheet_actions_ui.dart';
+part 'add_main_goal_bottom_sheet_actions.dart';
 
 class AddMainGoalBottomSheet extends StatefulWidget {
   const AddMainGoalBottomSheet({super.key});
-
   @override
   State<AddMainGoalBottomSheet> createState() => _AddMainGoalBottomSheetState();
 }
@@ -55,14 +42,11 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
       defaultTarget: 3.0,
     ),
   ];
-
   int _selectedTemplateIndex = 0;
   late TextEditingController _targetController;
-
   // Deadline selection: '1_week', '1_month', 'custom'
   String _deadlineType = '1_month';
   DateTime _customDeadlineDate = DateTime.now().add(const Duration(days: 30));
-
   @override
   void initState() {
     super.initState();
@@ -79,88 +63,6 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
     super.dispose();
   }
 
-  void _onSelectTemplate(int index) {
-    setState(() {
-      _selectedTemplateIndex = index;
-      final t = templates[index];
-      _targetController.text = t.defaultTarget == t.defaultTarget.toInt()
-          ? t.defaultTarget.toInt().toString()
-          : t.defaultTarget.toString();
-    });
-  }
-
-  DateTime _getCalculatedDeadline() {
-    final now = DateTime.now();
-    if (_deadlineType == '1_week') {
-      return now.add(const Duration(days: 7));
-    } else if (_deadlineType == '1_month') {
-      return now.add(const Duration(days: 30));
-    } else {
-      return _customDeadlineDate;
-    }
-  }
-
-  Future<void> _pickCustomDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _customDeadlineDate,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365 * 3)),
-      locale: const Locale('th', 'TH'),
-      helpText: 'เลือกวันที่',
-      cancelText: 'ยกเลิก',
-      confirmText: 'ตกลง',
-      fieldHintText: 'วัน/เดือน/ปี',
-      fieldLabelText: 'กรอกวันที่',
-      builder: (context, child) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: isDark ? AppTheme.primaryLightGreen : const Color(0xFF0F9C58),
-              onPrimary: Colors.white,
-              onSurface: isDark ? Colors.white : const Color(0xFF1C2819),
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (picked != null) {
-      setState(() {
-        _deadlineType = 'custom';
-        _customDeadlineDate = picked;
-      });
-    }
-  }
-
-  void _submit() {
-    final targetText = _targetController.text.trim();
-    final targetVal = double.tryParse(targetText) ?? 0.0;
-    if (targetVal <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('กรุณากรอกตัวเลขเป้าหมายที่ถูกต้อง'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-      return;
-    }
-
-    final selectedTemplate = templates[_selectedTemplateIndex];
-    final deadlineDate = _getCalculatedDeadline();
-
-    Navigator.pop(context, {
-      'title': selectedTemplate.title,
-      'icon': selectedTemplate.icon,
-      'unit': selectedTemplate.defaultUnit,
-      'targetValue': targetVal,
-      'linkedWorkout': selectedTemplate.linkedWorkout,
-      'deadlineDate': deadlineDate,
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -170,7 +72,6 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
     final borderColor = AppTheme.getBorderColor(isDark);
     final surfaceBg = AppTheme.getSurfaceColor(isDark);
     final selectedTemplate = templates[_selectedTemplateIndex];
-
     return Container(
       padding: EdgeInsets.only(
         left: 20,
@@ -193,278 +94,36 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF4A584E) : Colors.grey.shade300,
+                  color: isDark
+                      ? const Color(0xFF4A584E)
+                      : Colors.grey.shade300,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
             const SizedBox(height: 16),
-
-            // Header Title
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF23352A) : const Color(0xFFE8F5E9),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    Icons.flag_rounded,
-                    color: isDark ? AppTheme.primaryLightGreen : const Color(0xFF0F9C58),
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'ตั้งเป้าหมายหลัก (Set Main Goal)',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: textPrimary,
-                      ),
-                    ),
-                    Text(
-                      'เป้าหมายระยะยาวพร้อมยอดสะสมและวันสิ้นสุด',
-                      style: TextStyle(fontSize: 12, color: textSecondary),
-                    ),
-                  ],
-                ),
-              ],
+            ..._buildHeader(isDark, textPrimary, textSecondary),
+            ..._buildGoalTypeSection(
+              isDark,
+              surfaceBg,
+              borderColor,
+              textPrimary,
             ),
-            const SizedBox(height: 20),
-
-            // Section 1: Goal Type Selection
-            Text(
-              'ส่วนที่ 1: เลือกประเภทความท้าทาย (Goal Type)',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: isDark ? AppTheme.primaryLightGreen : const Color(0xFF006432),
-              ),
+            ..._buildTargetSection(
+              isDark,
+              surfaceBg,
+              borderColor,
+              textPrimary,
+              textSecondary,
+              selectedTemplate,
             ),
-            const SizedBox(height: 10),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 2.5,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-              ),
-              itemCount: templates.length,
-              itemBuilder: (context, index) {
-                final t = templates[index];
-                final isSelected = index == _selectedTemplateIndex;
-
-                return InkWell(
-                  onTap: () => _onSelectTemplate(index),
-                  borderRadius: BorderRadius.circular(14),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? (isDark ? const Color(0xFF23352A) : const Color(0xFFE8F5E9))
-                          : surfaceBg,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: isSelected
-                            ? (isDark ? AppTheme.primaryLightGreen : const Color(0xFF0F9C58))
-                            : borderColor,
-                        width: isSelected ? 2.0 : 1.0,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Text(t.icon, style: const TextStyle(fontSize: 20)),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            t.title,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: isSelected
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                              color: isSelected
-                                  ? (isDark ? AppTheme.primaryLightGreen : const Color(0xFF006432))
-                                  : textPrimary,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
+            ..._buildDeadlineSection(
+              isDark,
+              surfaceBg,
+              borderColor,
+              textPrimary,
             ),
-            const SizedBox(height: 20),
-
-            // Section 2: Target & Unit
-            Text(
-              'ส่วนที่ 2: กำหนดเส้นชัย (Target & Unit)',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: isDark ? AppTheme.primaryLightGreen : const Color(0xFF006432),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _targetController,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    style: TextStyle(color: textPrimary),
-                    decoration: InputDecoration(
-                      labelText: 'ตัวเลขเป้าหมาย',
-                      labelStyle: TextStyle(color: textSecondary),
-                      hintText: 'เช่น 50',
-                      hintStyle: TextStyle(color: textSecondary.withValues(alpha: 0.6)),
-                      prefixIcon: Icon(
-                        Icons.track_changes,
-                        color: isDark ? AppTheme.primaryLightGreen : const Color(0xFF0F9C58),
-                      ),
-                      filled: true,
-                      fillColor: surfaceBg,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(color: borderColor),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(color: borderColor),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(
-                          color: isDark ? AppTheme.primaryLightGreen : const Color(0xFF0F9C58),
-                          width: 2,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF23352A) : const Color(0xFFE8F5E9),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: (isDark ? AppTheme.primaryLightGreen : const Color(0xFF0F9C58)).withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Text(
-                    selectedTemplate.defaultUnit,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? AppTheme.primaryLightGreen : const Color(0xFF006432),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Section 3: Deadline Selection
-            Text(
-              'ส่วนที่ 3: กำหนดเส้นตาย (Deadline)',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: isDark ? AppTheme.primaryLightGreen : const Color(0xFF006432),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildDeadlineOption(
-                    isDark: isDark,
-                    surfaceBg: surfaceBg,
-                    borderColor: borderColor,
-                    textPrimary: textPrimary,
-                    type: '1_week',
-                    label: '1 สัปดาห์\n(7 วัน)',
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildDeadlineOption(
-                    isDark: isDark,
-                    surfaceBg: surfaceBg,
-                    borderColor: borderColor,
-                    textPrimary: textPrimary,
-                    type: '1_month',
-                    label: '1 เดือน\n(30 วัน)',
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildDeadlineOption(
-                    isDark: isDark,
-                    surfaceBg: surfaceBg,
-                    borderColor: borderColor,
-                    textPrimary: textPrimary,
-                    type: 'custom',
-                    label: _deadlineType == 'custom'
-                        ? '${_customDeadlineDate.day}/${_customDeadlineDate.month}/${_customDeadlineDate.year}'
-                        : 'เลือกวันเอง\n(Custom)',
-                    onTapCustom: _pickCustomDate,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // Save Button
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: _submit,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isDark ? const Color(0xFF2E5327) : const Color(0xFF006432),
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.check_circle, color: Colors.white),
-                    SizedBox(width: 8),
-                    Text(
-                      'ยืนยันการตั้งเป้าหมายหลัก',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            ..._buildSaveButton(isDark),
           ],
         ),
       ),
@@ -481,7 +140,6 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
     VoidCallback? onTapCustom,
   }) {
     final isSelected = _deadlineType == type;
-
     return InkWell(
       onTap: () {
         if (type == 'custom') {
@@ -502,7 +160,9 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected
-                ? (isDark ? AppTheme.primaryLightGreen : const Color(0xFF0F9C58))
+                ? (isDark
+                      ? AppTheme.primaryLightGreen
+                      : const Color(0xFF0F9C58))
                 : borderColor,
             width: isSelected ? 2.0 : 1.0,
           ),
@@ -513,7 +173,9 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
               type == 'custom' ? Icons.calendar_month : Icons.timer_outlined,
               size: 20,
               color: isSelected
-                  ? (isDark ? AppTheme.primaryLightGreen : const Color(0xFF0F9C58))
+                  ? (isDark
+                        ? AppTheme.primaryLightGreen
+                        : const Color(0xFF0F9C58))
                   : (isDark ? const Color(0xFF6B7E72) : Colors.grey),
             ),
             const SizedBox(height: 4),
@@ -524,7 +186,9 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
                 fontSize: 11,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 color: isSelected
-                    ? (isDark ? AppTheme.primaryLightGreen : const Color(0xFF006432))
+                    ? (isDark
+                          ? AppTheme.primaryLightGreen
+                          : const Color(0xFF006432))
                     : textPrimary,
               ),
             ),

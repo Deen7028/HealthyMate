@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/shared/theme/index.dart';
 
+part 'settings_card_action_row.dart';
+
 class SettingsCard extends StatelessWidget {
   final bool isLocationEnabled;
   final String selectedUnit;
@@ -53,11 +55,15 @@ class SettingsCard extends StatelessWidget {
               child: Icon(
                 isDark ? Icons.nightlight_round : Icons.wb_sunny_rounded,
                 key: ValueKey(isDark),
-                color: isDark ? const Color(0xFF8C9EFF) : AppTheme.warningOrange,
+                color: isDark
+                    ? const Color(0xFF8C9EFF)
+                    : AppTheme.warningOrange,
                 size: 20,
               ),
             ),
-            iconBgColor: isDark ? const Color(0xFF1A237E).withValues(alpha: 0.35) : AppTheme.warningOrangeBg,
+            iconBgColor: isDark
+                ? const Color(0xFF1A237E).withValues(alpha: 0.35)
+                : AppTheme.warningOrangeBg,
             title: 'โหมดมืด',
             subtitle: 'Switch between light and dark themes',
             trailing: Switch(
@@ -90,11 +96,17 @@ class SettingsCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: isLocationEnabled ? Theme.of(context).colorScheme.primary : Colors.grey,
+                    color: isLocationEnabled
+                        ? Theme.of(context).colorScheme.primary
+                        : Colors.grey,
                   ),
                 ),
                 const SizedBox(width: 4),
-                const Icon(Icons.chevron_right_rounded, color: AppTheme.textTertiaryDark, size: 20),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppTheme.textTertiaryDark,
+                  size: 20,
+                ),
               ],
             ),
             onTap: onLocationTap,
@@ -114,7 +126,11 @@ class SettingsCard extends StatelessWidget {
             iconColor: AppTheme.infoBlue,
             title: 'หน่วยวัด',
             subtitle: selectedUnit,
-            trailing: const Icon(Icons.chevron_right_rounded, color: AppTheme.textTertiaryDark, size: 20),
+            trailing: const Icon(
+              Icons.chevron_right_rounded,
+              color: AppTheme.textTertiaryDark,
+              size: 20,
+            ),
             onTap: onUnitPickerTap,
           ),
           Divider(
@@ -131,14 +147,19 @@ class SettingsCard extends StatelessWidget {
             iconBgColor: AppTheme.successGreenBg,
             iconColor: AppTheme.successGreen,
             title: 'Google Gemini API Key',
-            subtitle: hasGeminiApiKey ? 'ตั้งค่าแล้ว (พร้อมใช้งาน AI จริง)' : 'ยังไม่ได้ตั้งค่า (กดเพื่อกรอก Key)',
+            subtitle: hasGeminiApiKey
+                ? 'ตั้งค่าแล้ว (พร้อมใช้งาน AI จริง)'
+                : 'ยังไม่ได้ตั้งค่า (กดเพื่อกรอก Key)',
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (hasGeminiApiKey)
                   Container(
                     margin: const EdgeInsets.only(right: 6),
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: AppTheme.successGreenBg,
                       borderRadius: BorderRadius.circular(6),
@@ -152,74 +173,16 @@ class SettingsCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                const Icon(Icons.chevron_right_rounded, color: AppTheme.textTertiaryDark, size: 20),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppTheme.textTertiaryDark,
+                  size: 20,
+                ),
               ],
             ),
             onTap: onGeminiApiKeyTap,
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildActionRow({
-    required bool isDark,
-    IconData? icon,
-    Widget? iconWidget,
-    required Color iconBgColor,
-    Color iconColor = Colors.white,
-    required String title,
-    String? subtitle,
-    required Widget trailing,
-    VoidCallback? onTap,
-  }) {
-    final defaultTitleColor = isDark ? Colors.white : const Color(0xFF1E2822);
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        child: Row(
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: iconBgColor,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: iconWidget ?? Icon(icon, color: iconColor, size: 20),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: defaultTitleColor,
-                    ),
-                  ),
-                  if (subtitle != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFF8C968E),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            trailing,
-          ],
-        ),
       ),
     );
   }

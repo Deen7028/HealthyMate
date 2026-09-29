@@ -61,22 +61,33 @@ extension AppDatabaseWorkoutDao on AppDatabase {
         final rawId = item['nWorkoutId'];
         final workoutId = rawId != null ? int.tryParse(rawId.toString()) : null;
         final rawUserId = item['nUserId'];
-        final responseUserId = rawUserId != null ? int.tryParse(rawUserId.toString()) : null;
+        final responseUserId = rawUserId != null
+            ? int.tryParse(rawUserId.toString())
+            : null;
         if (responseUserId != null && responseUserId != userId) continue;
 
         final rawDuration = item['nDuration'];
-        final duration = rawDuration != null ? int.tryParse(rawDuration.toString()) ?? 0 : 0;
+        final duration = rawDuration != null
+            ? int.tryParse(rawDuration.toString()) ?? 0
+            : 0;
 
         final rawDistance = item['nDistance'];
-        final distance = rawDistance != null ? double.tryParse(rawDistance.toString()) ?? 0.0 : 0.0;
+        final distance = rawDistance != null
+            ? double.tryParse(rawDistance.toString()) ?? 0.0
+            : 0.0;
 
         final rawCalories = item['nCaloriesBurned'];
-        final calories = rawCalories != null ? double.tryParse(rawCalories.toString()) ?? 0.0 : 0.0;
+        final calories = rawCalories != null
+            ? double.tryParse(rawCalories.toString()) ?? 0.0
+            : 0.0;
 
         final type = item['sType']?.toString() ?? 'วิ่ง';
         final routePoints = item['sRoutePoints']?.toString() ?? '';
-        final workoutDate = item['dtWorkoutDate']?.toString() ?? DateTime.now().toIso8601String();
-        final updatedAt = item['dtUpdatedAt']?.toString() ?? DateTime.now().toIso8601String();
+        final workoutDate =
+            item['dtWorkoutDate']?.toString() ??
+            DateTime.now().toIso8601String();
+        final updatedAt =
+            item['dtUpdatedAt']?.toString() ?? DateTime.now().toIso8601String();
 
         final mapToInsert = <String, dynamic>{
           if (workoutId != null && workoutId > 0) 'nWorkoutId': workoutId,

@@ -47,7 +47,7 @@ class AuthService extends ChangeNotifier {
         // ยิง loginRemote ใน Background เพื่อรับ Token ล่าสุดจาก Server (ถ้ามีเน็ต)
         String? token;
         try {
-          final remoteRes = await HealthApiService.loginRemote(
+          final remoteRes = await AuthApiService.loginRemote(
             email: cleanEmail,
             password: password,
           );
@@ -79,7 +79,7 @@ class AuthService extends ChangeNotifier {
 
     // 2. ถ้าใน SQLite ไม่มีผู้ใช้นี้ (เช่น ลงแอปใหม่ ย้ายเครื่อง หรือล้างข้อมูลแอป)
     // ให้ยิงไปตรวจสอบกับ MySQL Server ผ่าน login.php
-    final remoteRes = await HealthApiService.loginRemote(
+    final remoteRes = await AuthApiService.loginRemote(
       email: cleanEmail,
       password: password,
     );

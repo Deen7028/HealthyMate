@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/features/workout/models/workout_models.dart';
-
+part 'workout_top_stats_card_header.dart';
 class WorkoutTopStatsCard extends StatelessWidget {
   final WorkoutCategory category;
   final bool isRunning;
@@ -11,7 +11,6 @@ class WorkoutTopStatsCard extends StatelessWidget {
   final Animation<double> pulseAnimation;
   final VoidCallback? onChangeCategoryTap;
   final bool isCountdownMode;
-
   const WorkoutTopStatsCard({
     super.key,
     required this.category,
@@ -52,82 +51,7 @@ class WorkoutTopStatsCard extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              InkWell(
-                onTap: onChangeCategoryTap,
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: isDarkModeMap
-                        ? const Color(0xFF74B46E).withValues(alpha: 0.25)
-                        : const Color(0xFF2E5327).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        category.icon,
-                        size: 16,
-                        color: isDarkModeMap
-                            ? const Color(0xFF90DB89)
-                            : const Color(0xFF2E5327),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        category.title,
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w700,
-                          color: isDarkModeMap
-                              ? const Color(0xFF90DB89)
-                              : const Color(0xFF2E5327),
-                        ),
-                      ),
-                      if (onChangeCategoryTap != null) ...[
-                        const SizedBox(width: 4),
-                        Icon(
-                          Icons.swap_horiz_rounded,
-                          size: 16,
-                          color: isDarkModeMap
-                              ? const Color(0xFF90DB89)
-                              : const Color(0xFF2E5327),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-              if (isRunning)
-                FadeTransition(
-                  opacity: pulseAnimation,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.redAccent.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: const [
-                        CircleAvatar(radius: 4, backgroundColor: Colors.redAccent),
-                        SizedBox(width: 6),
-                        Text(
-                          'กำลังบันทึก',
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.redAccent,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-            ],
-          ),
+          _buildStatusAndCategoryHeader(isDarkModeMap),
 
           const SizedBox(height: 8),
 
@@ -136,7 +60,9 @@ class WorkoutTopStatsCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: isDarkModeMap ? const Color(0xFFA0ACA0) : const Color(0xFF5A665A),
+              color: isDarkModeMap
+                  ? const Color(0xFFA0ACA0)
+                  : const Color(0xFF5A665A),
               letterSpacing: 0.2,
             ),
           ),
@@ -167,7 +93,9 @@ class WorkoutTopStatsCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: isDarkModeMap ? const Color(0xFFA0ACA0) : const Color(0xFF677366),
+                          color: isDarkModeMap
+                              ? const Color(0xFFA0ACA0)
+                              : const Color(0xFF677366),
                         ),
                       ),
                       TweenAnimationBuilder<double>(
@@ -181,7 +109,9 @@ class WorkoutTopStatsCard extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 26,
                                 fontWeight: FontWeight.w900,
-                                color: isDarkModeMap ? const Color(0xFF90DB89) : const Color(0xFF2E5327),
+                                color: isDarkModeMap
+                                    ? const Color(0xFF90DB89)
+                                    : const Color(0xFF2E5327),
                                 letterSpacing: -0.5,
                               ),
                               children: [
@@ -190,7 +120,9 @@ class WorkoutTopStatsCard extends StatelessWidget {
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
-                                    color: isDarkModeMap ? const Color(0xFFA0ACA0) : const Color(0xFF5A665A),
+                                    color: isDarkModeMap
+                                        ? const Color(0xFFA0ACA0)
+                                        : const Color(0xFF5A665A),
                                   ),
                                 ),
                               ],
@@ -205,7 +137,9 @@ class WorkoutTopStatsCard extends StatelessWidget {
                 Container(
                   height: 36,
                   width: 1,
-                  color: isDarkModeMap ? Colors.white12 : const Color(0xFFE4ECE2),
+                  color: isDarkModeMap
+                      ? Colors.white12
+                      : const Color(0xFFE4ECE2),
                 ),
               ],
 
@@ -217,7 +151,9 @@ class WorkoutTopStatsCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: isDarkModeMap ? const Color(0xFFA0ACA0) : const Color(0xFF677366),
+                        color: isDarkModeMap
+                            ? const Color(0xFFA0ACA0)
+                            : const Color(0xFF677366),
                       ),
                     ),
                     TweenAnimationBuilder<double>(
@@ -231,7 +167,9 @@ class WorkoutTopStatsCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 26,
                               fontWeight: FontWeight.w900,
-                              color: isDarkModeMap ? Colors.white : const Color(0xFF1E281F),
+                              color: isDarkModeMap
+                                  ? Colors.white
+                                  : const Color(0xFF1E281F),
                               letterSpacing: -0.5,
                             ),
                             children: [
@@ -240,7 +178,9 @@ class WorkoutTopStatsCard extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
-                                  color: isDarkModeMap ? const Color(0xFFA0ACA0) : const Color(0xFF5A665A),
+                                  color: isDarkModeMap
+                                      ? const Color(0xFFA0ACA0)
+                                      : const Color(0xFF5A665A),
                                 ),
                               ),
                             ],

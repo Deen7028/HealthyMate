@@ -19,7 +19,7 @@ class ForgotPasswordController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await HealthApiService.sendForgotPasswordOtp(email);
+      final result = await EmailApiService.sendForgotPasswordOtp(email);
       isLoading = false;
 
       if (result['status'] == 'success') {
@@ -85,7 +85,7 @@ class ForgotPasswordController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await HealthApiService.resetPassword(email, newPassword);
+      final result = await EmailApiService.resetPassword(email, newPassword);
       if (result['status'] == 'success') {
         await AppDatabase.instance.updateLocalPassword(email, newPassword);
         isLoading = false;

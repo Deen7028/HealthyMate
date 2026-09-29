@@ -72,7 +72,7 @@ extension AppDatabaseHealthRecordDao on AppDatabase {
   Future<void> deleteHealthRecord(int recordId) async {
     if (kIsWeb) {
       _webHealthRecords.removeWhere((item) => item['nRecordId'] == recordId);
-      await HealthApiService.deleteHealthRecordRemote(recordId);
+      await HealthRecordApiService.deleteHealthRecordRemote(recordId);
       return;
     }
 
@@ -97,10 +97,14 @@ extension AppDatabaseHealthRecordDao on AppDatabase {
           'dtQueuedAt': DateTime.now().toIso8601String(),
         });
       }
-      await txn.delete(AppDatabase.tableHealthRecords, where: 'nRecordId = ?', whereArgs: [recordId]);
+      await txn.delete(
+        AppDatabase.tableHealthRecords,
+        where: 'nRecordId = ?',
+        whereArgs: [recordId],
+      );
     });
     if (wasSynced && userId > 0) {
-      if (await HealthApiService.deleteHealthRecordRemote(recordId)) {
+      if (await HealthRecordApiService.deleteHealthRecordRemote(recordId)) {
         final pending = await db.query(
           AppDatabase.tablePendingDeletions,
           where: 'nUserId = ? AND sEntity = ? AND nRemoteId = ?',
@@ -108,8 +112,11 @@ extension AppDatabaseHealthRecordDao on AppDatabase {
           limit: 1,
         );
         if (pending.isNotEmpty) {
-          await db.delete(AppDatabase.tablePendingDeletions,
-              where: 'nDeletionId = ?', whereArgs: [pending.first['nDeletionId']]);
+          await db.delete(
+            AppDatabase.tablePendingDeletions,
+            where: 'nDeletionId = ?',
+            whereArgs: [pending.first['nDeletionId']],
+          );
         }
       } else {
         unawaited(SyncService.instance.updatePendingCount());
