@@ -126,7 +126,7 @@ class TbUser {
     }
 
     return TbUser(
-      nUserId: _toInt(map['nUserId'], 1),
+      nUserId: _toInt(map['nUserId'], 0),
       sEmail: map['sEmail']?.toString() ?? 'user@healthymate.app',
       sPasswordHash: map['sPasswordHash']?.toString() ?? '',
       sFirstName: firstName.isNotEmpty ? firstName : 'ผู้ใช้งาน',

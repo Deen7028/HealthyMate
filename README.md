@@ -22,3 +22,20 @@
 * **Mobile Framework:** Flutter (Dart)
 * **Database:** MySQL
 * **Architecture:** Feature-First / Domain-Driven Structure
+
+## Local configuration
+
+Copy `.env.example` to `.env`, then fill in the API values:
+
+```sh
+cp -n .env.example .env
+flutter run
+```
+
+Keep `.env` limited to these client settings. Server credentials such as database
+passwords and SMTP credentials must stay on the server; they are not read by the app.
+The Android and iOS native map setup also reads `GOOGLE_MAPS_API_KEY` from `.env`.
+
+Flutter bundles `.env` into the app, so users can extract its values. Restrict the
+Maps key to this app and its required APIs. `APP_KEY` must not be the API's only
+authorization control; enforce user ownership with bearer tokens on the server.

@@ -144,7 +144,8 @@ class ProfileController extends ChangeNotifier {
   Future<void> saveImageLocally(String tempPath) async {
     try {
       final docDir = await getApplicationDocumentsDirectory();
-      final userId = currentUser?.nUserId ?? 1;
+      final userId = currentUser?.nUserId;
+      if (userId == null) return;
       final rawExt = tempPath.contains('.') ? tempPath.split('.').last.toLowerCase() : 'jpg';
       final fileExtension = (rawExt.length <= 4 && !rawExt.contains('/')) ? rawExt : 'jpg';
       final timestamp = DateTime.now().millisecondsSinceEpoch;
@@ -234,7 +235,8 @@ class ProfileController extends ChangeNotifier {
   Future<void> saveUserUnitPreference(String unit) async {
     selectedUnit = unit;
     notifyListeners();
-    final uId = currentUser?.nUserId ?? 1;
+    final uId = currentUser?.nUserId;
+    if (uId == null) return;
     await AppDatabase.instance.saveUserUnitPreference(
       uId,
       unit,
@@ -242,7 +244,6 @@ class ProfileController extends ChangeNotifier {
     final isSynced = await HealthApiService.saveUserPreferencesRemote(
       userId: uId,
       unitLabel: unit,
-      geminiApiKey: geminiApiKey,
     );
     if (!isSynced) {
       await SyncService.instance.updatePendingCount();
@@ -284,7 +285,8 @@ class ProfileController extends ChangeNotifier {
 
   /// เพิ่มอุปกรณ์ที่เชื่อมต่อ
   Future<void> addConnectedDevice(String providerName) async {
-    final userId = currentUser?.nUserId ?? 1;
+    final userId = currentUser?.nUserId;
+    if (userId == null) return;
     await AppDatabase.instance.insertConnectedDevice(
       userId: userId,
       providerName: providerName,
@@ -296,7 +298,8 @@ class ProfileController extends ChangeNotifier {
 
   /// สลับสถานะเปิด/ปิดอุปกรณ์ที่เชื่อมต่อ
   Future<void> toggleConnectedDeviceStatus(int integrationId, bool isActive) async {
-    final userId = currentUser?.nUserId ?? 1;
+    final userId = currentUser?.nUserId;
+    if (userId == null) return;
     await AppDatabase.instance.updateConnectedDeviceStatus(
       integrationId: integrationId,
       isSynced: isActive,
@@ -307,7 +310,8 @@ class ProfileController extends ChangeNotifier {
 
   /// ลบอุปกรณ์ที่เชื่อมต่อ
   Future<void> deleteConnectedDevice(int integrationId) async {
-    final userId = currentUser?.nUserId ?? 1;
+    final userId = currentUser?.nUserId;
+    if (userId == null) return;
     await AppDatabase.instance.deleteConnectedDevice(integrationId);
     connectedDevices = await AppDatabase.instance.getConnectedDevices(userId);
     notifyListeners();
@@ -315,17 +319,29 @@ class ProfileController extends ChangeNotifier {
 
   /// ส่งออก PDF
   Future<String?> exportPdf() async {
-    final userId = currentUser?.nUserId ?? 1;
+    final userId = currentUser?.nUserId;
+    if (userId == null) return null;
     return await DataExportService.instance.exportDataToPdf(userId);
   }
 
   /// ลบบัญชีผู้ใช้
-  Future<void> deleteAccount() async {
+  Future<bool> deleteAccount() async {
     final user = currentUser;
-    if (user == null) return;
+    if (user == null) return false;
 
     isLoading = true;
     notifyListeners();
+
+    // Remote deletion must succeed before destroying the only local copy.
+    final result = await HealthApiService.deleteAccount(
+      userId: user.nUserId,
+      email: user.sEmail,
+    );
+    if (result['status'] != 'success') {
+      isLoading = false;
+      notifyListeners();
+      return false;
+    }
 
     // 0. ลบไฟล์รูปภาพโปรไฟล์จริงในเครื่อง (ถ้ามี)
     final profilePath = user.sProfileImagePath;
@@ -340,9 +356,6 @@ class ProfileController extends ChangeNotifier {
       }
     }
 
-    // 1. เรียก API ทำลายข้อมูลบน Server
-    await HealthApiService.deleteAccount(userId: user.nUserId, email: user.sEmail);
-
     // 2. ทำลายข้อมูล SQLite ในเครื่อง
     await AppDatabase.instance.deleteUserAccount(user.nUserId);
 
@@ -352,6 +365,7 @@ class ProfileController extends ChangeNotifier {
     } catch (_) {}
 
     await AuthService.instance.logout();
+    return true;
   }
 
   /// ออกจากระบบ
@@ -364,24 +378,15 @@ class ProfileController extends ChangeNotifier {
     await AuthService.instance.logout();
   }
 
-  /// อัปเดต Gemini API Key พร้อมบันทึกลง SQLite และซิงค์ขึ้น Server
+  /// เก็บ Gemini API Key ไว้ใน secure storage บนอุปกรณ์เท่านั้น
   Future<void> updateGeminiApiKey(String key) async {
     geminiApiKey = key;
     notifyListeners();
 
-    final uId = currentUser?.nUserId ?? 1;
+    final uId = currentUser?.nUserId;
+    if (uId == null) return;
 
-    // 1. บันทึกลง SQLite
+    // 1. บันทึกลง secure storage
     await AppDatabase.instance.saveGeminiApiKey(uId, key);
-
-    // 2. ซิงค์ขึ้น Remote Server
-    final isSynced = await HealthApiService.saveUserPreferencesRemote(
-      userId: uId,
-      unitLabel: selectedUnit,
-      geminiApiKey: key,
-    );
-    if (!isSynced) {
-      await SyncService.instance.updatePendingCount();
-    }
   }
 }

@@ -89,6 +89,7 @@ class AuthService extends ChangeNotifier {
       // 3. เซิร์ฟเวอร์ยืนยันว่าถูกต้อง -> ทำการ Hydrate บันทึก User ลง SQLite ในเครื่องทันที
       final hydratedUser = await AppDatabase.instance.upsertUserFromServer(
         Map<String, dynamic>.from(remoteRes['user'] as Map),
+        authenticatedPassword: password,
       );
 
       _isLoggedIn = true;

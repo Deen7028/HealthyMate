@@ -1,6 +1,7 @@
 // ignore_for_file: non_const_argument_for_const_parameter
 import 'package:flutter/material.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
+import 'package:healthymate/features/dashboard/utils/dashboard_ui_helpers.dart';
 import '../models/routine_item.dart';
 import 'routine_step_category.dart';
 import 'routine_step_goal.dart';
@@ -127,7 +128,7 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
       final iconCode =
           (r['iconData'] as num?)?.toInt() ?? (r['nIconData'] as num?)?.toInt();
       if (iconCode != null && iconCode > 0) {
-        _selectedIcon = IconData(iconCode, fontFamily: 'MaterialIcons');
+        _selectedIcon = DashboardUiHelpers.iconFromCodePoint(iconCode, fallback: _selectedCategory.icon);
       } else {
         _selectedIcon = _selectedCategory.icon;
       }

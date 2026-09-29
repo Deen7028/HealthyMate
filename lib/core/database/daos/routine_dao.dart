@@ -65,14 +65,16 @@ extension AppDatabaseRoutineDao on AppDatabase {
     final db = await database;
     if (db == null) return [];
     try {
-      // 🛡️ ซ่อมแซม nUserId ของกิจวัตรในเครื่องหากพบว่าผูกกับ ID เก่า (เช่น 1 หรือ 0)
+      // Migrate legacy owner IDs only when this device has exactly one account.
       if (userId > 0) {
-        await db.rawUpdate(
-          'UPDATE ${AppDatabase.tableRoutines} SET nUserId = ? WHERE nUserId != ? AND (nUserId = 1 OR nUserId = 0)',
-          [userId, userId],
-        );
-        // กวาดล้างรายการที่ชื่อซ้ำกันออกไป
-        await deduplicateRoutines(userId: userId);
+        final users = await db.query(AppDatabase.tableUsers, columns: ['nUserId']);
+        if (users.length == 1 && (users.first['nUserId'] as num?)?.toInt() == userId) {
+          await db.rawUpdate(
+            'UPDATE ${AppDatabase.tableRoutines} SET nUserId = ? WHERE nUserId IN (0, 1) AND nUserId != ?',
+            [userId, userId],
+          );
+          await deduplicateRoutines(userId: userId);
+        }
       }
 
       return await db.query(

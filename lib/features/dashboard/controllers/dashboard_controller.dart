@@ -36,9 +36,7 @@ class DashboardController extends ChangeNotifier {
     }
     try {
       final db = AppDatabase.instance;
-      final email = await db.getLoggedInUserEmail();
-      if (email != null && email.isNotEmpty) user = await db.getUserByEmail(email);
-      user ??= await db.getUser(userId: 1);
+      user = await db.getCurrentUser();
 
       if (user == null) {
         isLoading = false;
@@ -82,24 +80,13 @@ class DashboardController extends ChangeNotifier {
       List<Map<String, dynamic>> nutritionToday = [];
 
       if (dbInstance != null) {
-        // ค้นหาจาก TbNutritionLogs ที่บันทึกผ่าน AI Food Scanner
-        // ตรวจสอบทั้ง userId ปัจจุบัน และ default userId (1) เพื่อป้องกันกรณี user ID ไม่ตรงกัน
+        // Nutrition logs are private to the authenticated user.
         nutritionToday = await dbInstance.query(
           AppDatabase.tableNutritionLogs,
-          where: '(nUserId = ? OR nUserId = 1) AND dtLoggedAt LIKE ?',
+          where: 'nUserId = ? AND dtLoggedAt LIKE ?',
           whereArgs: [userId, '$todayStr%'],
           orderBy: 'nNutritionId DESC',
         );
-
-        // หากยังไม่พบ ให้ดึงจากบันทึกอาหารทั้งหมดในวันนี้บนอุปกรณ์
-        if (nutritionToday.isEmpty) {
-          nutritionToday = await dbInstance.query(
-            AppDatabase.tableNutritionLogs,
-            where: 'dtLoggedAt LIKE ?',
-            whereArgs: ['$todayStr%'],
-            orderBy: 'nNutritionId DESC',
-          );
-        }
       } else {
         nutritionToday = await db.getNutritionLogsToday(userId);
       }

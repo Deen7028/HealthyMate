@@ -2,6 +2,28 @@
 import 'package:flutter/material.dart';
 
 class DashboardUiHelpers {
+  static const Map<int, IconData> knownIcons = {
+    0xe6de: Icons.water_drop_rounded,
+    0xe1e1: Icons.directions_walk_rounded,
+    0xf0153: Icons.self_improvement_rounded,
+    0xf322: Icons.restaurant_rounded,
+    0xe25b: Icons.favorite_rounded,
+    0xe28d: Icons.fitness_center_rounded,
+    0xf592: Icons.bedtime_rounded,
+    0xe0ef: Icons.book_rounded,
+    0xe1e0: Icons.directions_run_rounded,
+    0xf0027: Icons.nature_people_rounded,
+    0xe4c3: Icons.pool_rounded,
+    0xe5f9: Icons.star_rounded,
+    0xe08f: Icons.flag_rounded,
+    0xe072: Icons.alarm_rounded,
+    0xe3d9: Icons.medical_services_rounded,
+  };
+
+  static IconData iconFromCodePoint(int codePoint, {IconData fallback = Icons.star_rounded}) {
+    return knownIcons[codePoint] ?? fallback;
+  }
+
   static Color getRoutineColor(Map<String, dynamic> routine, int index) {
     if (routine['color'] != null) return Color((routine['color'] as num).toInt());
     final title = routine['sTitle']?.toString().toLowerCase() ?? '';
@@ -15,7 +37,11 @@ class DashboardUiHelpers {
   }
 
   static IconData getRoutineIcon(Map<String, dynamic> routine, int index) {
-    if (routine['iconData'] != null) return IconData((routine['iconData'] as num).toInt(), fontFamily: 'MaterialIcons');
+    if (routine['iconData'] != null) {
+      final codePoint = (routine['iconData'] as num).toInt();
+      final icon = knownIcons[codePoint];
+      if (icon != null) return icon;
+    }
     final title = routine['sTitle']?.toString().toLowerCase() ?? '';
     if (title.contains('น้ำ') || title.contains('drink') || title.contains('water')) return Icons.water_drop_rounded;
     if (title.contains('วิ่ง') || title.contains('เดิน') || title.contains('work')) return Icons.directions_walk_rounded;

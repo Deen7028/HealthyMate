@@ -64,7 +64,7 @@ class DataExportService {
                     w['nDistance']?.toString() ?? '0',
                     '$durMin นาที',
                     w['nCaloriesBurned']?.toString() ?? '0',
-                    (w['dtWorkoutDate']?.toString() ?? '').substring(0, 10),
+                    _dateOnly(w['dtWorkoutDate']),
                   ];
                 }).toList(),
               ),
@@ -104,5 +104,11 @@ class DataExportService {
       debugPrint('Error exporting PDF: $e');
       return null;
     }
+  }
+
+  String _dateOnly(dynamic value) {
+    final raw = value?.toString() ?? '';
+    if (raw.length >= 10) return raw.substring(0, 10);
+    return raw.isEmpty ? 'ไม่ระบุ' : raw;
   }
 }

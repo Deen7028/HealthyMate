@@ -156,6 +156,13 @@ class SyncService extends ChangeNotifier {
       return;
     }
 
+    final activeUser = await AppDatabase.instance.getCurrentUser();
+    if (activeUser == null) {
+      await updatePendingCount();
+      return;
+    }
+    final currentUserId = activeUser.nUserId;
+
     _isSyncing = true;
     _status = SyncStatus.syncing;
     _statusMessage = 'กำลังซิงค์ข้อมูลกับเซิร์ฟเวอร์...';
@@ -164,18 +171,8 @@ class SyncService extends ChangeNotifier {
     int syncedTotal = 0;
 
     try {
-      // ดึงข้อมูล User ที่ล็อกอินอยู่ในปัจจุบัน
-      final db = AppDatabase.instance;
-      final loggedInEmail = await db.getLoggedInUserEmail();
-      TbUser? activeUser;
-      if (loggedInEmail != null && loggedInEmail.isNotEmpty) {
-        activeUser = await db.getUserByEmail(loggedInEmail);
-      }
-      activeUser ??= await db.getUser();
-      final currentUserId = activeUser?.nUserId ?? 1;
-
       // 1. ซิงค์ตาราง TbHealthRecords
-      final unsyncedHealthRecords = await AppDatabase.instance.getUnsyncedHealthRecords();
+      final unsyncedHealthRecords = await AppDatabase.instance.getUnsyncedHealthRecords(currentUserId);
       for (final map in unsyncedHealthRecords) {
         try {
           final record = TbHealthRecord.fromMap(map);
@@ -194,7 +191,7 @@ class SyncService extends ChangeNotifier {
       }
 
       // 2. ซิงค์ตาราง TbUsers (โปรไฟล์หรือผู้ใช้ใหม่ที่สมัครตอนออฟไลน์)
-      final unsyncedUsers = await AppDatabase.instance.getUnsyncedUsers();
+      final unsyncedUsers = await AppDatabase.instance.getUnsyncedUsers(currentUserId);
       for (final map in unsyncedUsers) {
         try {
           var user = TbUser.fromMap(map);
@@ -224,7 +221,7 @@ class SyncService extends ChangeNotifier {
       }
 
       // 3. ซิงค์ตาราง TbWorkouts
-      final unsyncedWorkouts = await AppDatabase.instance.getUnsyncedWorkouts();
+      final unsyncedWorkouts = await AppDatabase.instance.getUnsyncedWorkouts(currentUserId);
       for (final workout in unsyncedWorkouts) {
         try {
           final workoutId = (workout['nWorkoutId'] as num?)?.toInt() ?? 0;
@@ -240,7 +237,7 @@ class SyncService extends ChangeNotifier {
       }
 
       // 4. ซิงค์ตาราง TbNutritionLogs
-      final unsyncedNutrition = await AppDatabase.instance.getUnsyncedNutritionLogs();
+      final unsyncedNutrition = await AppDatabase.instance.getUnsyncedNutritionLogs(currentUserId);
       for (final nutrition in unsyncedNutrition) {
         try {
           final nutritionId = (nutrition['nNutritionId'] as num?)?.toInt() ?? 0;
@@ -266,6 +263,25 @@ class SyncService extends ChangeNotifier {
           }
         } catch (e) {
           debugPrint('SyncService: Error syncing nutrition log: $e');
+        }
+      }
+
+      // Retry queued deletions after reconnecting; local deletion is already complete.
+      final pendingDeletions = await AppDatabase.instance.getPendingDeletions(currentUserId);
+      for (final deletion in pendingDeletions) {
+        final entity = deletion['sEntity']?.toString();
+        final remoteId = (deletion['nRemoteId'] as num?)?.toInt() ?? 0;
+        final deletionId = (deletion['nDeletionId'] as num?)?.toInt() ?? 0;
+        if (remoteId <= 0 || deletionId <= 0) continue;
+        var success = false;
+        if (entity == 'health_record') {
+          success = await HealthApiService.deleteHealthRecordRemote(remoteId);
+        } else if (entity == 'nutrition_log') {
+          success = await HealthApiService.deleteNutritionLogRemote(remoteId);
+        }
+        if (success) {
+          await AppDatabase.instance.completePendingDeletion(deletionId);
+          syncedTotal++;
         }
       }
 
@@ -368,11 +384,9 @@ class SyncService extends ChangeNotifier {
 
         // 7. ซิงค์ตาราง TbUserPreferences
         final unitPref = await AppDatabase.instance.getUserUnitPreference(currentUserId);
-        final apiKey = await AppDatabase.instance.getGeminiApiKey(currentUserId);
         final okPref = await HealthApiService.saveUserPreferencesRemote(
           userId: currentUserId,
           unitLabel: unitPref,
-          geminiApiKey: apiKey,
         );
         if (okPref) {
           debugPrint('☁️ [SYNC SUCCESS] [TbUserPreferences] ➜ ซิงค์การตั้งค่าหน่วยวัด ($unitPref) ขึ้น Server สำเร็จ');
@@ -438,7 +452,7 @@ class SyncService extends ChangeNotifier {
 
       // 4. เขียนลง SQLite ด้วยเทคนิค UPSERT (INSERT OR REPLACE)
       if (serverWorkouts.isNotEmpty) {
-        pulledCount = await AppDatabase.instance.upsertWorkoutsFromServer(serverWorkouts);
+        pulledCount = await AppDatabase.instance.upsertWorkoutsFromServer(userId, serverWorkouts);
         debugPrint('SyncService: Successfully hydrated $pulledCount workouts into SQLite');
       }
 

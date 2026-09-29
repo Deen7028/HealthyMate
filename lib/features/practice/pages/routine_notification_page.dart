@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/services/routine_state_notifier.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
+import 'package:healthymate/features/dashboard/utils/dashboard_ui_helpers.dart';
 import '../models/routine_item.dart';
 import '../widgets/index.dart';
 import '../controllers/routine_controller.dart';
@@ -626,8 +627,7 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     IconData icon = _getRoutineIcon(index);
     if (routine['iconData'] != null) {
       final int codePoint = (routine['iconData'] as num).toInt();
-      // ignore: non_const_argument_for_const_parameter
-      icon = IconData(codePoint, fontFamily: 'MaterialIcons');
+      icon = DashboardUiHelpers.iconFromCodePoint(codePoint, fallback: icon);
     }
 
     final targetVal = (routine['targetValue'] as num?)?.toDouble() ?? 

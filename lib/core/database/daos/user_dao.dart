@@ -1,8 +1,14 @@
 part of '../app_database.dart';
 
 extension AppDatabaseUserDao on AppDatabase {
+  Future<TbUser?> getCurrentUser() async {
+    final email = await getLoggedInUserEmail();
+    if (email == null || email.trim().isEmpty) return null;
+    return getUserByEmail(email);
+  }
+
   /// ดึงข้อมูลผู้ใช้จาก `TbUsers` ตาม nUserId
-  Future<TbUser?> getUser({int userId = 1}) async {
+  Future<TbUser?> getUser({required int userId}) async {
     if (kIsWeb) {
       final map = _webUsers.cast<Map<String, dynamic>?>().firstWhere(
         (item) => item?['nUserId'] == userId,
@@ -102,7 +108,7 @@ extension AppDatabaseUserDao on AppDatabase {
     final cleanEmail = email.trim();
     final cleanFirstName = firstName.trim();
     final cleanLastName = lastName.trim();
-    final hashedPassword = AppDatabase.hashPassword(password, salt: cleanEmail);
+    final hashedPassword = AppDatabase.hashPassword(password);
 
     if (kIsWeb) {
       final id = _webUsers.length + 1;
@@ -183,8 +189,17 @@ extension AppDatabaseUserDao on AppDatabase {
   }
 
   /// บันทึกหรืออัปเดตข้อมูลผู้ใช้ที่ได้จาก Server (User Hydration) ลงใน `TbUsers` ของ SQLite
-  Future<TbUser> upsertUserFromServer(Map<String, dynamic> userMap) async {
-    final user = TbUser.fromMap(userMap);
+  Future<TbUser> upsertUserFromServer(
+    Map<String, dynamic> userMap, {
+    String? authenticatedPassword,
+  }) async {
+    final parsed = TbUser.fromMap(userMap);
+    if (parsed.nUserId <= 0 || parsed.sEmail.trim().isEmpty) {
+      throw const FormatException('Server returned an invalid user record');
+    }
+    final user = authenticatedPassword == null
+        ? parsed
+        : parsed.copyWith(sPasswordHash: AppDatabase.hashPassword(authenticatedPassword));
     if (kIsWeb) {
       final index = _webUsers.indexWhere((u) => u['nUserId'] == user.nUserId);
       if (index >= 0) {
@@ -232,6 +247,11 @@ extension AppDatabaseUserDao on AppDatabase {
       return;
     }
 
+    try {
+      await AppDatabase._secureStorage.delete(key: 'gemini_api_key_$userId');
+      await AppDatabase._secureStorage.delete(key: 'auth_token');
+    } catch (_) {}
+
     final db = await database;
     if (db == null) return;
 
@@ -242,6 +262,7 @@ extension AppDatabaseUserDao on AppDatabase {
       await txn.delete(AppDatabase.tableNutritionLogs, where: 'nUserId = ?', whereArgs: [userId]);
       await txn.delete(AppDatabase.tableWorkouts, where: 'nUserId = ?', whereArgs: [userId]);
       await txn.delete(AppDatabase.tableHealthIntegrations, where: 'nUserId = ?', whereArgs: [userId]);
+      await txn.delete(AppDatabase.tablePendingDeletions, where: 'nUserId = ?', whereArgs: [userId]);
       await txn.delete(AppDatabase.tableUserBadges, where: 'nUserId = ?', whereArgs: [userId]);
       await txn.delete('TbGoals', where: 'nUserId = ?', whereArgs: [userId]);
       await txn.delete('TbUserPreferences', where: 'nUserId = ?', whereArgs: [userId]);
@@ -272,7 +293,7 @@ extension AppDatabaseUserDao on AppDatabase {
         'nSessionId': 1,
         'isLoggedIn': isLoggedIn,
         'sEmail': email ?? '',
-        'sAuthToken': token ?? _webSession?['sAuthToken'] ?? '',
+        'sAuthToken': isLoggedIn ? (token ?? '') : '',
         'dtUpdatedAt': DateTime.now().toIso8601String(),
       };
       return;
@@ -280,21 +301,23 @@ extension AppDatabaseUserDao on AppDatabase {
 
     final db = await database;
     if (db == null) return;
+
+    try {
+      if (isLoggedIn && token != null && token.isNotEmpty) {
+        await AppDatabase._secureStorage.write(key: 'auth_token', value: token);
+      } else {
+        // Never carry a token across local/offline login or logout.
+        await AppDatabase._secureStorage.delete(key: 'auth_token');
+      }
+    } catch (_) {}
     
     final Map<String, dynamic> data = {
       'nSessionId': 1,
       'isLoggedIn': isLoggedIn ? 1 : 0,
       'sEmail': email ?? '',
+      'sAuthToken': '',
       'dtUpdatedAt': DateTime.now().toIso8601String(),
     };
-    if (token != null) {
-      data['sAuthToken'] = token;
-    } else {
-      final existing = await getAuthToken();
-      if (existing != null && existing.isNotEmpty) {
-        data['sAuthToken'] = existing;
-      }
-    }
 
     await db.insert(AppDatabase.tableSession, data, conflictAlgorithm: ConflictAlgorithm.replace);
   }
@@ -304,13 +327,28 @@ extension AppDatabaseUserDao on AppDatabase {
     if (kIsWeb) {
       return _webSession?['sAuthToken']?.toString();
     }
+    String? secureToken;
+    try {
+      secureToken = await AppDatabase._secureStorage.read(key: 'auth_token');
+    } catch (_) {
+      return null;
+    }
+    if (secureToken != null && secureToken.isNotEmpty) return secureToken;
     final db = await database;
     if (db == null) return null;
     try {
       final maps = await db.query(AppDatabase.tableSession, where: 'nSessionId = 1');
       if (maps.isNotEmpty) {
         final token = maps.first['sAuthToken']?.toString();
-        if (token != null && token.isNotEmpty) return token;
+        if (token != null && token.isNotEmpty) {
+          await AppDatabase._secureStorage.write(key: 'auth_token', value: token);
+          await db.update(
+            AppDatabase.tableSession,
+            {'sAuthToken': ''},
+            where: 'nSessionId = 1',
+          );
+          return token;
+        }
       }
     } catch (_) {}
     return null;
@@ -319,7 +357,6 @@ extension AppDatabaseUserDao on AppDatabase {
   /// ตรวจสอบการเข้าสู่ระบบ
   Future<bool> authenticateUser(String email, String password) async {
     final cleanEmail = email.trim().toLowerCase();
-    final saltedHash = AppDatabase.hashPassword(password, salt: cleanEmail);
     final legacyHash = AppDatabase.hashPasswordLegacy(password);
 
     if (kIsWeb) {
@@ -330,7 +367,11 @@ extension AppDatabaseUserDao on AppDatabase {
       );
       if (user.isNotEmpty && user['sPasswordHash'] != null) {
         final stored = user['sPasswordHash'].toString();
-        return stored == saltedHash || stored == legacyHash || stored == password;
+        if (AppDatabase.verifyPassword(password, stored)) return true;
+        final legacyMatched = stored == AppDatabase.hashPasswordLegacySalted(password, cleanEmail) ||
+            stored == legacyHash || stored == password;
+        if (legacyMatched) user['sPasswordHash'] = AppDatabase.hashPassword(password);
+        return legacyMatched;
       }
       return false;
     }
@@ -346,7 +387,18 @@ extension AppDatabaseUserDao on AppDatabase {
     if (maps.isNotEmpty) {
       final storedHash = maps.first['sPasswordHash']?.toString();
       if (storedHash != null && storedHash.isNotEmpty) {
-        return storedHash == saltedHash || storedHash == legacyHash || storedHash == password;
+        if (AppDatabase.verifyPassword(password, storedHash)) return true;
+        final legacyMatched = storedHash == AppDatabase.hashPasswordLegacySalted(password, cleanEmail) ||
+            storedHash == legacyHash || storedHash == password;
+        if (legacyMatched) {
+          await db.update(
+            AppDatabase.tableUsers,
+            {'sPasswordHash': AppDatabase.hashPassword(password)},
+            where: 'LOWER(sEmail) = ?',
+            whereArgs: [cleanEmail],
+          );
+        }
+        return legacyMatched;
       }
     }
     return false;
@@ -354,7 +406,7 @@ extension AppDatabaseUserDao on AppDatabase {
 
   Future<void> updateLocalPassword(String email, String newPassword) async {
     final cleanEmail = email.trim().toLowerCase();
-    final hashedPassword = AppDatabase.hashPassword(newPassword, salt: cleanEmail);
+    final hashedPassword = AppDatabase.hashPassword(newPassword);
 
     if (kIsWeb) {
       final idx = _webUsers.indexWhere((u) => u['sEmail']?.toString().toLowerCase() == cleanEmail);

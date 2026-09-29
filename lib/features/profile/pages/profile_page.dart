@@ -376,7 +376,12 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
     );
 
     if (confirmed == true && mounted) {
-      await _controller.deleteAccount();
+      final deleted = await _controller.deleteAccount();
+      if (!deleted && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('ลบบัญชีบนเซิร์ฟเวอร์ไม่สำเร็จ กรุณาลองใหม่')),
+        );
+      }
     }
   }
 
@@ -511,9 +516,10 @@ class _ProfilePageState extends State<ProfilePage> with WidgetsBindingObserver {
                 },
                 onUnitPickerTap: _showUnitPicker,
                 onGeminiApiKeyTap: () {
+                  if (user == null) return;
                   GeminiApiKeyDialog.show(
                     context,
-                    userId: user?.nUserId ?? 1,
+                    userId: user.nUserId,
                     currentKey: _controller.geminiApiKey,
                     onSaved: (newKey) {
                       _controller.updateGeminiApiKey(newKey);

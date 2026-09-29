@@ -147,7 +147,7 @@ class DashboardActionButtons extends StatelessWidget {
                 final remainingText =
                     'เป้าหมาย: 0 / ${targetVal == targetVal.toInt() ? targetVal.toInt() : targetVal.toStringAsFixed(1)} $unit (เหลือ $remainingDays วัน • สิ้นสุด $deadlineStr)';
 
-                final user = await AppDatabase.instance.getUser();
+                final user = await AppDatabase.instance.getCurrentUser();
                 if (user != null) {
                   await AppDatabase.instance.saveUserGoal(
                     userId: user.nUserId,

@@ -1,5 +1,3 @@
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:healthymate/core/config/app_config.dart';
@@ -16,24 +14,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:healthymate/features/login/pages/login_page.dart';
 import 'package:healthymate/main_app.dart';
 
-class MyHttpOverrides extends HttpOverrides {
-  @override
-  HttpClient createHttpClient(SecurityContext? context) {
-    return super.createHttpClient(context)
-      ..badCertificateCallback = (X509Certificate cert, String host, int port) {
-        // ยินยอมให้ข้ามการตรวจ SSL สำหรับ IP เซิร์ฟเวอร์ ม.อ. (172.18.x.x) หรือในโหมด kDebugMode
-        if (kDebugMode ||
-            host == '172.18.111.30' ||
-            host.startsWith('172.18.')) {
-          return true;
-        }
-        return false;
-      };
-  }
-}
-
 void main() async {
-  HttpOverrides.global = MyHttpOverrides();
   WidgetsFlutterBinding.ensureInitialized();
   await AppConfig.init();
   AppDatabase.ensureInitialized();

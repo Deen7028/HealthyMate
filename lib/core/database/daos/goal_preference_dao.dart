@@ -129,6 +129,13 @@ extension AppDatabaseGoalPreferenceDao on AppDatabase {
   }
 
   Future<String> getGeminiApiKey(int userId) async {
+    if (kIsWeb) return '';
+    final storageKey = 'gemini_api_key_$userId';
+    String? secureValue;
+    try {
+      secureValue = await AppDatabase._secureStorage.read(key: storageKey);
+    } catch (_) {}
+    if (secureValue != null && secureValue.isNotEmpty) return secureValue;
     final db = await database;
     if (db == null) return '';
     try {
@@ -139,7 +146,17 @@ extension AppDatabaseGoalPreferenceDao on AppDatabase {
         limit: 1,
       );
       if (maps.isNotEmpty && maps.first['sGeminiApiKey'] != null) {
-        return maps.first['sGeminiApiKey'].toString();
+        final legacyValue = maps.first['sGeminiApiKey'].toString();
+        if (legacyValue.isNotEmpty) {
+          await AppDatabase._secureStorage.write(key: storageKey, value: legacyValue);
+          await db.update(
+            'TbUserPreferences',
+            {'sGeminiApiKey': ''},
+            where: 'nUserId = ?',
+            whereArgs: [userId],
+          );
+          return legacyValue;
+        }
       }
     } catch (e) {
       debugPrint('getGeminiApiKey error: $e');
@@ -148,6 +165,14 @@ extension AppDatabaseGoalPreferenceDao on AppDatabase {
   }
 
   Future<void> saveGeminiApiKey(int userId, String apiKey) async {
+    if (kIsWeb) return;
+    final normalizedKey = apiKey.trim();
+    final storageKey = 'gemini_api_key_$userId';
+    if (normalizedKey.isEmpty) {
+      await AppDatabase._secureStorage.delete(key: storageKey);
+    } else {
+      await AppDatabase._secureStorage.write(key: storageKey, value: normalizedKey);
+    }
     final db = await database;
     if (db == null) return;
     try {
@@ -164,7 +189,7 @@ extension AppDatabaseGoalPreferenceDao on AppDatabase {
       if (existing.isNotEmpty) {
         await db.update(
           'TbUserPreferences',
-          {'sGeminiApiKey': apiKey.trim()},
+          {'sGeminiApiKey': ''},
           where: 'nUserId = ?',
           whereArgs: [userId],
         );
@@ -175,7 +200,7 @@ extension AppDatabaseGoalPreferenceDao on AppDatabase {
             'nUserId': userId,
             'sUnitSystem': 'metric',
             'sUnitLabel': 'Kilometers, Kilograms',
-            'sGeminiApiKey': apiKey.trim(),
+            'sGeminiApiKey': '',
           },
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
@@ -272,15 +297,59 @@ extension AppDatabaseGoalPreferenceDao on AppDatabase {
       total += (r4.first['cnt'] as num?)?.toInt() ?? 0;
     } catch (_) {}
 
+    try {
+      final r5 = await db.rawQuery('SELECT COUNT(*) as cnt FROM ${AppDatabase.tablePendingDeletions}');
+      total += (r5.first['cnt'] as num?)?.toInt() ?? 0;
+    } catch (_) {}
+
     return total;
   }
 
-  Future<List<Map<String, dynamic>>> getUnsyncedHealthRecords() async {
+  Future<void> queuePendingDeletion({
+    required int userId,
+    required String entity,
+    required int remoteId,
+  }) async {
+    if (kIsWeb) return;
+    final db = await database;
+    if (db == null) return;
+    await db.insert(AppDatabase.tablePendingDeletions, {
+      'nUserId': userId,
+      'sEntity': entity,
+      'nRemoteId': remoteId,
+      'dtQueuedAt': DateTime.now().toIso8601String(),
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> getPendingDeletions(int userId) async {
+    if (kIsWeb) return [];
+    final db = await database;
+    if (db == null) return [];
+    return db.query(
+      AppDatabase.tablePendingDeletions,
+      where: 'nUserId = ?',
+      whereArgs: [userId],
+      orderBy: 'nDeletionId ASC',
+    );
+  }
+
+  Future<void> completePendingDeletion(int deletionId) async {
+    if (kIsWeb) return;
+    final db = await database;
+    if (db == null) return;
+    await db.delete(
+      AppDatabase.tablePendingDeletions,
+      where: 'nDeletionId = ?',
+      whereArgs: [deletionId],
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getUnsyncedHealthRecords(int userId) async {
     if (kIsWeb) return [];
     final db = await database;
     if (db == null) return [];
     try {
-      return await db.query(AppDatabase.tableHealthRecords, where: 'isSynced = 0');
+      return await db.query(AppDatabase.tableHealthRecords, where: 'isSynced = 0 AND nUserId = ?', whereArgs: [userId]);
     } catch (_) {
       return [];
     }
@@ -300,12 +369,12 @@ extension AppDatabaseGoalPreferenceDao on AppDatabase {
     } catch (_) {}
   }
 
-  Future<List<Map<String, dynamic>>> getUnsyncedWorkouts() async {
+  Future<List<Map<String, dynamic>>> getUnsyncedWorkouts(int userId) async {
     if (kIsWeb) return [];
     final db = await database;
     if (db == null) return [];
     try {
-      return await db.query(AppDatabase.tableWorkouts, where: 'isSynced = 0');
+      return await db.query(AppDatabase.tableWorkouts, where: 'isSynced = 0 AND nUserId = ?', whereArgs: [userId]);
     } catch (_) {
       return [];
     }
@@ -325,12 +394,12 @@ extension AppDatabaseGoalPreferenceDao on AppDatabase {
     } catch (_) {}
   }
 
-  Future<List<Map<String, dynamic>>> getUnsyncedNutritionLogs() async {
+  Future<List<Map<String, dynamic>>> getUnsyncedNutritionLogs(int userId) async {
     if (kIsWeb) return [];
     final db = await database;
     if (db == null) return [];
     try {
-      return await db.query(AppDatabase.tableNutritionLogs, where: 'isSynced = 0');
+      return await db.query(AppDatabase.tableNutritionLogs, where: 'isSynced = 0 AND nUserId = ?', whereArgs: [userId]);
     } catch (_) {
       return [];
     }
@@ -350,12 +419,12 @@ extension AppDatabaseGoalPreferenceDao on AppDatabase {
     } catch (_) {}
   }
 
-  Future<List<Map<String, dynamic>>> getUnsyncedUsers() async {
+  Future<List<Map<String, dynamic>>> getUnsyncedUsers(int userId) async {
     if (kIsWeb) return [];
     final db = await database;
     if (db == null) return [];
     try {
-      return await db.query(AppDatabase.tableUsers, where: 'isSynced = 0');
+      return await db.query(AppDatabase.tableUsers, where: 'isSynced = 0 AND nUserId = ?', whereArgs: [userId]);
     } catch (_) {
       return [];
     }

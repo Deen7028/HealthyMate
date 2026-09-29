@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/database/app_database.dart';
-import 'package:healthymate/core/services/auth_service.dart';
 
 /// Centralized Theme Service for Light/Dark mode management in HealthyMate
 class ThemeService extends ChangeNotifier {
@@ -14,18 +13,9 @@ class ThemeService extends ChangeNotifier {
 
   Future<void> init() async {
     try {
-      final email = AuthService.instance.currentUserEmail;
-      if (email.isNotEmpty) {
-        final user = await AppDatabase.instance.getUserByEmail(email);
-        if (user != null) {
-          _isDarkMode = user.isDarkMode;
-          notifyListeners();
-          return;
-        }
-      }
-      final defaultUser = await AppDatabase.instance.getUser(userId: 1);
-      if (defaultUser != null) {
-        _isDarkMode = defaultUser.isDarkMode;
+      final user = await AppDatabase.instance.getCurrentUser();
+      if (user != null) {
+        _isDarkMode = user.isDarkMode;
         notifyListeners();
       }
     } catch (e) {
@@ -39,9 +29,7 @@ class ThemeService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final email = AuthService.instance.currentUserEmail;
-      var user = email.isNotEmpty ? await AppDatabase.instance.getUserByEmail(email) : null;
-      user ??= await AppDatabase.instance.getUser(userId: 1);
+      final user = await AppDatabase.instance.getCurrentUser();
 
       if (user != null) {
         final updated = user.copyWith(isDarkMode: value);

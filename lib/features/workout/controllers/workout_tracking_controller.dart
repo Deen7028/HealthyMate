@@ -33,8 +33,9 @@ class WorkoutTrackingController extends ChangeNotifier {
   int? _targetDurationSeconds;
 
   double _userWeightKg = 65.0;
-  int _userId = 1;
+  int _userId = 0;
   bool _isDisposed = false;
+  late final Future<void> _userDataLoad;
 
   // Auto-pause & TTS variables
   int _zeroSpeedSeconds = 0;
@@ -42,7 +43,7 @@ class WorkoutTrackingController extends ChangeNotifier {
   int _lastAnnouncedKm = 0;
 
   WorkoutTrackingController() {
-    _loadUserData();
+    _userDataLoad = _loadUserData();
     _listenBackgroundLocation();
   }
 
@@ -71,6 +72,9 @@ class WorkoutTrackingController extends ChangeNotifier {
   bool get isRunning => _status == WorkoutState.running;
   bool get isPaused => _status == WorkoutState.paused;
   bool get isAutoPaused => _isAutoPaused;
+  bool get hasAuthenticatedUser => _userId > 0;
+
+  Future<void> ensureUserDataLoaded() => _userDataLoad;
 
   @override
   void dispose() {
@@ -90,9 +94,11 @@ class WorkoutTrackingController extends ChangeNotifier {
   }
 
   Future<void> _loadUserData() async {
-    final email = AuthService.instance.currentUserEmail;
-    if (email.isNotEmpty) {
-      final user = await AppDatabase.instance.getUserByEmail(email);
+    try {
+      final email = AuthService.instance.currentUserEmail;
+      final user = email.isNotEmpty
+          ? await AppDatabase.instance.getUserByEmail(email)
+          : await AppDatabase.instance.getCurrentUser();
       if (user != null) {
         _userId = user.nUserId;
         if (user.nWeight != null && user.nWeight! > 0) {
@@ -100,6 +106,8 @@ class WorkoutTrackingController extends ChangeNotifier {
         }
         _safeNotifyListeners();
       }
+    } catch (_) {
+      debugPrint('WorkoutTrackingController: Failed to load signed-in user.');
     }
   }
 
@@ -199,7 +207,7 @@ class WorkoutTrackingController extends ChangeNotifier {
   }
 
   void startWorkout() {
-    if (!_isGpsEnabled) {
+    if (!_isGpsEnabled || _userId <= 0) {
       return;
     }
     _status = WorkoutState.running;
@@ -481,9 +489,7 @@ class WorkoutTrackingController extends ChangeNotifier {
       _routePoints.map((p) => {'lat': p.latitude, 'lng': p.longitude}).toList(),
     );
 
-    if (savedDuration >= 1) {
-      final nowStr = DateTime.now().toIso8601String();
-
+    if (savedDuration >= 1 && _userId > 0) {
       // 1. บันทึกลง SQLite (isSynced = 0)
       await AppDatabase.instance.insertWorkout(
         userId: _userId,
@@ -494,33 +500,24 @@ class WorkoutTrackingController extends ChangeNotifier {
         routePoints: routePointsJson,
       );
 
-      // 2. บันทึกขึ้น Remote Server โดยตรง (ไม่ต้องรอ SyncService)
-      final workoutPayload = {
-        'nUserId': _userId,
-        'sType': _selectedCategory.title,
-        'nDistance': savedDistance,
-        'nDuration': savedDuration,
-        'nCaloriesBurned': savedCalories,
-        'sRoutePoints': routePointsJson,
-        'dtWorkoutDate': nowStr,
-        'dtUpdatedAt': nowStr,
-      };
-      HealthApiService.saveWorkout(workoutPayload).then((success) {
-        if (success) {
-          debugPrint('☁️ [WORKOUT SAVE] ➜ บันทึกการออกกำลังกาย (${_selectedCategory.title}) ขึ้น Server สำเร็จ');
-        }
-      }).catchError((_) {});
-
       // 🏆 อัปเดตและปลดล็อกเหรียญรางวัล (TbBadges & TbUserBadges)
       try {
         final totalWorkouts = await AppDatabase.instance.getWorkoutCount(userId: _userId);
         if (totalWorkouts >= 1) {
           await HealthApiService.unlockBadgeRemote(userId: _userId, badgeName: 'ผู้เริ่มต้นก้าวแรก');
         }
-        if (savedDistance >= 5.0) {
+        final workouts = await AppDatabase.instance.getWorkouts(userId: _userId);
+        final cumulativeRunningDistance = workouts.fold<double>(0.0, (total, workout) {
+          final type = workout['sType']?.toString().toLowerCase() ?? '';
+          if (!type.contains('วิ่ง') && !type.contains('running')) return total;
+          return total + ((workout['nDistance'] as num?)?.toDouble() ?? 0.0);
+        });
+        final cumulativeCalories = workouts.fold<double>(0.0, (total, workout) =>
+            total + ((workout['nCaloriesBurned'] as num?)?.toDouble() ?? 0.0));
+        if (cumulativeRunningDistance >= 5.0) {
           await HealthApiService.unlockBadgeRemote(userId: _userId, badgeName: 'วิ่งสะสม 5 กิโลเมตร');
         }
-        if (savedCalories >= 500.0) {
+        if (cumulativeCalories >= 500.0) {
           await HealthApiService.unlockBadgeRemote(userId: _userId, badgeName: 'นักเบิร์นไฟแรง');
         }
       } catch (_) {}
@@ -550,4 +547,3 @@ class WorkoutTrackingController extends ChangeNotifier {
     return '$hours:$minutes:$seconds';
   }
 }
-

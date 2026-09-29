@@ -1,8 +1,12 @@
 import 'dart:convert';
+import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:healthymate/core/services/api_service.dart';
+import 'package:healthymate/core/services/sync_service.dart';
 import 'package:healthymate/features/health_calculator/models/health_record_model.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
 import 'package:path/path.dart' as p;
@@ -20,21 +24,60 @@ class AppDatabase {
   static final AppDatabase instance = AppDatabase._internal();
   AppDatabase._internal();
 
-  /// เข้ารหัสรหัสผ่านด้วย SHA-256 ร่วมกับ Local Salt เพื่อป้องกัน Rainbow Table Attack
-  static String hashPassword(String password, {String? salt}) {
-    final String combinedKey = (salt != null && salt.isNotEmpty)
-        ? 'HM_Salt_${salt.trim().toLowerCase()}_$password'
-        : 'HM_Salt_Default_$password';
-    final bytes = utf8.encode(combinedKey);
-    final digest = sha256.convert(bytes);
-    return digest.toString();
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
+
+  /// PBKDF2-HMAC-SHA256 password hash with a random per-password salt.
+  static String hashPassword(String password) {
+    final actualSalt = base64Url.encode(
+      List<int>.generate(16, (_) => Random.secure().nextInt(256)),
+    );
+    const iterations = 60000;
+    final derived = _pbkdf2(password, actualSalt, iterations);
+    return 'pbkdf2\$$iterations\$$actualSalt\$${base64Url.encode(derived)}';
   }
 
-  /// เข้ารหัสแบบเลกาซี SHA-256 (สำหรับตรวจสอบรหัสผ่านเก่าแบบ Backward Compatible)
+  static bool verifyPassword(String password, String encoded) {
+    try {
+      final parts = encoded.split(r'$');
+      if (parts.length != 4 || parts[0] != 'pbkdf2') return false;
+      final iterations = int.tryParse(parts[1]);
+      if (iterations == null || iterations < 10000 || iterations > 1000000) return false;
+      final expected = base64Url.decode(parts[3]);
+      final actual = _pbkdf2(password, parts[2], iterations);
+      if (actual.length != expected.length) return false;
+      var difference = 0;
+      for (var i = 0; i < actual.length; i++) {
+        difference |= actual[i] ^ expected[i];
+      }
+      return difference == 0;
+    } on FormatException {
+      return false;
+    }
+  }
+
+  static List<int> _pbkdf2(String password, String salt, int iterations) {
+    final hmac = Hmac(sha256, utf8.encode(password));
+    final first = hmac.convert([...utf8.encode(salt), 0, 0, 0, 1]).bytes;
+    var block = List<int>.from(first);
+    final output = List<int>.from(first);
+    for (var i = 1; i < iterations; i++) {
+      block = hmac.convert(block).bytes;
+      for (var j = 0; j < output.length; j++) {
+        output[j] ^= block[j];
+      }
+    }
+    return output;
+  }
+
+  /// Legacy hashes are accepted only for migration during successful login.
   static String hashPasswordLegacy(String password) {
     final bytes = utf8.encode(password);
     final digest = sha256.convert(bytes);
     return digest.toString();
+  }
+
+  static String hashPasswordLegacySalted(String password, String email) {
+    return sha256.convert(utf8.encode('HM_Salt_${email.trim().toLowerCase()}_$password')).toString();
   }
 
   static const String _dbName = '6620310001_HealthMateDB.db';
@@ -50,6 +93,7 @@ class AppDatabase {
   static const String tableUserBadges = 'TbUserBadges';
   static const String tableHealthIntegrations = 'TbHealthIntegrations';
   static const String tableSession = 'TbSession';
+  static const String tablePendingDeletions = 'TbPendingDeletions';
 
   Database? _db;
 
@@ -83,7 +127,7 @@ class AppDatabase {
 
     return await openDatabase(
       path,
-      version: 12,
+      version: 13,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -193,6 +237,16 @@ class AppDatabase {
         sEmail TEXT,
         sAuthToken TEXT DEFAULT "",
         dtUpdatedAt TEXT
+      );
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $tablePendingDeletions (
+        nDeletionId INTEGER PRIMARY KEY AUTOINCREMENT,
+        nUserId INTEGER NOT NULL,
+        sEntity TEXT NOT NULL,
+        nRemoteId INTEGER NOT NULL,
+        dtQueuedAt TEXT NOT NULL
       );
     ''');
 

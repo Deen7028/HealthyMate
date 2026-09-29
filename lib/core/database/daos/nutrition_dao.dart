@@ -50,18 +50,49 @@ extension AppDatabaseNutritionDao on AppDatabase {
 
   Future<void> deleteNutritionLog(int nutritionId) async {
     if (kIsWeb) {
-      HealthApiService.deleteNutritionLogRemote(nutritionId);
+      await HealthApiService.deleteNutritionLogRemote(nutritionId);
       return;
     }
     final db = await database;
     if (db == null) return;
-    await db.delete(
+    final rows = await db.query(
       AppDatabase.tableNutritionLogs,
       where: 'nNutritionId = ?',
       whereArgs: [nutritionId],
+      limit: 1,
     );
-
-    // ซิงค์ลบที่ Server
-    HealthApiService.deleteNutritionLogRemote(nutritionId);
+    if (rows.isEmpty) return;
+    final row = rows.first;
+    final userId = (row['nUserId'] as num?)?.toInt() ?? 0;
+    final wasSynced = (row['isSynced'] as num?)?.toInt() == 1;
+    await db.transaction((txn) async {
+      if (wasSynced && userId > 0) {
+        await txn.insert(AppDatabase.tablePendingDeletions, {
+          'nUserId': userId,
+          'sEntity': 'nutrition_log',
+          'nRemoteId': nutritionId,
+          'dtQueuedAt': DateTime.now().toIso8601String(),
+        });
+      }
+      await txn.delete(AppDatabase.tableNutritionLogs, where: 'nNutritionId = ?', whereArgs: [nutritionId]);
+    });
+    if (wasSynced && userId > 0) {
+      if (await HealthApiService.deleteNutritionLogRemote(nutritionId)) {
+        final pending = await db.query(
+          AppDatabase.tablePendingDeletions,
+          where: 'nUserId = ? AND sEntity = ? AND nRemoteId = ?',
+          whereArgs: [userId, 'nutrition_log', nutritionId],
+          limit: 1,
+        );
+        if (pending.isNotEmpty) {
+          await db.delete(AppDatabase.tablePendingDeletions,
+              where: 'nDeletionId = ?', whereArgs: [pending.first['nDeletionId']]);
+        }
+      } else {
+        unawaited(SyncService.instance.updatePendingCount());
+        unawaited(SyncService.instance.syncPendingData());
+      }
+    }
+    unawaited(SyncService.instance.updatePendingCount());
   }
 }

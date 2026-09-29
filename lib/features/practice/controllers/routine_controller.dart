@@ -47,11 +47,7 @@ class RoutineController extends ChangeNotifier {
 
     try {
       final db = AppDatabase.instance;
-      final email = await db.getLoggedInUserEmail();
-      if (email != null && email.isNotEmpty) {
-        user = await db.getUserByEmail(email);
-      }
-      user ??= await db.getUser(userId: 1);
+      user = await db.getCurrentUser();
 
       if (user == null) {
         isLoading = false;
@@ -270,7 +266,7 @@ class RoutineController extends ChangeNotifier {
           if (lowerTitle.contains('ลดน้ำหนัก') || lowerTitle.contains('น้ำหนัก')) {
             unitText = 'กก.';
             final records = await db.getHealthRecords(userId: userId);
-            final userObj = await db.getUser();
+            final userObj = await db.getCurrentUser();
             final validRecords = records.where((r) {
               if (goalCreatedAt == null) return true;
               return r.dtRecordedAt.isAfter(goalCreatedAt) || r.dtRecordedAt.isAtSameMomentAs(goalCreatedAt);

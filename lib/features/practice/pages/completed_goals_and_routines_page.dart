@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/database/app_database.dart';
-import 'package:healthymate/core/services/auth_service.dart';
-import 'package:healthymate/features/health_calculator/models/user_model.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 
 class CompletedGoalsAndRoutinesPage extends StatefulWidget {
@@ -50,16 +48,9 @@ class _CompletedGoalsAndRoutinesPageState
     setState(() => _isLoading = true);
     try {
       final db = AppDatabase.instance;
-      String? email = AuthService.instance.currentUserEmail;
-      if (email.isEmpty) {
-        email = await db.getLoggedInUserEmail();
-      }
-      TbUser? user;
-      if (email != null && email.isNotEmpty) {
-        user = await db.getUserByEmail(email);
-      }
-      user ??= await db.getUser(userId: 1);
-      final userId = user?.nUserId ?? 1;
+      final user = await db.getCurrentUser();
+      if (user == null) return;
+      final userId = user.nUserId;
 
       // 1. ดึงประวัติเป้าหมายหลัก
       final allGoals = await db.getAllUserGoalsHistory(userId);

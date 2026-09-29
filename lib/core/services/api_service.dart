@@ -12,10 +12,10 @@ class HealthApiService {
 
   /// Headers พื้นฐานสำหรับระบบความปลอดภัยและการเรียก API
   static Map<String, String> get defaultHeaders {
-    final headers = <String, String>{
-      'Content-Type': 'application/json; charset=utf-8',
-      'X-App-Key': AppConfig.appKey,
-    };
+    final headers = <String, String>{'Content-Type': 'application/json; charset=utf-8'};
+    if (AppConfig.appKey.isNotEmpty) {
+      headers['X-App-Key'] = AppConfig.appKey;
+    }
     if (AppConfig.hostHeader.isNotEmpty) {
       headers['Host'] = AppConfig.hostHeader;
     }
@@ -26,7 +26,6 @@ class HealthApiService {
   static Future<Map<String, String>> getAuthHeaders() async {
     final headers = Map<String, String>.from(defaultHeaders);
     final token = await AppDatabase.instance.getAuthToken();
-    debugPrint('[API] getAuthHeaders: token=${token != null && token.isNotEmpty ? "${token.substring(0, 10)}..." : "NULL/EMPTY"}');
     if (token != null && token.isNotEmpty) {
       headers['Authorization'] = 'Bearer $token';
     }
@@ -38,7 +37,6 @@ class HealthApiService {
   static Future<Map<String, dynamic>> loginRemote({
     required String email,
     required String password,
-    String? passwordHash,
   }) async {
     try {
       final uri = Uri.parse('$baseUrl/login.php');
@@ -46,9 +44,6 @@ class HealthApiService {
         'sEmail': email,
         'sPassword': password,
       };
-      if (passwordHash != null) {
-        payload['sPasswordHash'] = passwordHash;
-      }
 
       final response = await http
           .post(
@@ -58,7 +53,7 @@ class HealthApiService {
           )
           .timeout(const Duration(seconds: 8));
 
-      debugPrint('HealthApiService: Remote login status code: ${response.statusCode}, body: ${response.body}');
+      debugPrint('HealthApiService: Remote login HTTP ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
@@ -150,7 +145,7 @@ class HealthApiService {
 
   /// 1. ดึงข้อมูลประวัติสุขภาพจาก PHP API (`health_records.php`)
   static Future<List<TbHealthRecord>> fetchHealthRecords({
-    int userId = 1,
+    required int userId,
   }) async {
     try {
       final uri = Uri.parse('$baseUrl/health_records.php?nUserId=$userId');
@@ -169,7 +164,7 @@ class HealthApiService {
               .toList();
         }
       } else {
-        debugPrint('[API ERROR] fetchHealthRecords HTTP ${response.statusCode}: ${response.body}');
+        debugPrint('[API ERROR] fetchHealthRecords HTTP ${response.statusCode}');
       }
     } catch (e) {
       debugPrint('[API EXCEPTION] fetchHealthRecords failed: $e');
@@ -197,7 +192,7 @@ class HealthApiService {
           return true;
         }
       } else {
-        debugPrint('[API ERROR] saveHealthRecord HTTP ${response.statusCode}: ${response.body}');
+        debugPrint('[API ERROR] saveHealthRecord HTTP ${response.statusCode}');
       }
     } catch (e) {
       debugPrint('[API EXCEPTION] saveHealthRecord failed: $e');
@@ -212,7 +207,13 @@ class HealthApiService {
       final uri = Uri.parse('$baseUrl/user_profile.php');
       final Map<String, dynamic> payload;
       if (userOrMap is Map<String, dynamic>) {
-        payload = userOrMap;
+        payload = Map<String, dynamic>.from(userOrMap)
+          ..removeWhere((key, _) => const {
+            'sPassword',
+            'sPasswordHash',
+            'sGeminiApiKey',
+            'sAuthToken',
+          }.contains(key));
       } else if (userOrMap is TbUser) {
         payload = userOrMap.toPublicProfileMap();
       } else {
@@ -235,7 +236,7 @@ class HealthApiService {
           return true;
         }
       } else {
-        debugPrint('[API ERROR] updateUserProfile HTTP ${response.statusCode}: ${response.body}');
+        debugPrint('[API ERROR] updateUserProfile HTTP ${response.statusCode}');
       }
     } catch (e) {
       debugPrint('[API EXCEPTION] updateUserProfile failed: $e');
@@ -268,7 +269,7 @@ class HealthApiService {
           );
         }
       } else {
-        debugPrint('[API ERROR] fetchWorkouts HTTP ${response.statusCode}: ${response.body}');
+        debugPrint('[API ERROR] fetchWorkouts HTTP ${response.statusCode}');
       }
     } catch (e) {
       debugPrint('[API EXCEPTION] fetchWorkouts failed: $e');
@@ -296,7 +297,7 @@ class HealthApiService {
           return true;
         }
       } else {
-        debugPrint('[API ERROR] saveWorkout HTTP ${response.statusCode}: ${response.body}');
+        debugPrint('[API ERROR] saveWorkout HTTP ${response.statusCode}');
       }
     } catch (e) {
       debugPrint('[API EXCEPTION] saveWorkout failed: $e');
@@ -324,7 +325,7 @@ class HealthApiService {
           return true;
         }
       } else {
-        debugPrint('[API ERROR] saveNutritionLog HTTP ${response.statusCode}: ${response.body}');
+        debugPrint('[API ERROR] saveNutritionLog HTTP ${response.statusCode}');
       }
     } catch (e) {
       debugPrint('[API EXCEPTION] saveNutritionLog failed: $e');
@@ -438,10 +439,10 @@ class HealthApiService {
         if (body['status'] == 'success' && body['data'] is Map) {
           return Map<String, dynamic>.from(body['data'] as Map);
         } else {
-          debugPrint('[API ERROR] fetchDashboardData: ${response.body}');
+          debugPrint('[API ERROR] fetchDashboardData HTTP ${response.statusCode}');
         }
       } else {
-        debugPrint('[API ERROR] fetchDashboardData HTTP ${response.statusCode}: ${response.body}');
+        debugPrint('[API ERROR] fetchDashboardData HTTP ${response.statusCode}');
       }
     } catch (e) {
       debugPrint('[API EXCEPTION] fetchDashboardData failed: $e');
@@ -474,7 +475,7 @@ class HealthApiService {
           return Map<String, dynamic>.from(body as Map);
         }
       } else {
-        debugPrint('[API ERROR] fetchRoutines HTTP ${response.statusCode}: ${response.body}');
+        debugPrint('[API ERROR] fetchRoutines HTTP ${response.statusCode}');
       }
     } catch (e) {
       debugPrint('[API EXCEPTION] fetchRoutines failed: $e');
@@ -523,7 +524,7 @@ class HealthApiService {
           return (body['nRoutineId'] as num?)?.toInt() ?? 0;
         }
       }
-      debugPrint('[API ERROR] insertRoutineRemote HTTP ${response.statusCode}: ${response.body}');
+      debugPrint('[API ERROR] insertRoutineRemote HTTP ${response.statusCode}');
     } catch (e) {
       debugPrint('[API EXCEPTION] insertRoutineRemote failed: $e');
     }
@@ -738,7 +739,6 @@ class HealthApiService {
   static Future<bool> saveUserPreferencesRemote({
     required int userId,
     required String unitLabel,
-    String? geminiApiKey,
   }) async {
     try {
       final uri = Uri.parse('$baseUrl/user_preferences.php');
@@ -751,7 +751,6 @@ class HealthApiService {
               'nUserId': userId,
               'sUnitSystem': unitLabel.startsWith('Kilo') ? 'metric' : 'imperial',
               'sUnitLabel': unitLabel,
-              'sGeminiApiKey': ?geminiApiKey,
             }),
           )
           .timeout(const Duration(seconds: 5));
@@ -812,7 +811,7 @@ class HealthApiService {
   /// ส่งคำขอ OTP สำหรับลืมรหัสผ่าน
   static Future<Map<String, dynamic>> sendForgotPasswordOtp(String sEmail) async {
     try {
-      debugPrint('[API] sendForgotPasswordOtp: $baseUrl/send_forgot_password_otp.php (email: $sEmail)');
+      debugPrint('[API] sendForgotPasswordOtp: $baseUrl/send_forgot_password_otp.php');
       final response = await http
           .post(
             Uri.parse('$baseUrl/send_forgot_password_otp.php'),
@@ -821,7 +820,7 @@ class HealthApiService {
           )
           .timeout(const Duration(seconds: 60));
 
-      debugPrint('[API] sendForgotPasswordOtp response: HTTP ${response.statusCode}, Body: ${response.body}');
+      debugPrint('[API] sendForgotPasswordOtp HTTP ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
@@ -893,10 +892,11 @@ class HealthApiService {
   /// ลบบัญชีผู้ใช้และข้อมูลทั้งหมดจากระบบเซิร์ฟเวอร์ (PDPA/GDPR Account Deletion)
   static Future<Map<String, dynamic>> deleteAccount({required int userId, required String email}) async {
     try {
+      final headers = await getAuthHeaders();
       final response = await http
           .post(
             Uri.parse('$baseUrl/delete_account.php'),
-            headers: defaultHeaders,
+            headers: headers,
             body: jsonEncode({'nUserId': userId, 'sEmail': email}),
           )
           .timeout(const Duration(seconds: 10));
@@ -916,4 +916,3 @@ class HealthApiService {
     }
   }
 }
-

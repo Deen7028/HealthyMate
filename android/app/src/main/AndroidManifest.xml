@@ -27,7 +27,7 @@
         android:label="healthymate"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
-        android:usesCleartextTraffic="true">
+        android:usesCleartextTraffic="false">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -68,7 +68,7 @@
         <!-- Google Maps API Key -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyD28TcpyjZhUkMfkgbuzRDo1iIfnh0eM5A" />
+            android:value="${googleMapsApiKey}" />
 
         <!-- Flutter Background Service -->
         <service

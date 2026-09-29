@@ -2,7 +2,7 @@ part of '../app_database.dart';
 
 extension AppDatabaseHealthRecordDao on AppDatabase {
   /// ดึงรายการประวัติทั้งหมดจาก `TbHealthRecords`
-  Future<List<TbHealthRecord>> getHealthRecords({int userId = 1}) async {
+  Future<List<TbHealthRecord>> getHealthRecords({required int userId}) async {
     if (kIsWeb) {
       return _webHealthRecords
           .map((item) => TbHealthRecord.fromMap(item))
@@ -72,20 +72,51 @@ extension AppDatabaseHealthRecordDao on AppDatabase {
   Future<void> deleteHealthRecord(int recordId) async {
     if (kIsWeb) {
       _webHealthRecords.removeWhere((item) => item['nRecordId'] == recordId);
-      HealthApiService.deleteHealthRecordRemote(recordId);
+      await HealthApiService.deleteHealthRecordRemote(recordId);
       return;
     }
 
     final db = await database;
     if (db == null) return;
-    await db.delete(
+    final rows = await db.query(
       AppDatabase.tableHealthRecords,
       where: 'nRecordId = ?',
       whereArgs: [recordId],
+      limit: 1,
     );
-
-    // ซิงค์ลบที่ Server
-    HealthApiService.deleteHealthRecordRemote(recordId);
+    if (rows.isEmpty) return;
+    final row = rows.first;
+    final userId = (row['nUserId'] as num?)?.toInt() ?? 0;
+    final wasSynced = (row['isSynced'] as num?)?.toInt() == 1;
+    await db.transaction((txn) async {
+      if (wasSynced && userId > 0) {
+        await txn.insert(AppDatabase.tablePendingDeletions, {
+          'nUserId': userId,
+          'sEntity': 'health_record',
+          'nRemoteId': recordId,
+          'dtQueuedAt': DateTime.now().toIso8601String(),
+        });
+      }
+      await txn.delete(AppDatabase.tableHealthRecords, where: 'nRecordId = ?', whereArgs: [recordId]);
+    });
+    if (wasSynced && userId > 0) {
+      if (await HealthApiService.deleteHealthRecordRemote(recordId)) {
+        final pending = await db.query(
+          AppDatabase.tablePendingDeletions,
+          where: 'nUserId = ? AND sEntity = ? AND nRemoteId = ?',
+          whereArgs: [userId, 'health_record', recordId],
+          limit: 1,
+        );
+        if (pending.isNotEmpty) {
+          await db.delete(AppDatabase.tablePendingDeletions,
+              where: 'nDeletionId = ?', whereArgs: [pending.first['nDeletionId']]);
+        }
+      } else {
+        unawaited(SyncService.instance.updatePendingCount());
+        unawaited(SyncService.instance.syncPendingData());
+      }
+    }
+    unawaited(SyncService.instance.updatePendingCount());
   }
 
   /// ล้างข้อมูล `TbHealthRecords` ทั้งหมด

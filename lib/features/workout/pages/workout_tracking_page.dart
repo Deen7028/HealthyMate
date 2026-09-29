@@ -201,6 +201,15 @@ class _WorkoutTrackingPageState extends State<WorkoutTrackingPage>
   }
 
   Future<void> _handleStartWorkout() async {
+    await _state.ensureUserDataLoaded();
+    if (!_state.hasAuthenticatedUser) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('กรุณาเข้าสู่ระบบก่อนบันทึกการออกกำลังกาย')),
+        );
+      }
+      return;
+    }
     if (!_state.isGpsEnabled) {
       final hasGps = await _initCurrentLocation();
       if (!hasGps) {

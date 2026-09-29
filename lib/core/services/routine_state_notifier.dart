@@ -23,7 +23,7 @@ class RoutineStateNotifier extends ChangeNotifier {
   Map<String, Map<String, double>> _todayWorkoutStats = {};
   Map<String, Map<String, double>> get todayWorkoutStats => _todayWorkoutStats;
 
-  int _userId = 1;
+  int _userId = 0;
   int get userId => _userId;
 
   String get todayStr {
@@ -42,11 +42,16 @@ class RoutineStateNotifier extends ChangeNotifier {
       if (userId != null) {
         _userId = userId;
       } else {
-        final email = await db.getLoggedInUserEmail();
-        if (email != null && email.isNotEmpty) {
-          final u = await db.getUserByEmail(email);
-          if (u != null) _userId = u.nUserId;
-        }
+        final user = await db.getCurrentUser();
+        _userId = user?.nUserId ?? 0;
+      }
+
+      if (_userId <= 0) {
+        _routines = [];
+        _todayCompletionMap = {};
+        _userGoal = null;
+        _todayWorkoutStats = {};
+        return;
       }
 
       // 1. ดึง Routines
@@ -154,7 +159,7 @@ class RoutineStateNotifier extends ChangeNotifier {
           if (lowerTitle.contains('ลดน้ำหนัก') || lowerTitle.contains('น้ำหนัก')) {
             unitText = 'กก.';
             final records = await db.getHealthRecords(userId: _userId);
-            final user = await db.getUser();
+            final user = await db.getCurrentUser();
             final validRecords = records.where((r) {
               if (goalCreatedAt == null) return true;
               return r.dtRecordedAt.isAfter(goalCreatedAt) || r.dtRecordedAt.isAtSameMomentAs(goalCreatedAt);

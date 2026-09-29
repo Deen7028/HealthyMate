@@ -65,7 +65,7 @@ class TbHealthRecord {
   factory TbHealthRecord.fromMap(Map<String, dynamic> map) {
     return TbHealthRecord(
       nRecordId: _toInt(map['nRecordId']),
-      nUserId: _toInt(map['nUserId'], 1),
+      nUserId: _toInt(map['nUserId'], 0),
       nWeight: _toDouble(map['nWeight']),
       nHeight: _toDouble(map['nHeight']),
       nBmi: _toDouble(map['nBmi']),
@@ -78,4 +78,3 @@ class TbHealthRecord {
     );
   }
 }
-

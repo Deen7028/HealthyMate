@@ -36,9 +36,9 @@ class _FoodRecognitionResultSheetState extends State<FoodRecognitionResultSheet>
   }
 
   Future<void> _loadUserWeight() async {
-    final user = await AppDatabase.instance.getUser();
+    final user = await AppDatabase.instance.getCurrentUser();
     final weight = user?.nWeight ?? 0.0;
-    if (weight > 0) {
+    if (weight > 0 && mounted) {
       setState(() {
         _userWeight = weight;
       });
@@ -89,8 +89,9 @@ class _FoodRecognitionResultSheetState extends State<FoodRecognitionResultSheet>
   }
 
   Future<void> _openApiKeyDialog() async {
-    final user = await AppDatabase.instance.getUser();
-    final userId = user?.nUserId ?? 1;
+    final user = await AppDatabase.instance.getCurrentUser();
+    final userId = user?.nUserId;
+    if (userId == null) return;
     final currentKey = await AppDatabase.instance.getGeminiApiKey(userId);
     if (mounted) {
       GeminiApiKeyDialog.show(
@@ -116,8 +117,9 @@ class _FoodRecognitionResultSheetState extends State<FoodRecognitionResultSheet>
     setState(() => _isSaving = true);
 
     try {
-      final user = await AppDatabase.instance.getUser();
-      final userId = user?.nUserId ?? 1;
+      final user = await AppDatabase.instance.getCurrentUser();
+      final userId = user?.nUserId;
+      if (userId == null) return;
 
       for (final item in _result.items) {
         await AppDatabase.instance.insertNutritionLog(

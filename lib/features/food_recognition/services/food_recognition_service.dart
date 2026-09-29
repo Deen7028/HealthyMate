@@ -19,8 +19,10 @@ class FoodRecognitionService {
     bool hasKey = false;
 
     try {
-      final targetUserId =
-          userId ?? (await AppDatabase.instance.getUser())?.nUserId ?? 1;
+      final targetUserId = userId ?? (await AppDatabase.instance.getCurrentUser())?.nUserId;
+      if (targetUserId == null) {
+        throw Exception('กรุณาเข้าสู่ระบบก่อนใช้การวิเคราะห์อาหาร');
+      }
       final apiKey = await AppDatabase.instance.getGeminiApiKey(targetUserId);
 
       if (apiKey.trim().isNotEmpty) {
@@ -50,10 +52,10 @@ class FoodRecognitionService {
           'FoodRecognitionService: No Gemini API Key configured for user $targetUserId.',
         );
       }
-    } catch (e, stack) {
+    } catch (e) {
       final msg = e.toString().replaceFirst('Exception: ', '');
-      errorMsg = msg;
-      debugPrint('FoodRecognitionService: Gemini API failed: $e\n$stack');
+      errorMsg = msg.replaceAll(RegExp(r'key=[^&\s]+'), 'key=REDACTED');
+      debugPrint('FoodRecognitionService: Gemini API request failed.');
     }
 
     // เมื่อไม่มี API key หรือไม่สามารถตรวจจับได้ ให้คืนค่าผลลัพธ์ว่างเปล่า ไม่สุ่ม mock data
@@ -71,6 +73,10 @@ class FoodRecognitionService {
     File imageFile,
     String apiKey,
   ) async {
+    final fileSize = await imageFile.length();
+    if (fileSize > 10 * 1024 * 1024) {
+      throw Exception('ไฟล์ภาพใหญ่เกินไป กรุณาเลือกรูปที่มีขนาดไม่เกิน 10 MB');
+    }
     final bytes = await imageFile.readAsBytes();
     final base64Image = base64Encode(bytes);
 
@@ -232,17 +238,18 @@ class FoodRecognitionService {
         final map = rawList[i];
         if (map is Map<String, dynamic>) {
           final name = map['name']?.toString() ?? 'อาหารไม่ระบุชื่อ';
-          if (name.trim().isNotEmpty && name != 'null') {
+          final rawCalories = map['calories'];
+          if (name.trim().isNotEmpty && name != 'null' && rawCalories is num && rawCalories >= 0) {
             items.add(
               DetectedFoodItem(
                 id: 'food_ai_${DateTime.now().millisecondsSinceEpoch}_$i',
                 name: name,
-                calories: (map['calories'] as num?)?.toInt() ?? 100,
-                protein: (map['protein'] as num?)?.toDouble() ?? 0.0,
-                carbs: (map['carbs'] as num?)?.toDouble() ?? 0.0,
-                fat: (map['fat'] as num?)?.toDouble() ?? 0.0,
+                calories: rawCalories.toInt(),
+                protein: _nonNegative(map['protein']),
+                carbs: _nonNegative(map['carbs']),
+                fat: _nonNegative(map['fat']),
                 servingSize: map['servingSize']?.toString() ?? '1 ที่',
-                confidence: (map['confidence'] as num?)?.toDouble() ?? 0.95,
+                confidence: ((map['confidence'] as num?)?.toDouble() ?? 0.0).clamp(0.0, 1.0),
               ),
             );
           }
@@ -250,8 +257,13 @@ class FoodRecognitionService {
       }
       if (items.isNotEmpty) return items;
     } catch (e) {
-      debugPrint('Error parsing Gemini JSON: $e\nText: $text');
+      debugPrint('Error parsing Gemini JSON: $e');
     }
     return [];
+  }
+
+  double _nonNegative(dynamic value) {
+    if (value is! num || !value.isFinite || value < 0) return 0.0;
+    return value.toDouble();
   }
 }

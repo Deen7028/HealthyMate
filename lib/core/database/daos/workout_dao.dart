@@ -47,7 +47,10 @@ extension AppDatabaseWorkoutDao on AppDatabase {
   }
 
   /// เขียนข้อมูล Workouts จาก Server ลง SQLite ด้วย UPSERT (INSERT OR REPLACE)
-  Future<int> upsertWorkoutsFromServer(List<Map<String, dynamic>> workouts) async {
+  Future<int> upsertWorkoutsFromServer(
+    int userId,
+    List<Map<String, dynamic>> workouts,
+  ) async {
     if (kIsWeb || workouts.isEmpty) return 0;
     final db = await database;
     if (db == null) return 0;
@@ -58,7 +61,8 @@ extension AppDatabaseWorkoutDao on AppDatabase {
         final rawId = item['nWorkoutId'];
         final workoutId = rawId != null ? int.tryParse(rawId.toString()) : null;
         final rawUserId = item['nUserId'];
-        final userId = rawUserId != null ? int.tryParse(rawUserId.toString()) ?? 1 : 1;
+        final responseUserId = rawUserId != null ? int.tryParse(rawUserId.toString()) : null;
+        if (responseUserId != null && responseUserId != userId) continue;
 
         final rawDuration = item['nDuration'];
         final duration = rawDuration != null ? int.tryParse(rawDuration.toString()) ?? 0 : 0;

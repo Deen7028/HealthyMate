@@ -7,7 +7,7 @@ class WorkoutHistoryController extends ChangeNotifier {
   bool isLoading = true;
   bool isPulling = false;
   List<Map<String, dynamic>> workouts = [];
-  int _userId = 1;
+  int _userId = 0;
   bool _isDisposed = false;
 
   int get userId => _userId;
