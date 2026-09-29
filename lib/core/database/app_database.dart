@@ -31,7 +31,7 @@ part 'daos/goal_preference_dao_sync_records.dart';
 part 'app_database_lifecycle.dart';
 part 'app_database_schema.dart';
 
-/// Database Manager เชื่อมต่อโครงสร้างฐานข้อมูล SQLite ตาม `6620310001_HealthMateDB.sql`
+/// Database Manager เชื่อมต่อโครงสร้างฐานข้อมูล SQLite ตาม `HealthyMate.sql`
 class AppDatabase {
   static final AppDatabase instance = AppDatabase._internal();
   AppDatabase._internal();
@@ -96,12 +96,13 @@ class AppDatabase {
         .toString();
   }
 
-  static const String _dbName = '6620310001_HealthMateDB.db';
+  static const String _dbName = 'HealthyMate.db';
 
-  // Table Names matching 6620310001_HealthMateDB.sql
+  // Table Names matching HealthyMate.sql
   static const String tableUsers = 'TbUsers';
   static const String tableHealthRecords = 'TbHealthRecords';
   static const String tableWorkouts = 'TbWorkouts';
+  static const String tableWorkoutCategories = 'TbWorkoutCategories';
   static const String tableNutritionLogs = 'TbNutritionLogs';
   static const String tableRoutines = 'TbRoutines';
   static const String tableRoutineLogs = 'TbRoutineLogs';

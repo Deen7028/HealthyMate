@@ -15,17 +15,38 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
   static const List<MainGoalTemplate> templates = [
     MainGoalTemplate(
       title: 'วิ่งสะสมระยะทาง',
-      icon: '🏃♂️',
+      icon: '🏃',
       defaultUnit: 'กม.',
       linkedWorkout: 'วิ่ง',
       defaultTarget: 50.0,
     ),
     MainGoalTemplate(
+      title: 'เดินสะสมระยะทาง',
+      icon: '🚶',
+      defaultUnit: 'กม.',
+      linkedWorkout: 'เดิน',
+      defaultTarget: 30.0,
+    ),
+    MainGoalTemplate(
       title: 'ปั่นจักรยานสะสมระยะทาง',
-      icon: '🚴♂️',
+      icon: '🚴',
       defaultUnit: 'กม.',
       linkedWorkout: 'ปั่นจักรยาน',
       defaultTarget: 100.0,
+    ),
+    MainGoalTemplate(
+      title: 'ฝึกสมาธิสะสมเวลา',
+      icon: '🧘',
+      defaultUnit: 'นาที',
+      linkedWorkout: 'ทำสมาธิ',
+      defaultTarget: 120.0,
+    ),
+    MainGoalTemplate(
+      title: 'ฝึกโยคะสะสมเวลา',
+      icon: '🧘‍♀️',
+      defaultUnit: 'นาที',
+      linkedWorkout: 'โยคะ',
+      defaultTarget: 180.0,
     ),
     MainGoalTemplate(
       title: 'เผาผลาญแคลอรีรวม',

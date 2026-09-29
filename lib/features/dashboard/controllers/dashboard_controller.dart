@@ -14,6 +14,7 @@ class DashboardController extends ChangeNotifier {
   TbUser? user;
   TbHealthRecord? latestRecord;
   List<TbHealthRecord> healthRecords = [];
+  List<Map<String, dynamic>> workouts = [];
   int workoutCount = 0;
   double totalDistanceKm = 0.0;
   double totalRunningDistanceKm = 0.0;

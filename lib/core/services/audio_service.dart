@@ -1,28 +1,43 @@
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart';
 
 class AudioService {
   static final AudioService instance = AudioService._();
   AudioService._();
 
-  // สร้าง Player แยกกันเพื่อไม่ให้เสียงตีกันเวลากดพร้อมกัน
   final AudioPlayer _uiPlayer = AudioPlayer();
   final AudioPlayer _timerPlayer = AudioPlayer();
 
   Future<void> playSuccess() async {
-    // เล่นเสียงความสำเร็จ
-    await _uiPlayer.play(AssetSource('sounds/success.mp3'), volume: 0.6);
+    try {
+      if (_uiPlayer.state == PlayerState.playing) {
+        await _uiPlayer.stop();
+      }
+      await _uiPlayer.play(AssetSource('sounds/success.mp3'), volume: 0.8);
+    } catch (e) {
+      debugPrint('AudioService.playSuccess error: $e');
+    }
   }
 
   Future<void> playWaterDrop() async {
-    // เล่นเสียงน้ำแบบรวดเร็ว
-    if (_uiPlayer.state == PlayerState.playing) {
-      await _uiPlayer.stop(); // หยุดเสียงเก่าถ้ากดรัวๆ
+    try {
+      if (_uiPlayer.state == PlayerState.playing) {
+        await _uiPlayer.stop();
+      }
+      await _uiPlayer.play(AssetSource('sounds/water.mp3'), volume: 1.0);
+    } catch (e) {
+      debugPrint('AudioService.playWaterDrop error: $e');
     }
-    await _uiPlayer.play(AssetSource('sounds/water.mp3'), volume: 0.8);
   }
 
   Future<void> playTimerComplete() async {
-    // เสียงระฆังยาวๆ
-    await _timerPlayer.play(AssetSource('sounds/bell.mp3'));
+    try {
+      if (_timerPlayer.state == PlayerState.playing) {
+        await _timerPlayer.stop();
+      }
+      await _timerPlayer.play(AssetSource('sounds/bell.mp3'), volume: 1.0);
+    } catch (e) {
+      debugPrint('AudioService.playTimerComplete error: $e');
+    }
   }
 }

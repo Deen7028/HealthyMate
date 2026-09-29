@@ -167,4 +167,19 @@ extension AppDatabaseWorkoutDao on AppDatabase {
     }
     return 0;
   }
+
+  /// ดึงหมวดหมู่การออกกำลังกายทั้งหมดจากตาราง TbWorkoutCategories
+  Future<List<Map<String, dynamic>>> getWorkoutCategories() async {
+    if (kIsWeb) return [];
+    final db = await database;
+    if (db == null) return [];
+    try {
+      return await db.query(
+        AppDatabase.tableWorkoutCategories,
+        orderBy: 'nCategoryId ASC',
+      );
+    } catch (_) {
+      return [];
+    }
+  }
 }

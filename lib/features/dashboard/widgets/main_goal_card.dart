@@ -42,18 +42,30 @@ class MainGoalCard extends StatelessWidget {
     final match = RegExp(
       r'(\d{1,2})/(\d{1,2})/(\d{4})',
     ).firstMatch(remainingText);
-    if (match == null) return null;
-
-    final day = int.parse(match.group(1)!);
-    final month = int.parse(match.group(2)!);
-    var year = int.parse(match.group(3)!);
-    if (year > 2500) {
-      year -= 543;
+    if (match != null) {
+      final day = int.parse(match.group(1)!);
+      final month = int.parse(match.group(2)!);
+      var year = int.parse(match.group(3)!);
+      if (year > 2500) {
+        year -= 543;
+      }
+      final parsed = DateTime.tryParse(
+        '$year-${month.toString().padLeft(2, '0')}-${day.toString().padLeft(2, '0')}',
+      );
+      if (parsed != null) return parsed;
     }
 
-    return DateTime.tryParse(
-      '$year-${month.toString().padLeft(2, '0')}-${day.toString().padLeft(2, '0')}',
-    );
+    final rawCreatedAt = goal?['dtCreatedAt']?.toString();
+    if (rawCreatedAt != null && rawCreatedAt.isNotEmpty) {
+      final createdAt = DateTime.tryParse(rawCreatedAt);
+      if (createdAt != null) {
+        return createdAt.add(const Duration(days: 30));
+      }
+    } else if (goal != null) {
+      return DateTime.now().add(const Duration(days: 30));
+    }
+
+    return null;
   }
 
   Future<void> _createGoal(BuildContext context) async {
@@ -86,6 +98,7 @@ class MainGoalCard extends StatelessWidget {
         title: '$icon $title',
         progress: 0.0,
         remainingText: remainingText,
+        dtCreatedAt: now.toIso8601String(),
       );
       RoutineStateNotifier.instance.loadData(userId: controller.user!.nUserId);
     }

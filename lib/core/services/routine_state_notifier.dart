@@ -13,7 +13,7 @@ class RoutineStateNotifier extends ChangeNotifier {
   static final RoutineStateNotifier instance = RoutineStateNotifier._internal();
   RoutineStateNotifier._internal();
 
-  void _notifyStateListeners() => this._notifyStateListeners();
+  void _notifyStateListeners() => notifyListeners();
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;

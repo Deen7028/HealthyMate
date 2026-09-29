@@ -117,6 +117,7 @@ extension RoutineControllerGoals on RoutineController {
           title: '$icon $title',
           progress: 0.0,
           remainingText: remainingText,
+          dtCreatedAt: createdAtStr,
         );
         await GoalApiService.saveMainGoalRemote(
           userId: user!.nUserId,

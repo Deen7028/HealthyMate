@@ -33,11 +33,13 @@ extension AppDatabaseGoalPreferenceDao on AppDatabase {
     required String title,
     required double progress,
     required String remainingText,
+    String? dtCreatedAt,
   }) async {
     final db = await database;
     if (db == null) return;
 
     final existing = await getUserGoal(userId);
+    final nowStr = DateTime.now().toIso8601String();
     if (existing != null) {
       final existingProgress =
           (existing['nProgress'] as num?)?.toDouble() ?? 0.0;
@@ -50,15 +52,19 @@ extension AppDatabaseGoalPreferenceDao on AppDatabase {
 
       // หากเป็นเป้าหมายเดิม หรือเป้าหมายเดิมยังไม่สำเร็จ ให้ Update ได้
       if (isSameGoal || !isExistingCompleted) {
+        final updateMap = <String, dynamic>{
+          'nRoutineId': nRoutineId,
+          'sTitle': title,
+          'nProgress': progress,
+          'sRemainingText': remainingText,
+          'dtUpdatedAt': nowStr,
+        };
+        if (dtCreatedAt != null) {
+          updateMap['dtCreatedAt'] = dtCreatedAt;
+        }
         await db.update(
           'TbGoals',
-          {
-            'nRoutineId': nRoutineId,
-            'sTitle': title,
-            'nProgress': progress,
-            'sRemainingText': remainingText,
-            'dtUpdatedAt': DateTime.now().toIso8601String(),
-          },
+          updateMap,
           where: 'nGoalId = ?',
           whereArgs: [existing['nGoalId']],
         );
@@ -73,8 +79,8 @@ extension AppDatabaseGoalPreferenceDao on AppDatabase {
       'sTitle': title,
       'nProgress': progress,
       'sRemainingText': remainingText,
-      'dtCreatedAt': DateTime.now().toIso8601String(),
-      'dtUpdatedAt': DateTime.now().toIso8601String(),
+      'dtCreatedAt': dtCreatedAt ?? nowStr,
+      'dtUpdatedAt': nowStr,
     });
   }
 

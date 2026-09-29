@@ -174,5 +174,31 @@ extension AppDatabaseSchema on AppDatabase {
         FOREIGN KEY (nUserId) REFERENCES $AppDatabase.tableUsers (nUserId) ON DELETE CASCADE
       );
     ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $AppDatabase.tableWorkoutCategories (
+        nCategoryId INTEGER PRIMARY KEY AUTOINCREMENT,
+        sCategoryId TEXT NOT NULL UNIQUE,
+        sTitle TEXT NOT NULL,
+        sSubtitle TEXT,
+        sIconName TEXT,
+        nIconCodePoint INTEGER,
+        nMetValue REAL DEFAULT 1.00,
+        isMoving INTEGER DEFAULT 0,
+        dtCreatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+    ''');
+
+    // Default seed categories
+    await db.execute('''
+      INSERT OR IGNORE INTO $AppDatabase.tableWorkoutCategories 
+        (nCategoryId, sCategoryId, sTitle, sSubtitle, sIconName, nIconCodePoint, nMetValue, isMoving) 
+      VALUES
+        (1, 'running', 'วิ่ง (Running)', 'ติดตามเส้นทาง GPS และความเร็ว', 'directions_run', 57904, 8.50, 1),
+        (2, 'walking', 'เดิน (Walking)', 'ออกกำลังกายเบาๆ เผาผลาญไขมัน', 'directions_walk', 57906, 3.80, 1),
+        (3, 'cycling', 'ปั่นจักรยาน (Cycling)', 'บันทึกระยะทางและความเร็วรอบขา', 'directions_bike', 57903, 7.50, 1),
+        (4, 'meditation', 'ทำสมาธิ (Meditation)', 'ฝึกสติ ผ่อนคลายความเครียด และฟื้นฟูจิตใจ', 'self_improvement', 58718, 1.50, 0),
+        (5, 'yoga', 'โยคะ (Yoga)', 'ยืดเหยียดกล้ามเนื้อ เสริมความยืดหยุ่นและสมดุล', 'spa', 58732, 3.00, 0);
+    ''');
   }
 }

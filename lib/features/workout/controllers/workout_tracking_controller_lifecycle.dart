@@ -3,6 +3,12 @@ part of 'workout_tracking_controller.dart';
 extension WorkoutTrackingLifecycle on WorkoutTrackingController {
   Future<void> _loadUserData() async {
     try {
+      final dbCategories = await AppDatabase.instance.getWorkoutCategories();
+      if (dbCategories.isNotEmpty) {
+        final parsed = dbCategories.map((m) => WorkoutCategory.fromMap(m)).toList();
+        WorkoutCategory.updateCategories(parsed);
+      }
+
       final email = AuthService.instance.currentUserEmail;
       final user = email.isNotEmpty
           ? await AppDatabase.instance.getUserByEmail(email)
@@ -12,10 +18,10 @@ extension WorkoutTrackingLifecycle on WorkoutTrackingController {
         if (user.nWeight != null && user.nWeight! > 0) {
           _userWeightKg = user.nWeight!;
         }
-        this._safeNotifyListeners();
       }
+      this._safeNotifyListeners();
     } catch (_) {
-      debugPrint('WorkoutTrackingController: Failed to load signed-in user.');
+      debugPrint('WorkoutTrackingController: Failed to load signed-in user or categories.');
     }
   }
 

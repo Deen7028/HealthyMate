@@ -23,6 +23,7 @@ extension DashboardControllerLoading on DashboardController {
       latestRecord = records.isNotEmpty ? records.first : null;
 
       final workouts = await db.getWorkouts(userId: userId);
+      this.workouts = workouts;
       workoutCount = workouts.length;
       totalDistanceKm = 0.0;
       totalRunningDistanceKm = 0.0;

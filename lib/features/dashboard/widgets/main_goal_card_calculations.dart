@@ -98,25 +98,53 @@ extension _MainGoalCardCalculations on MainGoalCard {
       double currentVal = 0.0;
       String unitText = '';
 
+      // กรองกิจกรรมไม่ให้นับข้อมูลที่เกิดขึ้นก่อนเวลาที่สร้างเป้าหมาย (Goal Creation Time Condition)
+      DateTime? goalCreatedAt;
+      final rawCreatedAt = userGoal['dtCreatedAt']?.toString();
+      if (rawCreatedAt != null && rawCreatedAt.isNotEmpty) {
+        goalCreatedAt = DateTime.tryParse(rawCreatedAt);
+      }
+
+      final validWorkouts = controller.workouts.where((w) {
+        if (goalCreatedAt == null) return true;
+        final wDateStr = w['dtWorkoutDate']?.toString() ?? '';
+        final wDate = DateTime.tryParse(wDateStr);
+        if (wDate == null) return false;
+        return wDate.isAfter(goalCreatedAt) ||
+            wDate.isAtSameMomentAs(goalCreatedAt);
+      }).toList();
+
       if (lowerTitle.contains('ลดน้ำหนัก') || lowerTitle.contains('น้ำหนัก')) {
         goalColor = const Color(0xFF0F9C58);
         goalIcon = Icons.monitor_weight_outlined;
         unitText = 'กก.';
 
-        // คำนวณน้ำหนักที่ลดได้จากประวัติสุขภาพ TbHealthRecords
-        if (controller.healthRecords.length >= 2) {
-          final startWeight = controller.healthRecords.last.nWeight;
-          final currentWeight = controller.healthRecords.first.nWeight;
-          final diff = startWeight - currentWeight;
+        final records = controller.healthRecords;
+        final validRecords = records.where((r) {
+          if (goalCreatedAt == null) return true;
+          return r.dtRecordedAt.isAfter(goalCreatedAt) ||
+              r.dtRecordedAt.isAtSameMomentAs(goalCreatedAt);
+        }).toList();
+
+        double startWeight = 0.0;
+        final recordsBeforeOrAt = records.where((r) {
+          if (goalCreatedAt == null) return true;
+          return r.dtRecordedAt.isBefore(goalCreatedAt) ||
+              r.dtRecordedAt.isAtSameMomentAs(goalCreatedAt);
+        }).toList();
+
+        if (recordsBeforeOrAt.isNotEmpty) {
+          startWeight = recordsBeforeOrAt.first.nWeight;
+        } else if (records.isNotEmpty) {
+          startWeight = records.last.nWeight;
+        } else if (controller.user != null) {
+          startWeight = controller.user?.nWeight ?? 0.0;
+        }
+
+        if (validRecords.isNotEmpty && startWeight > 0) {
+          final curWeight = validRecords.first.nWeight;
+          final diff = startWeight - curWeight;
           currentVal = diff > 0 ? diff : 0.0;
-        } else if (controller.healthRecords.isNotEmpty &&
-            controller.user != null) {
-          final currentWeight = controller.healthRecords.first.nWeight;
-          final userWeight = controller.user?.nWeight ?? 0.0;
-          final diff = (userWeight > currentWeight && userWeight > 0)
-              ? (userWeight - currentWeight)
-              : 0.0;
-          currentVal = diff;
         } else {
           currentVal = 0.0;
         }
@@ -133,7 +161,11 @@ extension _MainGoalCardCalculations on MainGoalCard {
         goalColor = const Color(0xFFFF9800);
         goalIcon = Icons.local_fire_department_rounded;
         unitText = 'แคล';
-        currentVal = controller.totalCaloriesBurned;
+        double totalBurned = 0.0;
+        for (final w in validWorkouts) {
+          totalBurned += (w['nCaloriesBurned'] as num?)?.toDouble() ?? 0.0;
+        }
+        currentVal = totalBurned;
         progress = targetVal > 0
             ? (currentVal / targetVal).clamp(0.0, 1.0)
             : 0.0;
@@ -142,13 +174,26 @@ extension _MainGoalCardCalculations on MainGoalCard {
         displayDetail =
             'เผาผลาญสะสม: ${controller.formatNum(currentVal)} / ${controller.formatNum(targetVal)} $unitText ($percent%)';
       } else if (lowerTitle.contains('ปั่น') ||
-          lowerTitle.contains('จักรยาน')) {
+          lowerTitle.contains('จักรยาน') ||
+          lowerTitle.contains('cycling')) {
         goalColor = const Color(0xFF0288D1);
         goalIcon = Icons.directions_bike;
-        unitText = 'กม.';
-        currentVal = controller.totalCyclingDistanceKm > 0
-            ? controller.totalCyclingDistanceKm
-            : controller.totalDistanceKm;
+        unitText = (userGoal['unit'] ?? 'กม.').toString();
+        double totalCycling = 0.0;
+        for (final w in validWorkouts) {
+          final type = (w['sType']?.toString() ?? '').toLowerCase();
+          if (type.contains('ปั่น') ||
+              type.contains('จักรยาน') ||
+              type.contains('cycling')) {
+            if (unitText.contains('นาที') || unitText.contains('min')) {
+              totalCycling +=
+                  ((w['nDuration'] as num?)?.toDouble() ?? 0.0) / 60.0;
+            } else {
+              totalCycling += (w['nDistance'] as num?)?.toDouble() ?? 0.0;
+            }
+          }
+        }
+        currentVal = totalCycling;
         progress = targetVal > 0
             ? (currentVal / targetVal).clamp(0.0, 1.0)
             : 0.0;
@@ -156,13 +201,24 @@ extension _MainGoalCardCalculations on MainGoalCard {
         isCompleted = progress >= 1.0;
         displayDetail =
             'ปั่นสะสม: ${controller.formatNum(currentVal)} / ${controller.formatNum(targetVal)} $unitText ($percent%)';
-      } else if (lowerTitle.contains('วิ่ง')) {
+      } else if (lowerTitle.contains('วิ่ง') ||
+          lowerTitle.contains('running')) {
         goalColor = const Color(0xFF4CAF50);
         goalIcon = Icons.directions_run;
-        unitText = 'กม.';
-        currentVal = controller.totalRunningDistanceKm > 0
-            ? controller.totalRunningDistanceKm
-            : controller.totalDistanceKm;
+        unitText = (userGoal['unit'] ?? 'กม.').toString();
+        double totalRunning = 0.0;
+        for (final w in validWorkouts) {
+          final type = (w['sType']?.toString() ?? '').toLowerCase();
+          if (type.contains('วิ่ง') || type.contains('running')) {
+            if (unitText.contains('นาที') || unitText.contains('min')) {
+              totalRunning +=
+                  ((w['nDuration'] as num?)?.toDouble() ?? 0.0) / 60.0;
+            } else {
+              totalRunning += (w['nDistance'] as num?)?.toDouble() ?? 0.0;
+            }
+          }
+        }
+        currentVal = totalRunning;
         progress = targetVal > 0
             ? (currentVal / targetVal).clamp(0.0, 1.0)
             : 0.0;
@@ -170,6 +226,73 @@ extension _MainGoalCardCalculations on MainGoalCard {
         isCompleted = progress >= 1.0;
         displayDetail =
             'วิ่งสะสม: ${controller.formatNum(currentVal)} / ${controller.formatNum(targetVal)} $unitText ($percent%)';
+      } else if (lowerTitle.contains('เดิน') ||
+          lowerTitle.contains('walking')) {
+        goalColor = const Color(0xFF26A69A);
+        goalIcon = Icons.directions_walk;
+        unitText = (userGoal['unit'] ?? 'กม.').toString();
+        double totalWalking = 0.0;
+        for (final w in validWorkouts) {
+          final type = (w['sType']?.toString() ?? '').toLowerCase();
+          if (type.contains('เดิน') || type.contains('walking')) {
+            if (unitText.contains('นาที') || unitText.contains('min')) {
+              totalWalking +=
+                  ((w['nDuration'] as num?)?.toDouble() ?? 0.0) / 60.0;
+            } else {
+              totalWalking += (w['nDistance'] as num?)?.toDouble() ?? 0.0;
+            }
+          }
+        }
+        currentVal = totalWalking;
+        progress = targetVal > 0
+            ? (currentVal / targetVal).clamp(0.0, 1.0)
+            : 0.0;
+        final percent = (progress * 100).toInt();
+        isCompleted = progress >= 1.0;
+        displayDetail =
+            'เดินสะสม: ${controller.formatNum(currentVal)} / ${controller.formatNum(targetVal)} $unitText ($percent%)';
+      } else if (lowerTitle.contains('สมาธิ') ||
+          lowerTitle.contains('meditation')) {
+        goalColor = const Color(0xFF8E24AA);
+        goalIcon = Icons.self_improvement_rounded;
+        unitText = (userGoal['unit'] ?? 'นาที').toString();
+        double totalMeditation = 0.0;
+        for (final w in validWorkouts) {
+          final type = (w['sType']?.toString() ?? '').toLowerCase();
+          if (type.contains('สมาธิ') || type.contains('meditation')) {
+            totalMeditation +=
+                ((w['nDuration'] as num?)?.toDouble() ?? 0.0) / 60.0;
+          }
+        }
+        currentVal = totalMeditation;
+        progress = targetVal > 0
+            ? (currentVal / targetVal).clamp(0.0, 1.0)
+            : 0.0;
+        final percent = (progress * 100).toInt();
+        isCompleted = progress >= 1.0;
+        displayDetail =
+            'สมาธิสะสม: ${controller.formatNum(currentVal)} / ${controller.formatNum(targetVal)} $unitText ($percent%)';
+      } else if (lowerTitle.contains('โยคะ') ||
+          lowerTitle.contains('yoga')) {
+        goalColor = const Color(0xFFE91E63);
+        goalIcon = Icons.spa_rounded;
+        unitText = (userGoal['unit'] ?? 'นาที').toString();
+        double totalYoga = 0.0;
+        for (final w in validWorkouts) {
+          final type = (w['sType']?.toString() ?? '').toLowerCase();
+          if (type.contains('โยคะ') || type.contains('yoga')) {
+            totalYoga +=
+                ((w['nDuration'] as num?)?.toDouble() ?? 0.0) / 60.0;
+          }
+        }
+        currentVal = totalYoga;
+        progress = targetVal > 0
+            ? (currentVal / targetVal).clamp(0.0, 1.0)
+            : 0.0;
+        final percent = (progress * 100).toInt();
+        isCompleted = progress >= 1.0;
+        displayDetail =
+            'โยคะสะสม: ${controller.formatNum(currentVal)} / ${controller.formatNum(targetVal)} $unitText ($percent%)';
       } else {
         progress =
             (userGoal['nProgress'] as num?)?.toDouble().clamp(0.0, 1.0) ?? 0.0;
