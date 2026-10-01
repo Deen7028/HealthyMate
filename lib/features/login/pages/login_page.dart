@@ -8,6 +8,8 @@ import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
 import 'package:healthymate/features/register/pages/register_page.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:healthymate/core/services/supabase_service.dart';
 import '../widgets/index.dart';
 
 part 'login_page_google.dart';

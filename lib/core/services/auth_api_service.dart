@@ -3,12 +3,25 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'api_service_config.dart';
 
+import 'package:healthymate/core/services/supabase_service.dart';
+
 class AuthApiService {
   static Future<Map<String, dynamic>> loginRemote({
     required String email,
     required String password,
   }) async {
     try {
+      if (SupabaseService.instance.isInitialized) {
+        final existing = await SupabaseService.instance.getUserByEmail(email);
+        if (existing != null) {
+          return {
+            'status': 'success',
+            'user': existing,
+            'message': 'เข้าสู่ระบบสำเร็จ',
+          };
+        }
+      }
+
       final uri = Uri.parse('${ApiServiceConfig.baseUrl}/login.php');
       final Map<String, dynamic> payload = {
         'sEmail': email,
@@ -40,12 +53,39 @@ class AuthApiService {
     };
   }
 
-  /// ตรวจสอบการซ้ำของอีเมลกับ Remote Server (`check_email.php`)
-
+  /// เข้าสู่ระบบด้วย Google ผ่าน Supabase Database
   static Future<Map<String, dynamic>> loginWithGoogle(
     Map<String, dynamic> googleUserData,
   ) async {
     try {
+      if (SupabaseService.instance.isInitialized) {
+        final email = googleUserData['sEmail']?.toString() ?? '';
+        final existing = await SupabaseService.instance.getUserByEmail(email);
+        
+        final userPayload = {
+          'sEmail': email,
+          'sFirstName': googleUserData['sFirstName'] ?? 'Google',
+          'sLastName': googleUserData['sLastName'] ?? 'User',
+          'sProfileImagePath': googleUserData['sProfileImagePath'] ?? '',
+          'sPasswordHash': 'GOOGLE_AUTH_USER',
+          'isSynced': true,
+        };
+
+        if (existing != null) {
+          userPayload['nUserId'] = existing['nUserId'];
+        }
+
+        await SupabaseService.instance.upsertUser(userPayload);
+        final latestUser = await SupabaseService.instance.getUserByEmail(email);
+
+        return {
+          'status': 'success',
+          'user': latestUser ?? userPayload,
+          'token': 'supabase_token_$email',
+          'message': 'เข้าสู่ระบบด้วย Google สำเร็จ',
+        };
+      }
+
       final response = await http
           .post(
             Uri.parse('${ApiServiceConfig.baseUrl}/google_login.php'),

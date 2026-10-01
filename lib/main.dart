@@ -12,11 +12,13 @@ import 'package:healthymate/shared/theme/app_theme.dart';
 
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:healthymate/features/login/pages/login_page.dart';
+import 'package:healthymate/core/services/supabase_service.dart';
 import 'package:healthymate/main_app.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppConfig.init();
+  await SupabaseService.instance.init();
   AppDatabase.ensureInitialized();
   await AuthService.instance.init();
   await ThemeService.instance.init();
@@ -26,8 +28,37 @@ void main() async {
   await TtsService.instance.init();
   await GoogleSignIn.instance.initialize(
     serverClientId:
-        '653331824744-1gcsv7spstab9sf5tlrs3e3qf21364su.apps.googleusercontent.com',
+        '653331824744-u7shnuntsincr6j4e91p7urbqie9kqu0.apps.googleusercontent.com',
   );
+
+  // ดักฟัง Supabase Auth State Change (สำหรับ Google OAuth Deep Link)
+  if (SupabaseService.instance.isInitialized && SupabaseService.instance.client != null) {
+    SupabaseService.instance.client!.auth.onAuthStateChange.listen((data) async {
+      final session = data.session;
+      if (session != null && session.user.email != null) {
+        final email = session.user.email!;
+        final meta = session.user.userMetadata ?? {};
+        final fullName = meta['full_name']?.toString() ?? meta['name']?.toString() ?? 'Google User';
+        final names = fullName.split(' ');
+        final firstName = names.isNotEmpty ? names.first : 'Google';
+        final lastName = names.length > 1 ? names.sublist(1).join(' ') : '';
+        final avatarUrl = meta['avatar_url']?.toString() ?? meta['picture']?.toString() ?? '';
+
+        final userPayload = {
+          'sEmail': email,
+          'sFirstName': firstName,
+          'sLastName': lastName,
+          'sProfileImagePath': avatarUrl,
+          'sPasswordHash': 'GOOGLE_AUTH_USER',
+          'isSynced': true,
+        };
+
+        final tbUser = await AppDatabase.instance.upsertUserFromServer(userPayload);
+        await AuthService.instance.setLoginSession(tbUser.sEmail, token: session.accessToken);
+      }
+    });
+  }
+
   runApp(const HealthyMateApp());
 }
 

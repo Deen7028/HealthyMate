@@ -4,13 +4,19 @@ extension LoginPageGoogle on _LoginPageState {
   Future<void> _handleGoogleSignIn() async {
     setState(() => _isLoading = true);
     try {
-      if (!_googleSignIn.supportsAuthenticate()) {
-        setState(() => _isLoading = false);
-        _showError('แพลตฟอร์มนี้ยังไม่รองรับ Google Sign-In');
+      // 1. ตรวจสอบว่ามี Supabase พร้อมใช้งานหรือไม่
+      if (SupabaseService.instance.isInitialized && SupabaseService.instance.client != null) {
+        await SupabaseService.instance.client!.auth.signInWithOAuth(
+          OAuthProvider.google,
+          redirectTo: 'com.example.healthymate://login-callback',
+        );
+        if (mounted) setState(() => _isLoading = false);
         return;
       }
 
+      // 2. Fallback เป็น GoogleSignIn SDK Native
       final GoogleSignInAccount user = await _googleSignIn.authenticate();
+
       final names = user.displayName?.split(' ') ?? ['Google', 'User'];
       final firstName = names.isNotEmpty ? names.first : 'Google';
       final lastName = names.length > 1 ? names.sublist(1).join(' ') : '';
@@ -52,21 +58,6 @@ extension LoginPageGoogle on _LoginPageState {
         setState(() => _isLoading = false);
         _showError(result['message'] ?? 'เข้าสู่ระบบด้วย Google ไม่สำเร็จ');
         await _googleSignIn.signOut();
-      }
-    } on GoogleSignInException catch (e) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-      if (e.code == GoogleSignInExceptionCode.clientConfigurationError) {
-        _showError(
-          'กรุณาตั้งค่า OAuth Web Client ID หรือ google-services.json บน Android ให้เรียบร้อยก่อนใช้งาน Google Sign-In',
-        );
-      } else if (e.code == GoogleSignInExceptionCode.canceled) {
-        // ผู้ใช้กดยกเลิกการล็อกอิน ไม่ต้องแสดง error แดง
-        return;
-      } else {
-        _showError(
-          'เกิดข้อผิดพลาดในการเข้าสู่ระบบ Google: ${e.description ?? e.code.name}',
-        );
       }
     } catch (error) {
       if (!mounted) return;

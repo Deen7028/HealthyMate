@@ -1,217 +1,210 @@
-SET NAMES utf8mb4;
-SET FOREIGN_KEY_CHECKS = 0;
-SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
-SET time_zone = "+00:00";
+-- PostgreSQL Database Schema (DDL) for HealthyMate
 
-DROP TABLE IF EXISTS `TbWorkoutCategories`;
-DROP TABLE IF EXISTS `TbWorkouts`;
-DROP TABLE IF EXISTS `TbUserPreferences`;
-DROP TABLE IF EXISTS `TbUserBadges`;
-DROP TABLE IF EXISTS `TbSession`;
-DROP TABLE IF EXISTS `tbsession`;
-DROP TABLE IF EXISTS `TbRoutineLogs`;
-DROP TABLE IF EXISTS `TbNutritionLogs`;
-DROP TABLE IF EXISTS `TbHealthRecords`;
-DROP TABLE IF EXISTS `TbHealthIntegrations`;
-DROP TABLE IF EXISTS `TbGoals`;
-DROP TABLE IF EXISTS `TbRoutines`;
-DROP TABLE IF EXISTS `TbEmailOtps`;
-DROP TABLE IF EXISTS `TbBadges`;
-DROP TABLE IF EXISTS `TbUsers`;
+DROP TABLE IF EXISTS "TbWorkoutCategories" CASCADE;
+DROP TABLE IF EXISTS "TbWorkouts" CASCADE;
+DROP TABLE IF EXISTS "TbUserPreferences" CASCADE;
+DROP TABLE IF EXISTS "TbUserBadges" CASCADE;
+DROP TABLE IF EXISTS "TbSession" CASCADE;
+DROP TABLE IF EXISTS "tbsession" CASCADE;
+DROP TABLE IF EXISTS "TbRoutineLogs" CASCADE;
+DROP TABLE IF EXISTS "TbNutritionLogs" CASCADE;
+DROP TABLE IF EXISTS "TbHealthRecords" CASCADE;
+DROP TABLE IF EXISTS "TbHealthIntegrations" CASCADE;
+DROP TABLE IF EXISTS "TbGoals" CASCADE;
+DROP TABLE IF EXISTS "TbRoutines" CASCADE;
+DROP TABLE IF EXISTS "TbEmailOtps" CASCADE;
+DROP TABLE IF EXISTS "TbBadges" CASCADE;
+DROP TABLE IF EXISTS "TbUsers" CASCADE;
 
-CREATE TABLE IF NOT EXISTS `TbUsers` (
-  `nUserId` int(11) NOT NULL AUTO_INCREMENT,
-  `sEmail` varchar(255) NOT NULL,
-  `sPasswordHash` varchar(255) NOT NULL,
-  `sFirstName` varchar(100) NOT NULL,
-  `sLastName` varchar(100) NOT NULL,
-  `nAge` int(11) DEFAULT NULL,
-  `nHeight` decimal(5,2) DEFAULT NULL,
-  `nWeight` decimal(5,2) DEFAULT NULL,
-  `sGender` varchar(20) DEFAULT NULL,
-  `sActivityLevel` varchar(50) DEFAULT NULL,
-  `isDarkMode` tinyint(1) DEFAULT 0,
-  `sProfileImagePath` text DEFAULT NULL,
-  `isSynced` tinyint(1) DEFAULT 0,
-  `dtUpdatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `dtCreatedAt` datetime DEFAULT current_timestamp(),
-  PRIMARY KEY (`nUserId`),
-  UNIQUE KEY `sEmail` (`sEmail`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- 1. Table structure for table "TbUsers"
+CREATE TABLE IF NOT EXISTS "TbUsers" (
+  "nUserId" SERIAL PRIMARY KEY,
+  "sEmail" VARCHAR(255) NOT NULL UNIQUE,
+  "sPasswordHash" VARCHAR(255) NOT NULL,
+  "sFirstName" VARCHAR(100) NOT NULL,
+  "sLastName" VARCHAR(100) NOT NULL,
+  "nAge" INT DEFAULT NULL,
+  "nHeight" DECIMAL(5,2) DEFAULT NULL,
+  "nWeight" DECIMAL(5,2) DEFAULT NULL,
+  "sGender" VARCHAR(20) DEFAULT NULL,
+  "sActivityLevel" VARCHAR(50) DEFAULT NULL,
+  "isDarkMode" BOOLEAN DEFAULT FALSE,
+  "sProfileImagePath" TEXT DEFAULT NULL,
+  "isSynced" BOOLEAN DEFAULT FALSE,
+  "dtUpdatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  "dtCreatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-CREATE TABLE IF NOT EXISTS `TbBadges` (
-  `nBadgeId` int(11) NOT NULL AUTO_INCREMENT,
-  `sBadgeName` varchar(100) NOT NULL,
-  `sDescription` varchar(255) DEFAULT NULL,
-  `sIconUrl` varchar(255) DEFAULT NULL,
-  PRIMARY KEY (`nBadgeId`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- 2. Table structure for table "TbBadges"
+CREATE TABLE IF NOT EXISTS "TbBadges" (
+  "nBadgeId" SERIAL PRIMARY KEY,
+  "sBadgeName" VARCHAR(100) NOT NULL,
+  "sDescription" VARCHAR(255) DEFAULT NULL,
+  "sIconUrl" VARCHAR(255) DEFAULT NULL
+);
 
-CREATE TABLE IF NOT EXISTS `TbEmailOtps` (
-  `nOtpId` int(11) NOT NULL AUTO_INCREMENT,
-  `sEmail` varchar(150) NOT NULL,
-  `sOtpCode` varchar(6) NOT NULL,
-  `nAttempts` int(11) DEFAULT 0,
-  `isUsed` tinyint(1) DEFAULT 0,
-  `dtExpiresAt` datetime NOT NULL,
-  `dtCreatedAt` datetime DEFAULT current_timestamp(),
-  `sIpAddress` varchar(45) DEFAULT NULL,
-  PRIMARY KEY (`nOtpId`),
-  KEY `idx_email_status` (`sEmail`,`isUsed`,`dtExpiresAt`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- 3. Table structure for table "TbEmailOtps"
+CREATE TABLE IF NOT EXISTS "TbEmailOtps" (
+  "nOtpId" SERIAL PRIMARY KEY,
+  "sEmail" VARCHAR(150) NOT NULL,
+  "sOtpCode" VARCHAR(6) NOT NULL,
+  "nAttempts" INT DEFAULT 0,
+  "isUsed" BOOLEAN DEFAULT FALSE,
+  "dtExpiresAt" TIMESTAMP NOT NULL,
+  "dtCreatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  "sIpAddress" VARCHAR(45) DEFAULT NULL
+);
+CREATE INDEX "idx_email_status" ON "TbEmailOtps" ("sEmail", "isUsed", "dtExpiresAt");
 
-CREATE TABLE IF NOT EXISTS `TbRoutines` (
-  `nRoutineId` int(11) NOT NULL AUTO_INCREMENT,
-  `nUserId` int(11) NOT NULL,
-  `sTitle` varchar(150) NOT NULL,
-  `sTime` varchar(255) DEFAULT NULL,
-  `isNotificationActive` tinyint(1) DEFAULT 1,
-  `dtCreatedAt` datetime DEFAULT current_timestamp(),
-  `nTargetValue` double DEFAULT 1,
-  `sUnit` varchar(50) DEFAULT 'ครั้ง',
-  `sLinkedWorkout` varchar(100) DEFAULT '',
-  `nColor` bigint(20) DEFAULT NULL,
-  `nIconData` bigint(20) DEFAULT NULL,
-  PRIMARY KEY (`nRoutineId`),
-  KEY `nUserId` (`nUserId`),
-  CONSTRAINT `fk_routines_user` FOREIGN KEY (`nUserId`) REFERENCES `TbUsers` (`nUserId`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- 4. Table structure for table "TbRoutines"
+CREATE TABLE IF NOT EXISTS "TbRoutines" (
+  "nRoutineId" SERIAL PRIMARY KEY,
+  "nUserId" INT NOT NULL,
+  "sTitle" VARCHAR(150) NOT NULL,
+  "sTime" VARCHAR(255) DEFAULT NULL,
+  "isNotificationActive" BOOLEAN DEFAULT TRUE,
+  "dtCreatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  "nTargetValue" DOUBLE PRECISION DEFAULT 1,
+  "sUnit" VARCHAR(50) DEFAULT 'ครั้ง',
+  "sLinkedWorkout" VARCHAR(100) DEFAULT '',
+  "nColor" BIGINT DEFAULT NULL,
+  "nIconData" BIGINT DEFAULT NULL,
+  CONSTRAINT "fk_routines_user" FOREIGN KEY ("nUserId") REFERENCES "TbUsers" ("nUserId") ON DELETE CASCADE
+);
+CREATE INDEX "idx_routines_user" ON "TbRoutines" ("nUserId");
 
-CREATE TABLE IF NOT EXISTS `TbGoals` (
-  `nGoalId` int(11) NOT NULL AUTO_INCREMENT,
-  `nUserId` int(11) NOT NULL,
-  `sTitle` varchar(255) NOT NULL,
-  `nProgress` decimal(5,2) DEFAULT 0.00,
-  `sRemainingText` varchar(255) DEFAULT NULL,
-  `dtCreatedAt` datetime DEFAULT current_timestamp(),
-  `dtUpdatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `nRoutineId` int(11) DEFAULT NULL,
-  PRIMARY KEY (`nGoalId`),
-  KEY `nUserId` (`nUserId`),
-  KEY `fk_goals_routine` (`nRoutineId`),
-  CONSTRAINT `fk_goals_user` FOREIGN KEY (`nUserId`) REFERENCES `TbUsers` (`nUserId`) ON DELETE CASCADE,
-  CONSTRAINT `fk_goals_routine` FOREIGN KEY (`nRoutineId`) REFERENCES `TbRoutines` (`nRoutineId`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- 5. Table structure for table "TbGoals"
+CREATE TABLE IF NOT EXISTS "TbGoals" (
+  "nGoalId" SERIAL PRIMARY KEY,
+  "nUserId" INT NOT NULL,
+  "sTitle" VARCHAR(255) NOT NULL,
+  "nProgress" DECIMAL(5,2) DEFAULT 0.00,
+  "sRemainingText" VARCHAR(255) DEFAULT NULL,
+  "dtCreatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  "dtUpdatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  "nRoutineId" INT DEFAULT NULL,
+  CONSTRAINT "fk_goals_user" FOREIGN KEY ("nUserId") REFERENCES "TbUsers" ("nUserId") ON DELETE CASCADE,
+  CONSTRAINT "fk_goals_routine" FOREIGN KEY ("nRoutineId") REFERENCES "TbRoutines" ("nRoutineId") ON DELETE SET NULL
+);
+CREATE INDEX "idx_goals_user" ON "TbGoals" ("nUserId");
+CREATE INDEX "idx_goals_routine" ON "TbGoals" ("nRoutineId");
 
-CREATE TABLE IF NOT EXISTS `TbHealthIntegrations` (
-  `nIntegrationId` int(11) NOT NULL AUTO_INCREMENT,
-  `nUserId` int(11) NOT NULL,
-  `sProviderName` varchar(50) NOT NULL,
-  `isSynced` tinyint(1) DEFAULT 0,
-  `dtLastSyncedAt` datetime DEFAULT NULL,
-  PRIMARY KEY (`nIntegrationId`),
-  KEY `nUserId` (`nUserId`),
-  CONSTRAINT `fk_integrations_user` FOREIGN KEY (`nUserId`) REFERENCES `TbUsers` (`nUserId`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- 6. Table structure for table "TbHealthIntegrations"
+CREATE TABLE IF NOT EXISTS "TbHealthIntegrations" (
+  "nIntegrationId" SERIAL PRIMARY KEY,
+  "nUserId" INT NOT NULL,
+  "sProviderName" VARCHAR(50) NOT NULL,
+  "isSynced" BOOLEAN DEFAULT FALSE,
+  "dtLastSyncedAt" TIMESTAMP DEFAULT NULL,
+  CONSTRAINT "fk_integrations_user" FOREIGN KEY ("nUserId") REFERENCES "TbUsers" ("nUserId") ON DELETE CASCADE
+);
+CREATE INDEX "idx_integrations_user" ON "TbHealthIntegrations" ("nUserId");
 
-CREATE TABLE IF NOT EXISTS `TbHealthRecords` (
-  `nRecordId` int(11) NOT NULL AUTO_INCREMENT,
-  `nUserId` int(11) NOT NULL,
-  `nWeight` decimal(5,2) DEFAULT NULL,
-  `nHeight` decimal(5,2) DEFAULT NULL,
-  `nBmi` decimal(4,2) DEFAULT NULL,
-  `nTdee` decimal(6,2) DEFAULT NULL,
-  `computedBmr` decimal(6,2) DEFAULT NULL,
-  `activityLevelTitle` varchar(100) DEFAULT NULL,
-  `isSynced` tinyint(1) DEFAULT 0,
-  `dtUpdatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `dtRecordedAt` datetime DEFAULT current_timestamp(),
-  PRIMARY KEY (`nRecordId`),
-  KEY `nUserId` (`nUserId`),
-  CONSTRAINT `fk_healthrecords_user` FOREIGN KEY (`nUserId`) REFERENCES `TbUsers` (`nUserId`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- 7. Table structure for table "TbHealthRecords"
+CREATE TABLE IF NOT EXISTS "TbHealthRecords" (
+  "nRecordId" SERIAL PRIMARY KEY,
+  "nUserId" INT NOT NULL,
+  "nWeight" DECIMAL(5,2) DEFAULT NULL,
+  "nHeight" DECIMAL(5,2) DEFAULT NULL,
+  "nBmi" DECIMAL(4,2) DEFAULT NULL,
+  "nTdee" DECIMAL(6,2) DEFAULT NULL,
+  "computedBmr" DECIMAL(6,2) DEFAULT NULL,
+  "activityLevelTitle" VARCHAR(100) DEFAULT NULL,
+  "isSynced" BOOLEAN DEFAULT FALSE,
+  "dtUpdatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  "dtRecordedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "fk_healthrecords_user" FOREIGN KEY ("nUserId") REFERENCES "TbUsers" ("nUserId") ON DELETE CASCADE
+);
+CREATE INDEX "idx_healthrecords_user" ON "TbHealthRecords" ("nUserId");
 
-CREATE TABLE IF NOT EXISTS `TbNutritionLogs` (
-  `nNutritionId` int(11) NOT NULL AUTO_INCREMENT,
-  `nUserId` int(11) NOT NULL,
-  `sMealType` varchar(50) NOT NULL,
-  `sFoodName` varchar(150) NOT NULL,
-  `nCalories` int(11) NOT NULL,
-  `nProtein` decimal(5,2) DEFAULT 0.00,
-  `nCarbs` decimal(5,2) DEFAULT 0.00,
-  `nFat` decimal(5,2) DEFAULT 0.00,
-  `sServingSize` varchar(100) DEFAULT '',
-  `sImagePath` text DEFAULT NULL,
-  `isSynced` tinyint(1) DEFAULT 0,
-  `dtUpdatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `dtLoggedAt` datetime DEFAULT current_timestamp(),
-  PRIMARY KEY (`nNutritionId`),
-  KEY `nUserId` (`nUserId`),
-  CONSTRAINT `fk_nutrition_user` FOREIGN KEY (`nUserId`) REFERENCES `TbUsers` (`nUserId`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- 8. Table structure for table "TbNutritionLogs"
+CREATE TABLE IF NOT EXISTS "TbNutritionLogs" (
+  "nNutritionId" SERIAL PRIMARY KEY,
+  "nUserId" INT NOT NULL,
+  "sMealType" VARCHAR(50) NOT NULL,
+  "sFoodName" VARCHAR(150) NOT NULL,
+  "nCalories" INT NOT NULL,
+  "nProtein" DECIMAL(5,2) DEFAULT 0.00,
+  "nCarbs" DECIMAL(5,2) DEFAULT 0.00,
+  "nFat" DECIMAL(5,2) DEFAULT 0.00,
+  "sServingSize" VARCHAR(100) DEFAULT '',
+  "sImagePath" TEXT DEFAULT NULL,
+  "isSynced" BOOLEAN DEFAULT FALSE,
+  "dtUpdatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  "dtLoggedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "fk_nutrition_user" FOREIGN KEY ("nUserId") REFERENCES "TbUsers" ("nUserId") ON DELETE CASCADE
+);
+CREATE INDEX "idx_nutrition_user" ON "TbNutritionLogs" ("nUserId");
 
-CREATE TABLE IF NOT EXISTS `TbRoutineLogs` (
-  `nLogId` int(11) NOT NULL AUTO_INCREMENT,
-  `nRoutineId` int(11) NOT NULL,
-  `isCompleted` tinyint(1) DEFAULT 0,
-  `dtLogDate` date NOT NULL,
-  `nProgressValue` double DEFAULT 0,
-  `dtCreatedAt` datetime DEFAULT current_timestamp(),
-  `dtUpdatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  PRIMARY KEY (`nLogId`),
-  UNIQUE KEY `unique_routine_log` (`nRoutineId`,`dtLogDate`),
-  KEY `nRoutineId` (`nRoutineId`),
-  CONSTRAINT `fk_routinelogs_routine` FOREIGN KEY (`nRoutineId`) REFERENCES `TbRoutines` (`nRoutineId`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- 9. Table structure for table "TbRoutineLogs"
+CREATE TABLE IF NOT EXISTS "TbRoutineLogs" (
+  "nLogId" SERIAL PRIMARY KEY,
+  "nRoutineId" INT NOT NULL,
+  "isCompleted" BOOLEAN DEFAULT FALSE,
+  "dtLogDate" DATE NOT NULL,
+  "nProgressValue" DOUBLE PRECISION DEFAULT 0,
+  "dtCreatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  "dtUpdatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "unique_routine_log" UNIQUE ("nRoutineId", "dtLogDate"),
+  CONSTRAINT "fk_routinelogs_routine" FOREIGN KEY ("nRoutineId") REFERENCES "TbRoutines" ("nRoutineId") ON DELETE CASCADE
+);
+CREATE INDEX "idx_routinelogs_routine" ON "TbRoutineLogs" ("nRoutineId");
 
-CREATE TABLE IF NOT EXISTS `TbSession` (
-  `nUserId` int(11) NOT NULL,
-  `sToken` text NOT NULL,
-  `dtExpiresAt` datetime NOT NULL,
-  `dtCreatedAt` datetime DEFAULT current_timestamp(),
-  PRIMARY KEY (`nUserId`),
-  CONSTRAINT `fk_session_user` FOREIGN KEY (`nUserId`) REFERENCES `TbUsers` (`nUserId`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- 10. Table structure for table "TbSession"
+CREATE TABLE IF NOT EXISTS "TbSession" (
+  "nUserId" INT PRIMARY KEY,
+  "sToken" TEXT NOT NULL,
+  "dtExpiresAt" TIMESTAMP NOT NULL,
+  "dtCreatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "fk_session_user" FOREIGN KEY ("nUserId") REFERENCES "TbUsers" ("nUserId") ON DELETE CASCADE
+);
 
-CREATE TABLE IF NOT EXISTS `TbUserBadges` (
-  `nUserBadgeId` int(11) NOT NULL AUTO_INCREMENT,
-  `nUserId` int(11) NOT NULL,
-  `nBadgeId` int(11) NOT NULL,
-  `dtEarnedAt` datetime DEFAULT current_timestamp(),
-  PRIMARY KEY (`nUserBadgeId`),
-  KEY `nUserId` (`nUserId`),
-  KEY `nBadgeId` (`nBadgeId`),
-  CONSTRAINT `fk_userbadges_user` FOREIGN KEY (`nUserId`) REFERENCES `TbUsers` (`nUserId`) ON DELETE CASCADE,
-  CONSTRAINT `fk_userbadges_badge` FOREIGN KEY (`nBadgeId`) REFERENCES `TbBadges` (`nBadgeId`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- 11. Table structure for table "TbUserBadges"
+CREATE TABLE IF NOT EXISTS "TbUserBadges" (
+  "nUserBadgeId" SERIAL PRIMARY KEY,
+  "nUserId" INT NOT NULL,
+  "nBadgeId" INT NOT NULL,
+  "dtEarnedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "fk_userbadges_user" FOREIGN KEY ("nUserId") REFERENCES "TbUsers" ("nUserId") ON DELETE CASCADE,
+  CONSTRAINT "fk_userbadges_badge" FOREIGN KEY ("nBadgeId") REFERENCES "TbBadges" ("nBadgeId") ON DELETE CASCADE
+);
+CREATE INDEX "idx_userbadges_user" ON "TbUserBadges" ("nUserId");
+CREATE INDEX "idx_userbadges_badge" ON "TbUserBadges" ("nBadgeId");
 
-CREATE TABLE IF NOT EXISTS `TbUserPreferences` (
-  `nUserId` int(11) NOT NULL,
-  `sUnitSystem` varchar(50) DEFAULT 'metric',
-  `sUnitLabel` varchar(100) DEFAULT 'Kilometers, Kilograms',
-  `sGeminiApiKey` text DEFAULT NULL,
-  PRIMARY KEY (`nUserId`),
-  CONSTRAINT `fk_userpreferences_user` FOREIGN KEY (`nUserId`) REFERENCES `TbUsers` (`nUserId`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- 12. Table structure for table "TbUserPreferences"
+CREATE TABLE IF NOT EXISTS "TbUserPreferences" (
+  "nUserId" INT PRIMARY KEY,
+  "sUnitSystem" VARCHAR(50) DEFAULT 'metric',
+  "sUnitLabel" VARCHAR(100) DEFAULT 'Kilometers, Kilograms',
+  "sGeminiApiKey" TEXT DEFAULT NULL,
+  CONSTRAINT "fk_userpreferences_user" FOREIGN KEY ("nUserId") REFERENCES "TbUsers" ("nUserId") ON DELETE CASCADE
+);
 
-CREATE TABLE IF NOT EXISTS `TbWorkouts` (
-  `nWorkoutId` int(11) NOT NULL AUTO_INCREMENT,
-  `nUserId` int(11) NOT NULL,
-  `sType` varchar(50) NOT NULL,
-  `nDistance` decimal(6,2) DEFAULT 0.00,
-  `nDuration` int(11) DEFAULT 0,
-  `nCaloriesBurned` decimal(6,2) DEFAULT 0.00,
-  `sRoutePoints` longtext DEFAULT NULL,
-  `isSynced` tinyint(1) DEFAULT 0,
-  `dtUpdatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `dtWorkoutDate` datetime DEFAULT current_timestamp(),
-  PRIMARY KEY (`nWorkoutId`),
-  KEY `nUserId` (`nUserId`),
-  CONSTRAINT `fk_workouts_user` FOREIGN KEY (`nUserId`) REFERENCES `TbUsers` (`nUserId`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- 13. Table structure for table "TbWorkouts"
+CREATE TABLE IF NOT EXISTS "TbWorkouts" (
+  "nWorkoutId" SERIAL PRIMARY KEY,
+  "nUserId" INT NOT NULL,
+  "sType" VARCHAR(50) NOT NULL,
+  "nDistance" DECIMAL(6,2) DEFAULT 0.00,
+  "nDuration" INT DEFAULT 0,
+  "nCaloriesBurned" DECIMAL(6,2) DEFAULT 0.00,
+  "sRoutePoints" TEXT DEFAULT NULL,
+  "isSynced" BOOLEAN DEFAULT FALSE,
+  "dtUpdatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  "dtWorkoutDate" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "fk_workouts_user" FOREIGN KEY ("nUserId") REFERENCES "TbUsers" ("nUserId") ON DELETE CASCADE
+);
+CREATE INDEX "idx_workouts_user" ON "TbWorkouts" ("nUserId");
 
-CREATE TABLE IF NOT EXISTS `TbWorkoutCategories` (
-  `nCategoryId` int(11) NOT NULL AUTO_INCREMENT,
-  `sCategoryId` varchar(50) NOT NULL,
-  `sTitle` varchar(100) NOT NULL,
-  `sSubtitle` varchar(255) DEFAULT NULL,
-  `sIconName` varchar(50) DEFAULT 'directions_run',
-  `nIconCodePoint` int(11) DEFAULT 57904,
-  `nMetValue` decimal(4,2) DEFAULT 1.00,
-  `isMoving` tinyint(1) DEFAULT 0,
-  `dtCreatedAt` datetime DEFAULT current_timestamp(),
-  PRIMARY KEY (`nCategoryId`),
-  UNIQUE KEY `sCategoryId` (`sCategoryId`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
-SET FOREIGN_KEY_CHECKS = 1;
+-- 14. Table structure for table "TbWorkoutCategories"
+CREATE TABLE IF NOT EXISTS "TbWorkoutCategories" (
+  "nCategoryId" SERIAL PRIMARY KEY,
+  "sCategoryId" VARCHAR(50) NOT NULL UNIQUE,
+  "sTitle" VARCHAR(100) NOT NULL,
+  "sSubtitle" VARCHAR(255) DEFAULT NULL,
+  "sIconName" VARCHAR(50) DEFAULT 'directions_run',
+  "nIconCodePoint" INT DEFAULT 57904,
+  "nMetValue" DECIMAL(4,2) DEFAULT 1.00,
+  "isMoving" BOOLEAN DEFAULT FALSE,
+  "dtCreatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

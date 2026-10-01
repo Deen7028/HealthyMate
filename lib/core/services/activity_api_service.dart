@@ -3,12 +3,26 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'api_service_config.dart';
 
+import 'package:healthymate/core/services/supabase_service.dart';
+
 class ActivityApiService {
   static Future<List<Map<String, dynamic>>> fetchWorkouts({
     required int userId,
     String? since,
   }) async {
     try {
+      if (SupabaseService.instance.isInitialized && SupabaseService.instance.client != null) {
+        var query = SupabaseService.instance.client!
+            .from('TbWorkouts')
+            .select()
+            .eq('nUserId', userId);
+        if (since != null && since.isNotEmpty) {
+          query = query.gte('dtUpdatedAt', since);
+        }
+        final res = await query.order('dtWorkoutDate', ascending: false);
+        return List<Map<String, dynamic>>.from(res as List);
+      }
+
       var urlStr = '${ApiServiceConfig.baseUrl}/workouts.php?nUserId=$userId';
       if (since != null && since.isNotEmpty) {
         urlStr += '&since=${Uri.encodeComponent(since)}';
@@ -37,10 +51,17 @@ class ActivityApiService {
     return [];
   }
 
-  /// 5. บันทึกข้อมูลการออกกำลังกายขึ้น PHP API (`workouts.php`)
+  /// 5. บันทึกข้อมูลการออกกำลังกายขึ้น Supabase / PHP API (`workouts.php`)
 
   static Future<bool> saveWorkout(Map<String, dynamic> workout) async {
     try {
+      if (SupabaseService.instance.isInitialized) {
+        final payload = Map<String, dynamic>.from(workout);
+        payload.remove('nWorkoutId'); // ให้ Postgres generate ID อัตโนมัติถ้าเป็นแถวใหม่
+        final success = await SupabaseService.instance.upsertWorkout(payload);
+        if (success) return true;
+      }
+
       final uri = Uri.parse('${ApiServiceConfig.baseUrl}/workouts.php');
       final headers = await ApiServiceConfig.getAuthHeaders();
       final response = await http

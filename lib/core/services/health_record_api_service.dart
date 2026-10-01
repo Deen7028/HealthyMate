@@ -4,11 +4,24 @@ import 'package:http/http.dart' as http;
 import 'api_service_config.dart';
 import 'package:healthymate/features/health_calculator/models/health_record_model.dart';
 
+import 'package:healthymate/core/services/supabase_service.dart';
+
 class HealthRecordApiService {
   static Future<List<TbHealthRecord>> fetchHealthRecords({
     required int userId,
   }) async {
     try {
+      if (SupabaseService.instance.isInitialized && SupabaseService.instance.client != null) {
+        final res = await SupabaseService.instance.client!
+            .from('TbHealthRecords')
+            .select()
+            .eq('nUserId', userId)
+            .order('dtRecordedAt', ascending: false);
+        return (res as List)
+            .map((item) => TbHealthRecord.fromMap(item as Map<String, dynamic>))
+            .toList();
+      }
+
       final uri = Uri.parse(
         '${ApiServiceConfig.baseUrl}/health_records.php?nUserId=$userId',
       );
@@ -37,10 +50,17 @@ class HealthRecordApiService {
     return [];
   }
 
-  /// 2. บันทึกข้อมูลสุขภาพใหม่ผ่าน PHP API (`health_records.php`)
+  /// 2. บันทึกข้อมูลสุขภาพใหม่ผ่าน Supabase / PHP API (`health_records.php`)
 
   static Future<bool> saveHealthRecord(TbHealthRecord record) async {
     try {
+      if (SupabaseService.instance.isInitialized) {
+        final mapData = record.toMap();
+        mapData.remove('nRecordId'); // ให้ Postgres generate ID อัตโนมัติถ้าเป็นแถวใหม่
+        final success = await SupabaseService.instance.upsertHealthRecord(mapData);
+        if (success) return true;
+      }
+
       final uri = Uri.parse('${ApiServiceConfig.baseUrl}/health_records.php');
       final headers = await ApiServiceConfig.getAuthHeaders();
       final response = await http

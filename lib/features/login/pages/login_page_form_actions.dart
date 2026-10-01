@@ -108,10 +108,12 @@ extension LoginPageFormActions on _LoginPageState {
         SyncService.instance.pullDownstreamWorkouts(loggedInUser.nUserId);
       }
 
-      setState(() {
-        _isLoading = false;
-        _errorMessage = null;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = null;
+        });
+      }
 
       if (!mounted) return;
 

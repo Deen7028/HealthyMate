@@ -12,9 +12,13 @@ class AppConfig {
     }
   }
 
-  /// Base URL ของ PHP Remote Server API
+  /// Base URL ของ PHP Remote Server API (Fallback)
   static String get baseUrl =>
       dotenv.env['BASE_URL'] ?? 'https://healthymate-api.onrender.com/api';
+
+  /// Supabase Configuration
+  static String get supabaseUrl => dotenv.env['SUPABASE_URL'] ?? '';
+  static String get supabaseAnonKey => dotenv.env['SUPABASE_ANON_KEY'] ?? '';
 
   /// Host Header สำหรับ Virtual Host (ถ้ามี)
   static String get hostHeader => dotenv.env['HOST_HEADER'] ?? '';
