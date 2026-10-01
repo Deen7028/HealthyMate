@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -6,12 +8,13 @@ plugins {
 
 android {
     namespace = "com.example.healthymate"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
     }
 
     defaultConfig {
@@ -19,10 +22,19 @@ android {
         applicationId = "com.example.healthymate"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        minSdk = 26
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        val envFile = rootProject.file("../.env")
+        val appEnv = Properties()
+        if (envFile.isFile) {
+            envFile.inputStream().use { stream ->
+                appEnv.load(stream)
+            }
+        }
+        manifestPlaceholders["googleMapsApiKey"] =
+            appEnv.getProperty("GOOGLE_MAPS_API_KEY", "")
     }
 
     buildTypes {
@@ -42,4 +54,8 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

@@ -1,20 +1,102 @@
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:healthymate/core/config/app_config.dart';
+import 'package:healthymate/core/database/app_database.dart';
+import 'package:healthymate/core/services/auth_service.dart';
+import 'package:healthymate/core/services/location_background_service.dart';
+import 'package:healthymate/core/services/notification_service.dart';
+import 'package:healthymate/core/services/sync_service.dart';
+import 'package:healthymate/shared/theme/theme_service.dart';
+import 'package:healthymate/core/services/tts_service.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
 
-void main() {
-  runApp(const MainApp());
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:healthymate/features/login/pages/login_page.dart';
+import 'package:healthymate/core/services/supabase_service.dart';
+import 'package:healthymate/main_app.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await AppConfig.init();
+  await SupabaseService.instance.init();
+  AppDatabase.ensureInitialized();
+  await AuthService.instance.init();
+  await ThemeService.instance.init();
+  await SyncService.instance.init();
+  await NotificationService.instance.init();
+  await LocationBackgroundService.instance.initialize();
+  await TtsService.instance.init();
+  await GoogleSignIn.instance.initialize(
+    serverClientId:
+        '653331824744-u7shnuntsincr6j4e91p7urbqie9kqu0.apps.googleusercontent.com',
+  );
+
+  // ดักฟัง Supabase Auth State Change (สำหรับ Google OAuth Deep Link)
+  if (SupabaseService.instance.isInitialized && SupabaseService.instance.client != null) {
+    SupabaseService.instance.client!.auth.onAuthStateChange.listen((data) async {
+      final session = data.session;
+      if (session != null && session.user.email != null) {
+        final email = session.user.email!;
+        final meta = session.user.userMetadata ?? {};
+        final fullName = meta['full_name']?.toString() ?? meta['name']?.toString() ?? 'Google User';
+        final names = fullName.split(' ');
+        final firstName = names.isNotEmpty ? names.first : 'Google';
+        final lastName = names.length > 1 ? names.sublist(1).join(' ') : '';
+        final avatarUrl = meta['avatar_url']?.toString() ?? meta['picture']?.toString() ?? '';
+
+        final userPayload = {
+          'sEmail': email,
+          'sFirstName': firstName,
+          'sLastName': lastName,
+          'sProfileImagePath': avatarUrl,
+          'sPasswordHash': 'GOOGLE_AUTH_USER',
+          'isSynced': true,
+        };
+
+        final tbUser = await AppDatabase.instance.upsertUserFromServer(userPayload);
+        await AuthService.instance.setLoginSession(tbUser.sEmail, token: session.accessToken);
+      }
+    });
+  }
+
+  runApp(const HealthyMateApp());
 }
 
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
+class HealthyMateApp extends StatelessWidget {
+  const HealthyMateApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: Scaffold(
-        body: Center(
-          child: Text('Hello World!'),
-        ),
-      ),
+    return ListenableBuilder(
+      listenable: ThemeService.instance,
+      builder: (context, _) {
+        return MaterialApp(
+          title: 'HealthyMate',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: ThemeService.instance.themeMode,
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [
+            Locale('th', 'TH'),
+            Locale('en', 'US'),
+          ],
+          locale: const Locale('th', 'TH'),
+          home: ListenableBuilder(
+            listenable: AuthService.instance,
+            builder: (context, _) {
+              if (!AuthService.instance.isLoggedIn) {
+                return const LoginPage();
+              }
+              return const MainAppShell();
+            },
+          ),
+        );
+      },
     );
   }
 }

@@ -1,3 +1,41 @@
-# healthymate
+# 🍏 HealthyMate (เพื่อนคู่ใจสายสุขภาพ)
 
-A new Flutter project.
+แอปพลิเคชันติดตามและบริหารจัดการสุขภาพส่วนบุคคล พัฒนาขึ้นด้วย Flutter เพื่อช่วยให้ผู้ใช้สามารถติดตามการออกกำลังกาย คำนวณค่าทางกายภาพ (BMI & TDEE) บันทึกโภชนาการ และสร้างกิจวัตรประจำวันเพื่อสุขภาพที่ดีได้อย่างครบวงจร
+
+---
+
+## 🚀 Key Features (ฟีเจอร์หลักของระบบ)
+
+* **1. Onboarding & Authentication:** ระบบต้อนรับแนะนำแอป และระบบเข้าสู่ระบบ/ลงทะเบียนผู้ใช้งาน
+* **2. Daily Dashboard & Progress:** หน้าปัดสรุปภาพรวมสุขภาพประจำวัน แสดงวงแหวนความคืบหน้า (Activity Progress) และสถิติด่วน
+* **3. GPS Workout Tracker & History:** ระบบติดตามการออกกำลังกายแบบเรียลไทม์ (จับเวลา, ระยะทาง, แคลอรี) พร้อมแผนที่ GPS และประวัติย้อนหลัง
+* **4. Smart Health Calculator:** เครื่องคำนวณค่าดัชนีมวลกาย (BMI) และพลังงานที่ร่างกายต้องการต่อวัน (BMR & TDEE) พร้อมบันทึกประวัติ
+* **5. Habit & Routine Notifications:** ระบบสร้างนิสัยและกำหนดกิจวัตรประจำวัน พร้อมระบบแจ้งเตือนอัจฉริยะ
+* **6. Profile & Settings Manager:** จัดการข้อมูลส่วนตัว ตั้งค่าธีม (Dark/Light Mode) และการจัดการบัญชี
+* **7. Health Data Sync:** รองรับการเชื่อมต่อและซิงค์ข้อมูลสุขภาพกับแพลตฟอร์มภายนอก (Apple Health / Google Fit)
+* **8. Gamification & Badges:** ระบบสะสมเหรียญรางวัลและป้ายความสำเร็จเพื่อสร้างแรงจูงใจในการออกกำลังกาย
+* **9. Calorie Intake & Nutrition Log:** ระบบบันทึกรายการอาหารและปริมาณแคลอรีที่ได้รับในแต่ละวัน
+
+
+## 🛠️ Tech Stack
+
+* **Mobile Framework:** Flutter (Dart)
+* **Database:** MySQL
+* **Architecture:** Feature-First / Domain-Driven Structure
+
+## Local configuration
+
+Copy `.env.example` to `.env`, then fill in the API values:
+
+```sh
+cp -n .env.example .env
+flutter run
+```
+
+Keep `.env` limited to these client settings. Server credentials such as database
+passwords and SMTP credentials must stay on the server; they are not read by the app.
+The Android and iOS native map setup also reads `GOOGLE_MAPS_API_KEY` from `.env`.
+
+Flutter bundles `.env` into the app, so users can extract its values. Restrict the
+Maps key to this app and its required APIs. `APP_KEY` must not be the API's only
+authorization control; enforce user ownership with bearer tokens on the server.
