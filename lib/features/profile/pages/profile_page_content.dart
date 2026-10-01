@@ -88,7 +88,6 @@ extension ProfilePageContent on _ProfilePageState {
               SettingsCard(
                 isLocationEnabled: _controller.isLocationEnabled,
                 selectedUnit: _controller.selectedUnit,
-                hasGeminiApiKey: _controller.geminiApiKey.isNotEmpty,
                 onDarkModeChanged: (val) async {
                   await ThemeService.instance.setDarkMode(val);
                   setState(() {});
@@ -97,17 +96,6 @@ extension ProfilePageContent on _ProfilePageState {
                   await _controller.handleLocationTap();
                 },
                 onUnitPickerTap: this._showUnitPicker,
-                onGeminiApiKeyTap: () {
-                  if (user == null) return;
-                  GeminiApiKeyDialog.show(
-                    context,
-                    userId: user.nUserId,
-                    currentKey: _controller.geminiApiKey,
-                    onSaved: (newKey) {
-                      _controller.updateGeminiApiKey(newKey);
-                    },
-                  );
-                },
               ),
 
               const SizedBox(height: 20),

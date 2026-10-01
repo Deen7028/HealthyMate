@@ -6,21 +6,17 @@ part 'settings_card_action_row.dart';
 class SettingsCard extends StatelessWidget {
   final bool isLocationEnabled;
   final String selectedUnit;
-  final bool hasGeminiApiKey;
   final ValueChanged<bool> onDarkModeChanged;
   final VoidCallback onLocationTap;
   final VoidCallback onUnitPickerTap;
-  final VoidCallback onGeminiApiKeyTap;
 
   const SettingsCard({
     super.key,
     required this.isLocationEnabled,
     required this.selectedUnit,
-    this.hasGeminiApiKey = false,
     required this.onDarkModeChanged,
     required this.onLocationTap,
     required this.onUnitPickerTap,
-    required this.onGeminiApiKeyTap,
   });
 
   @override
@@ -132,55 +128,6 @@ class SettingsCard extends StatelessWidget {
               size: 20,
             ),
             onTap: onUnitPickerTap,
-          ),
-          Divider(
-            height: 1,
-            indent: 68,
-            endIndent: 20,
-            color: AppTheme.getBorderColor(isDark),
-          ),
-
-          // 4. Gemini AI Key (สำหรับสแกนอาหาร)
-          _buildActionRow(
-            isDark: isDark,
-            icon: Icons.vpn_key_rounded,
-            iconBgColor: AppTheme.successGreenBg,
-            iconColor: AppTheme.successGreen,
-            title: 'Google Gemini API Key',
-            subtitle: hasGeminiApiKey
-                ? 'ตั้งค่าแล้ว (พร้อมใช้งาน AI จริง)'
-                : 'ยังไม่ได้ตั้งค่า (กดเพื่อกรอก Key)',
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (hasGeminiApiKey)
-                  Container(
-                    margin: const EdgeInsets.only(right: 6),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppTheme.successGreenBg,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: const Text(
-                      'AI Active',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.successGreen,
-                      ),
-                    ),
-                  ),
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  color: AppTheme.textTertiaryDark,
-                  size: 20,
-                ),
-              ],
-            ),
-            onTap: onGeminiApiKeyTap,
           ),
         ],
       ),

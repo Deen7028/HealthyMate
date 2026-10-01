@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:healthymate/core/config/app_config.dart';
 import 'package:healthymate/core/database/app_database.dart';
+import 'package:healthymate/core/services/api_service_config.dart';
 import 'package:healthymate/core/services/auth_service.dart';
 import 'package:healthymate/core/services/location_background_service.dart';
 import 'package:healthymate/core/services/notification_service.dart';
@@ -17,6 +19,7 @@ import 'package:healthymate/main_app.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  HttpOverrides.global = MyHttpOverrides();
   await AppConfig.init();
   await SupabaseService.instance.init();
   AppDatabase.ensureInitialized();

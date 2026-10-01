@@ -13,7 +13,10 @@ extension FoodRecognitionAnalysis on FoodRecognitionService {
       if (targetUserId == null) {
         throw Exception('กรุณาเข้าสู่ระบบก่อนใช้การวิเคราะห์อาหาร');
       }
-      final apiKey = await AppDatabase.instance.getGeminiApiKey(targetUserId);
+      final envKey = AppConfig.geminiApiKey;
+      final apiKey = envKey.isNotEmpty
+          ? envKey
+          : await AppDatabase.instance.getGeminiApiKey(targetUserId);
 
       if (apiKey.trim().isNotEmpty) {
         hasKey = true;

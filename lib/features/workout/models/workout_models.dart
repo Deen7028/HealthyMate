@@ -83,21 +83,18 @@ class WorkoutCategory {
     final met = (map['nMetValue'] as num?)?.toDouble() ?? 1.0;
     final isMoving = ((map['isMoving'] as num?)?.toInt() ?? 0) == 1;
 
-    final iconCode = (map['nIconCodePoint'] as num?)?.toInt();
     IconData iconData = Icons.directions_run_rounded;
-    if (iconCode != null && iconCode > 0) {
-      iconData = IconData(iconCode, fontFamily: 'MaterialIcons');
+    final cleanId = id.toLowerCase().trim();
+    if (cleanId == 'walking' || cleanId.contains('เดิน')) {
+      iconData = Icons.directions_walk_rounded;
+    } else if (cleanId == 'cycling' || cleanId.contains('ปั่น')) {
+      iconData = Icons.directions_bike_rounded;
+    } else if (cleanId == 'meditation' || cleanId.contains('สมาธิ')) {
+      iconData = Icons.self_improvement_rounded;
+    } else if (cleanId == 'yoga' || cleanId.contains('โยคะ')) {
+      iconData = Icons.spa_rounded;
     } else {
-      final iconName = map['sIconName']?.toString();
-      if (iconName == 'directions_walk') {
-        iconData = Icons.directions_walk_rounded;
-      } else if (iconName == 'directions_bike') {
-        iconData = Icons.directions_bike_rounded;
-      } else if (iconName == 'self_improvement') {
-        iconData = Icons.self_improvement_rounded;
-      } else if (iconName == 'spa') {
-        iconData = Icons.spa_rounded;
-      }
+      iconData = Icons.directions_run_rounded;
     }
 
     return WorkoutCategory(

@@ -10,7 +10,6 @@ import 'package:healthymate/features/profile/controllers/profile_controller.dart
 
 // Components, Dialogs & Shared
 import '../widgets/index.dart';
-import 'package:healthymate/features/food_recognition/widgets/gemini_api_key_dialog.dart';
 
 /// หน้าโปรไฟล์และการตั้งค่า HealthyMate
 part 'profile_page_image_actions.dart';
