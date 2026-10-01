@@ -38,35 +38,60 @@ void main() async {
       if (session != null && session.user.email != null) {
         final email = session.user.email!.trim().toLowerCase();
         final meta = session.user.userMetadata ?? {};
-        final fullName = meta['full_name']?.toString() ?? meta['name']?.toString() ?? 'Google User';
-        final names = fullName.split(' ');
-        final firstName = names.isNotEmpty ? names.first : 'Google';
-        final lastName = names.length > 1 ? names.sublist(1).join(' ') : '';
+        final givenName = meta['given_name']?.toString() ?? meta['first_name']?.toString();
+        final familyName = meta['family_name']?.toString() ?? meta['last_name']?.toString();
+        final fullName = meta['full_name']?.toString() ?? meta['name']?.toString() ?? '';
+
+        String firstName = 'Google';
+        String lastName = 'User';
+
+        if (givenName != null && givenName.isNotEmpty) {
+          firstName = givenName;
+          lastName = familyName ?? '';
+        } else if (fullName.isNotEmpty) {
+          final names = fullName.trim().split(' ');
+          firstName = names.isNotEmpty ? names.first : 'Google';
+          lastName = names.length > 1 ? names.sublist(1).join(' ') : '';
+        }
+
         final avatarUrl = meta['avatar_url']?.toString() ?? meta['picture']?.toString() ?? '';
 
-        // 1. ตรวจสอบหรือสร้างผู้ใช้ใน TbUsers บน Supabase
+        // 1. ตรวจสอบหรือสร้าง/อัปเดตผู้ใช้ใน TbUsers บน Supabase
         var existing = await SupabaseService.instance.getUserByEmail(email);
-        if (existing == null) {
-          final insertPayload = {
-            'sEmail': email,
-            'sFirstName': firstName,
-            'sLastName': lastName,
-            'sProfileImagePath': avatarUrl,
-            'sPasswordHash': 'GOOGLE_AUTH_USER',
-            'isSynced': true,
-          };
-          await SupabaseService.instance.upsertUser(insertPayload);
-          existing = await SupabaseService.instance.getUserByEmail(email);
+        final currentFirstName = (firstName != 'Google' && firstName.isNotEmpty)
+            ? firstName
+            : (existing?['sFirstName'] ?? firstName);
+        final currentLastName = (lastName != 'User' && lastName.isNotEmpty)
+            ? lastName
+            : (existing?['sLastName'] ?? lastName);
+        final currentAvatar = avatarUrl.isNotEmpty
+            ? avatarUrl
+            : (existing?['sProfileImagePath'] ?? '');
+
+        final userSyncPayload = {
+          'sEmail': email,
+          'sFirstName': currentFirstName,
+          'sLastName': currentLastName,
+          'sProfileImagePath': currentAvatar,
+          'sPasswordHash': 'GOOGLE_AUTH_USER',
+          'isSynced': true,
+        };
+
+        if (existing != null) {
+          userSyncPayload['nUserId'] = existing['nUserId'];
         }
+
+        await SupabaseService.instance.upsertUser(userSyncPayload);
+        existing = await SupabaseService.instance.getUserByEmail(email);
 
         final int userId = (existing?['nUserId'] as num?)?.toInt() ?? 1;
 
         final userPayload = {
           'nUserId': userId,
           'sEmail': email,
-          'sFirstName': existing?['sFirstName'] ?? firstName,
-          'sLastName': existing?['sLastName'] ?? lastName,
-          'sProfileImagePath': existing?['sProfileImagePath'] ?? avatarUrl,
+          'sFirstName': currentFirstName,
+          'sLastName': currentLastName,
+          'sProfileImagePath': currentAvatar,
           'sPasswordHash': 'GOOGLE_AUTH_USER',
           'isSynced': true,
         };

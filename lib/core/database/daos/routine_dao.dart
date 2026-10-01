@@ -138,8 +138,11 @@ extension AppDatabaseRoutineDao on AppDatabase {
           'iconData':
               (r['nIconData'] as num?)?.toInt() ??
               (r['iconData'] as num?)?.toInt(),
-          'isNotificationActive':
-              ((r['isNotificationActive'] as num?)?.toInt() ?? 1) == 1 ? 1 : 0,
+          'isNotificationActive': (r['isNotificationActive'] is bool
+                  ? (r['isNotificationActive'] as bool)
+                  : ((r['isNotificationActive'] as num?)?.toInt() ?? 1) == 1)
+              ? 1
+              : 0,
           'dtCreatedAt':
               r['dtCreatedAt']?.toString() ?? DateTime.now().toIso8601String(),
         }, conflictAlgorithm: ConflictAlgorithm.replace);

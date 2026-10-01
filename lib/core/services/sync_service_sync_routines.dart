@@ -33,8 +33,9 @@ extension SyncServiceSyncRoutines on SyncService {
               linkedWorkout: lr['sLinkedWorkout']?.toString() ?? '',
               color: (lr['color'] as num?)?.toInt(),
               iconData: (lr['iconData'] as num?)?.toInt(),
-              isNotificationActive:
-                  ((lr['isNotificationActive'] as num?)?.toInt() ?? 1) == 1,
+              isNotificationActive: lr['isNotificationActive'] is bool
+                  ? (lr['isNotificationActive'] as bool)
+                  : ((lr['isNotificationActive'] as num?)?.toInt() ?? 1) == 1,
             );
             if (newId > 0) {
               syncedTotal++;

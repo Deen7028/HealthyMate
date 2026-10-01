@@ -55,8 +55,9 @@ extension RoutineControllerSyncing on RoutineController {
             final linkedWorkout = r['sLinkedWorkout']?.toString() ?? '';
             final color = (r['color'] as num?)?.toInt();
             final iconData = (r['iconData'] as num?)?.toInt();
-            final isNotif =
-                ((r['isNotificationActive'] as num?)?.toInt() ?? 1) == 1;
+            final isNotif = r['isNotificationActive'] is bool
+                ? (r['isNotificationActive'] as bool)
+                : ((r['isNotificationActive'] as num?)?.toInt() ?? 1) == 1;
 
             final newId = await RoutineApiService.insertRoutineRemote(
               userId: userId,
