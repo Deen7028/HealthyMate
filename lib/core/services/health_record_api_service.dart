@@ -89,6 +89,14 @@ class HealthRecordApiService {
 
   static Future<bool> deleteHealthRecordRemote(int recordId) async {
     try {
+      if (SupabaseService.instance.isInitialized && SupabaseService.instance.client != null) {
+        await SupabaseService.instance.client!
+            .from('TbHealthRecords')
+            .delete()
+            .eq('nRecordId', recordId);
+        return true;
+      }
+
       final uri = Uri.parse(
         '${ApiServiceConfig.baseUrl}/health_records.php?nRecordId=$recordId',
       );

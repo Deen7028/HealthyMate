@@ -36,7 +36,7 @@ void main() async {
     SupabaseService.instance.client!.auth.onAuthStateChange.listen((data) async {
       final session = data.session;
       if (session != null && session.user.email != null) {
-        final email = session.user.email!;
+        final email = session.user.email!.trim().toLowerCase();
         final meta = session.user.userMetadata ?? {};
         final fullName = meta['full_name']?.toString() ?? meta['name']?.toString() ?? 'Google User';
         final names = fullName.split(' ');
@@ -44,17 +44,37 @@ void main() async {
         final lastName = names.length > 1 ? names.sublist(1).join(' ') : '';
         final avatarUrl = meta['avatar_url']?.toString() ?? meta['picture']?.toString() ?? '';
 
+        // 1. ตรวจสอบหรือสร้างผู้ใช้ใน TbUsers บน Supabase
+        var existing = await SupabaseService.instance.getUserByEmail(email);
+        if (existing == null) {
+          final insertPayload = {
+            'sEmail': email,
+            'sFirstName': firstName,
+            'sLastName': lastName,
+            'sProfileImagePath': avatarUrl,
+            'sPasswordHash': 'GOOGLE_AUTH_USER',
+            'isSynced': true,
+          };
+          await SupabaseService.instance.upsertUser(insertPayload);
+          existing = await SupabaseService.instance.getUserByEmail(email);
+        }
+
+        final int userId = (existing?['nUserId'] as num?)?.toInt() ?? 1;
+
         final userPayload = {
+          'nUserId': userId,
           'sEmail': email,
-          'sFirstName': firstName,
-          'sLastName': lastName,
-          'sProfileImagePath': avatarUrl,
+          'sFirstName': existing?['sFirstName'] ?? firstName,
+          'sLastName': existing?['sLastName'] ?? lastName,
+          'sProfileImagePath': existing?['sProfileImagePath'] ?? avatarUrl,
           'sPasswordHash': 'GOOGLE_AUTH_USER',
           'isSynced': true,
         };
 
+        // 2. บันทึกลง SQLite และเริ่ม Session
         final tbUser = await AppDatabase.instance.upsertUserFromServer(userPayload);
         await AuthService.instance.setLoginSession(tbUser.sEmail, token: session.accessToken);
+        debugPrint('🎉 [Google Auth Success] เข้าสู่ระบบสำเร็จ: ${tbUser.sEmail} (ID: ${tbUser.nUserId})');
       }
     });
   }
@@ -85,7 +105,19 @@ class HealthyMateApp extends StatelessWidget {
             Locale('th', 'TH'),
             Locale('en', 'US'),
           ],
-          locale: const Locale('th', 'TH'),
+          onGenerateRoute: (settings) {
+            return MaterialPageRoute(
+              builder: (context) => ListenableBuilder(
+                listenable: AuthService.instance,
+                builder: (context, _) {
+                  if (!AuthService.instance.isLoggedIn) {
+                    return const LoginPage();
+                  }
+                  return const MainAppShell();
+                },
+              ),
+            );
+          },
           home: ListenableBuilder(
             listenable: AuthService.instance,
             builder: (context, _) {
