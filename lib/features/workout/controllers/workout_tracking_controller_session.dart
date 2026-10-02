@@ -101,9 +101,7 @@ extension WorkoutTrackingSession on WorkoutTrackingController {
   }
 
   void _startLocationUpdates() {
-    _positionStreamSub?.cancel();
-
-    // ดึงพิกัดตั้งต้นเฉพาะเมื่อยังไม่มี _lastPosition เพื่อป้องกัน Race Condition จาก async callback ย้อนหลัง
+    // ดึงพิกัดตั้งต้นเพื่อให้อัปเดต UI ทันที และวาง Marker จุดเริ่มต้น
     Geolocator.getCurrentPosition(
           locationSettings: const LocationSettings(
             accuracy: LocationAccuracy.high,
@@ -119,24 +117,5 @@ extension WorkoutTrackingSession on WorkoutTrackingController {
           }
         })
         .catchError((_) {});
-
-    const locationSettings = LocationSettings(
-      accuracy: LocationAccuracy.high,
-      distanceFilter: 5,
-    );
-
-    _positionStreamSub =
-        Geolocator.getPositionStream(locationSettings: locationSettings).listen(
-          (Position position) {
-            if (_status != WorkoutState.running) return;
-            this._handleNewLocation(
-              latitude: position.latitude,
-              longitude: position.longitude,
-              speedMs: position.speed,
-              accuracy: position.accuracy,
-              timestamp: position.timestamp,
-            );
-          },
-        );
   }
 }

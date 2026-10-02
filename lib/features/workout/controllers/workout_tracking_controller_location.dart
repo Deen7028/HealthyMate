@@ -48,18 +48,20 @@ extension WorkoutTrackingLocation on WorkoutTrackingController {
           ? (distanceInMeters / timeDifferenceSec)
           : 0.0;
 
-      // กรอง GPS Drift เข้มงวดระดับแอปออกกำลังกายมาตรฐาน:
-      // 1. ความแม่นยำสัญญาณ GPS (accuracy) ต้องดีกว่า 15 เมตร
-      // 2. ระยะทางขยับขั้นต่ำต้อง >= 5.0 เมตร (สอดคล้องกับ distanceFilter)
+      // กรอง GPS Drift ระดับ Production-Grade สำหรับแอปวิ่ง/เดิน:
+      // 1. ความแม่นยำสัญญาณ GPS (accuracy) ต้องดีกว่า 25 เมตร
+      // 2. ระยะทางขยับขั้นต่ำรองรับการเดินช้า (>= 1.8 เมตร ถ้า accuracy ดี หรือ >= 3.0 เมตรทั่วไป)
       // 3. ความเร็วที่คำนวณได้จริงต้องไม่เกิน 15.0 m/s (~54 km/h) สำหรับกีฬาเดิน/วิ่ง/จักรยาน
-      // 4. หากมีค่า speed จากฮาร์ดแวร์ ต้องสอดคล้อง ไม่ก้าวกระโดดผิดธรรมชาติ
-      final bool isAccuracyValid = accuracy <= 15.0;
+      // 4. ขจัด jitter/drift ด้วย dynamic threshold ตาม accuracy และ time gap
+      final bool isAccuracyValid = accuracy <= 25.0;
+      final double minDisplacement = accuracy <= 10.0 ? 1.8 : 3.0;
       final bool isDistanceValid =
-          distanceInMeters >= 5.0 && distanceInMeters < 120.0;
+          distanceInMeters >= minDisplacement && distanceInMeters < 120.0;
       final bool isSpeedValid = calculatedSpeedMs < 15.0 && speedMs < 20.0;
 
-      // ตรวจสอบว่าพิกัดขยับพ้นจากวงรัศมีคลาดเคลื่อน GPS (Displacement Threshold)
-      final bool isClearDisplacement = distanceInMeters >= (accuracy * 0.8);
+      // ตรวจสอบ Displacement ไม่ให้ค่า drift เล็กๆ หลุดเข้ามา แต่ไม่บล็อกการเดิน
+      final bool isClearDisplacement =
+          accuracy <= 10.0 || distanceInMeters >= (accuracy * 0.35);
 
       final bool isRealMovement =
           isAccuracyValid &&

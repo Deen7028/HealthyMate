@@ -72,6 +72,11 @@ class _WorkoutTrackingPageState extends State<WorkoutTrackingPage>
   @override
   void didUpdateWidget(covariant WorkoutTrackingPage oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // ป้องกันการรีเซ็ตสถานะขณะออกกำลังกาย หรือขณะหยุดพักชั่วคราว
+    if (_state.isRunning || _state.isPaused) {
+      return;
+    }
+
     if (widget.initialCategory != oldWidget.initialCategory ||
         widget.targetDurationMinutes != oldWidget.targetDurationMinutes ||
         (widget.isActive && !oldWidget.isActive)) {
@@ -80,14 +85,22 @@ class _WorkoutTrackingPageState extends State<WorkoutTrackingPage>
           widget.initialCategory != 'selectingCategory' &&
           widget.initialCategory != 'all' &&
           widget.initialCategory != 'selection') {
-        _state.selectCategoryByName(
-          widget.initialCategory,
-          widget.targetDurationMinutes,
-        );
+        // อัปเดตเฉพาะเมื่อหมวดหมู่ต่างจากปัจจุบัน
+        if (_state.selectedCategory.id != widget.initialCategory &&
+            _state.selectedCategory.title != widget.initialCategory) {
+          _state.selectCategoryByName(
+            widget.initialCategory,
+            widget.targetDurationMinutes,
+          );
+        } else if (widget.targetDurationMinutes != oldWidget.targetDurationMinutes) {
+          _state.setTargetDurationMinutes(widget.targetDurationMinutes);
+        }
       } else if (widget.initialCategory == 'selectingCategory' ||
           widget.initialCategory == 'all' ||
           widget.initialCategory == 'selection') {
-        _state.returnToCategorySelection();
+        if (_state.status != WorkoutState.selectingCategory) {
+          _state.returnToCategorySelection();
+        }
       }
     }
   }

@@ -7,6 +7,7 @@ import 'package:healthymate/core/services/api_service_config.dart';
 import 'package:healthymate/core/services/auth_service.dart';
 import 'package:healthymate/core/services/location_background_service.dart';
 import 'package:healthymate/core/services/notification_service.dart';
+import 'package:healthymate/core/services/onboarding_service.dart';
 import 'package:healthymate/core/services/sync_service.dart';
 import 'package:healthymate/shared/theme/theme_service.dart';
 import 'package:healthymate/core/services/tts_service.dart';
@@ -14,6 +15,8 @@ import 'package:healthymate/shared/theme/app_theme.dart';
 
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:healthymate/features/login/pages/login_page.dart';
+import 'package:healthymate/features/onboarding/pages/onboarding_slides_page.dart';
+import 'package:healthymate/features/onboarding/pages/profile_setup_wizard_page.dart';
 import 'package:healthymate/core/services/supabase_service.dart';
 import 'package:healthymate/main_app.dart';
 
@@ -24,6 +27,7 @@ void main() async {
   await SupabaseService.instance.init();
   AppDatabase.ensureInitialized();
   await AuthService.instance.init();
+  await OnboardingService.instance.init();
   await ThemeService.instance.init();
   await SyncService.instance.init();
   await NotificationService.instance.init();
@@ -61,15 +65,17 @@ void main() async {
 
         // 1. ตรวจสอบหรือสร้าง/อัปเดตผู้ใช้ใน TbUsers บน Supabase
         var existing = await SupabaseService.instance.getUserByEmail(email);
+        final localExisting = await AppDatabase.instance.getUserByEmail(email);
+
         final currentFirstName = (firstName != 'Google' && firstName.isNotEmpty)
             ? firstName
-            : (existing?['sFirstName'] ?? firstName);
+            : (existing?['sFirstName'] ?? localExisting?.sFirstName ?? firstName);
         final currentLastName = (lastName != 'User' && lastName.isNotEmpty)
             ? lastName
-            : (existing?['sLastName'] ?? lastName);
+            : (existing?['sLastName'] ?? localExisting?.sLastName ?? lastName);
         final currentAvatar = avatarUrl.isNotEmpty
             ? avatarUrl
-            : (existing?['sProfileImagePath'] ?? '');
+            : (existing?['sProfileImagePath'] ?? localExisting?.sProfileImagePath ?? '');
 
         final userSyncPayload = {
           'sEmail': email,
@@ -87,7 +93,14 @@ void main() async {
         await SupabaseService.instance.upsertUser(userSyncPayload);
         existing = await SupabaseService.instance.getUserByEmail(email);
 
-        final int userId = (existing?['nUserId'] as num?)?.toInt() ?? 1;
+        final int userId = (existing?['nUserId'] as num?)?.toInt() ?? (localExisting?.nUserId ?? 1);
+
+        // ดึงข้อมูลส่วนสูง น้ำหนัก อายุ เพศ ที่เคยบันทึกไว้ (จาก Server หรือ Local) ไม่ให้ถูก reset เป็น 0
+        final finalWeight = (existing?['nWeight'] as num?)?.toDouble() ?? localExisting?.nWeight;
+        final finalHeight = (existing?['nHeight'] as num?)?.toDouble() ?? localExisting?.nHeight;
+        final finalAge = (existing?['nAge'] as num?)?.toInt() ?? localExisting?.nAge;
+        final finalGender = existing?['sGender']?.toString() ?? localExisting?.sGender;
+        final finalActivity = existing?['sActivityLevel']?.toString() ?? localExisting?.sActivityLevel;
 
         final userPayload = {
           'nUserId': userId,
@@ -96,6 +109,11 @@ void main() async {
           'sLastName': currentLastName,
           'sProfileImagePath': currentAvatar,
           'sPasswordHash': 'GOOGLE_AUTH_USER',
+          'nWeight': finalWeight,
+          'nHeight': finalHeight,
+          'nAge': finalAge,
+          'sGender': finalGender,
+          'sActivityLevel': finalActivity,
           'isSynced': true,
         };
 
@@ -136,23 +154,75 @@ class HealthyMateApp extends StatelessWidget {
           onGenerateRoute: (settings) {
             return MaterialPageRoute(
               builder: (context) => ListenableBuilder(
-                listenable: AuthService.instance,
+                listenable: Listenable.merge([
+                  AuthService.instance,
+                  OnboardingService.instance,
+                ]),
                 builder: (context, _) {
+                  if (OnboardingService.instance.isFirstRun) {
+                    return const OnboardingSlidesPage();
+                  }
                   if (!AuthService.instance.isLoggedIn) {
                     return const LoginPage();
                   }
-                  return const MainAppShell();
+                  return FutureBuilder(
+                    future: AppDatabase.instance.getUserByEmail(AuthService.instance.currentUserEmail),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Scaffold(
+                          body: Center(
+                            child: CircularProgressIndicator(color: AppTheme.primaryGreen),
+                          ),
+                        );
+                      }
+                      final user = snapshot.data;
+                      final isProfileIncomplete = user == null ||
+                          (user.nWeight == null || user.nWeight! <= 0) ||
+                          (user.nHeight == null || user.nHeight! <= 0);
+
+                      if (isProfileIncomplete) {
+                        return const ProfileSetupWizardPage();
+                      }
+                      return const MainAppShell();
+                    },
+                  );
                 },
               ),
             );
           },
           home: ListenableBuilder(
-            listenable: AuthService.instance,
+            listenable: Listenable.merge([
+              AuthService.instance,
+              OnboardingService.instance,
+            ]),
             builder: (context, _) {
+              if (OnboardingService.instance.isFirstRun) {
+                return const OnboardingSlidesPage();
+              }
               if (!AuthService.instance.isLoggedIn) {
                 return const LoginPage();
               }
-              return const MainAppShell();
+              return FutureBuilder(
+                future: AppDatabase.instance.getUserByEmail(AuthService.instance.currentUserEmail),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Scaffold(
+                      body: Center(
+                        child: CircularProgressIndicator(color: AppTheme.primaryGreen),
+                      ),
+                    );
+                  }
+                  final user = snapshot.data;
+                  final isProfileIncomplete = user == null ||
+                      (user.nWeight == null || user.nWeight! <= 0) ||
+                      (user.nHeight == null || user.nHeight! <= 0);
+
+                  if (isProfileIncomplete) {
+                    return const ProfileSetupWizardPage();
+                  }
+                  return const MainAppShell();
+                },
+              );
             },
           ),
         );
