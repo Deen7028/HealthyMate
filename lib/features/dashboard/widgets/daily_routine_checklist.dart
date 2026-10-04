@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/dashboard_data.dart';
 
+/// การ์ดแสดงรายการเช็คลิสต์กิจวัตรประจำวัน (Daily Routine Checklist Widget)
 class DailyRoutineChecklist extends StatelessWidget {
   final List<DailyChecklistItem> items;
   final Function(String id, bool isChecked) onToggleItem;

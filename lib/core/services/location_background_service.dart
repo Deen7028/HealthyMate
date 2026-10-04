@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 @pragma('vm:entry-point')
 void onStart(ServiceInstance service) async {
@@ -15,16 +18,45 @@ void onStart(ServiceInstance service) async {
     service.on('setAsBackground').listen((event) {
       service.setAsBackgroundService();
     });
+
+    service.on('updateNotification').listen((event) {
+      if (event != null) {
+        final title = event['title']?.toString() ?? 'HealthyMate กำลังติดตามกิจกรรม';
+        final content = event['content']?.toString() ?? 'กำลังบันทึกระยะทางและเส้นทาง GPS...';
+        service.setForegroundNotificationInfo(
+          title: title,
+          content: content,
+        );
+      }
+    });
   }
 
   service.on('stopService').listen((event) {
     service.stopSelf();
   });
 
-  const locationSettings = LocationSettings(
-    accuracy: LocationAccuracy.high,
-    distanceFilter: 2,
-  );
+  LocationSettings locationSettings;
+  if (!kIsWeb && Platform.isAndroid) {
+    locationSettings = AndroidSettings(
+      accuracy: LocationAccuracy.best,
+      distanceFilter: 2,
+      intervalDuration: const Duration(seconds: 1),
+    );
+  } else if (!kIsWeb && Platform.isIOS) {
+    locationSettings = AppleSettings(
+      accuracy: LocationAccuracy.best,
+      distanceFilter: 2,
+      activityType: ActivityType.fitness,
+      pauseLocationUpdatesAutomatically: false,
+      showBackgroundLocationIndicator: true,
+      allowBackgroundLocationUpdates: true,
+    );
+  } else {
+    locationSettings = const LocationSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 2,
+    );
+  }
 
   Geolocator.getPositionStream(locationSettings: locationSettings).listen(
     (Position position) {
@@ -54,34 +86,78 @@ class LocationBackgroundService {
   static final LocationBackgroundService instance = LocationBackgroundService._();
 
   Future<void> initialize() async {
-    final service = FlutterBackgroundService();
+    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) {
+      return;
+    }
 
-    await service.configure(
-      androidConfiguration: AndroidConfiguration(
-        onStart: onStart,
-        autoStart: false,
-        isForegroundMode: false,
-      ),
-      iosConfiguration: IosConfiguration(
-        autoStart: false,
-        onForeground: onStart,
-        onBackground: onIosBackground,
-      ),
-    );
+    try {
+      final service = FlutterBackgroundService();
+
+      await service.configure(
+        androidConfiguration: AndroidConfiguration(
+          onStart: onStart,
+          autoStart: false,
+          isForegroundMode: false,
+        ),
+        iosConfiguration: IosConfiguration(
+          autoStart: false,
+          onForeground: onStart,
+          onBackground: onIosBackground,
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error initializing LocationBackgroundService: $e');
+    }
+  }
+
+  /// ขอสิทธิ์ยกเว้น Battery Optimization บน Android (ป้องกันระบบฆ่าแอปขณะปิดหน้าจอ)
+  Future<void> requestBatteryOptimizationExemption() async {
+    if (!kIsWeb && Platform.isAndroid) {
+      try {
+        final status = await Permission.ignoreBatteryOptimizations.status;
+        if (!status.isGranted) {
+          await Permission.ignoreBatteryOptimizations.request();
+        }
+      } catch (e) {
+        debugPrint('Failed to request ignoreBatteryOptimizations: $e');
+      }
+    }
   }
 
   Future<void> startTracking() async {
+    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) {
+      return;
+    }
     try {
       final service = FlutterBackgroundService();
       if (!await service.isRunning()) {
         await service.startService();
+      }
+      if (Platform.isAndroid) {
+        service.invoke('setAsForeground');
       }
     } catch (e, stack) {
       debugPrint('Error starting location background service: $e\n$stack');
     }
   }
 
+  void updateNotification({required String title, required String content}) {
+    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) {
+      return;
+    }
+    try {
+      final service = FlutterBackgroundService();
+      service.invoke('updateNotification', {
+        'title': title,
+        'content': content,
+      });
+    } catch (_) {}
+  }
+
   Future<void> stopTracking() async {
+    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) {
+      return;
+    }
     try {
       final service = FlutterBackgroundService();
       if (await service.isRunning()) {

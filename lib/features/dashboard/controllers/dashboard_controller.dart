@@ -9,6 +9,8 @@ import 'package:healthymate/features/practice/controllers/routine_controller.dar
 part 'dashboard_controller_sync.dart';
 part 'dashboard_controller_loading.dart';
 
+/// คอนโทรลเลอร์สำหรับจัดการข้อมูลและสถานะของหน้า Dashboard
+/// ทำหน้าที่ประสานงานระหว่าง Database, API Service และ View
 class DashboardController extends ChangeNotifier {
   bool isLoading = true;
   TbUser? user;

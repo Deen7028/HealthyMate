@@ -3,6 +3,7 @@ import '../models/dashboard_data.dart';
 
 part 'key_stats_grid_cards.dart';
 
+/// Grid แสดงการ์ดสถิติสำคัญประจำวัน (ระยะทาง เวลาออกกำลังกาย แคลอรี และก้าวเดิน)
 class KeyStatsGrid extends StatelessWidget {
   final DashboardStats stats;
 

@@ -1,6 +1,7 @@
 part of 'dashboard_health_summary_card.dart';
 
 extension _DashboardHealthSummaryCardLayout on DashboardHealthSummaryCard {
+  /// build UI ทั้งหมดของ DashboardHealthSummaryCard
   Widget _buildHealthSummaryLayout({
     required BuildContext context,
     required bool isDark,

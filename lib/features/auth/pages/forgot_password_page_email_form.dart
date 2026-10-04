@@ -1,10 +1,13 @@
 part of 'forgot_password_page.dart';
 
+/// Extension สำหรับสร้าง UI ของฟอร์มกรอกอีเมล
 extension _ForgotPasswordEmailForm on _ForgotPasswordPageState {
+  /// Build UI ฟอร์มกรอกอีเมล
   Widget _buildEmailForm() {
     return Column(
       key: const ValueKey('email_form'),
       children: [
+        /// อีเมล
         TextField(
           controller: _emailController,
           keyboardType: TextInputType.emailAddress,
@@ -26,6 +29,7 @@ extension _ForgotPasswordEmailForm on _ForgotPasswordPageState {
           ),
         ),
         const SizedBox(height: 24),
+        /// ปุ่มส่ง OTP
         SizedBox(
           width: double.infinity,
           height: 54,

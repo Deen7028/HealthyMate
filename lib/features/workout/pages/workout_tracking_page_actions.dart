@@ -1,8 +1,13 @@
 part of 'workout_tracking_page.dart';
 
+/// ส่วนขยายจัดการ Event และ Action ปุ่มกดของหน้าจอออกกำลังกาย (Workout UI Event Handlers)
 extension WorkoutTrackingPageActions on _WorkoutTrackingPageState {
+  /// จัดการการกดปุ่มเริ่มต้นออกกำลังกาย (ตรวจสิทธิ์ User และ GPS พร้อมรัน)
   Future<void> _handleStartWorkout() async {
+    // 1. ยืนยันว่าโหลดข้อมูลโปรไฟล์ผู้ใช้เสร็จสมบูรณ์แล้ว
     await _state.ensureUserDataLoaded();
+
+    // 2. ตรวจสอบว่าผู้ใช้ล็อกอินเข้าสู่ระบบแล้วหรือยัง
     if (!_state.hasAuthenticatedUser) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -13,25 +18,63 @@ extension WorkoutTrackingPageActions on _WorkoutTrackingPageState {
       }
       return;
     }
+
+    // 3. ตรวจสอบความพร้อมของสัญญาณและสิทธิ์ GPS
     if (!_state.isGpsEnabled) {
       final hasGps = await this._initCurrentLocation();
       if (!hasGps) {
-        return;
+        return; // หากผู้ใช้ปฏิเสธสิทธิ์ GPS ไม่เริ่มกิจกรรม
       }
     }
+
+    // 4. เริ่มต้นนับเวลา บันทึกพิกัด และรัน Background Service
     _state.startWorkout();
   }
 
+  /// จัดการการกดปุ่มหยุดกิจกรรม (แสดง ActionSheet ให้เลือก บันทึก / ละทิ้ง / เล่นต่อ)
   void _handleStopWorkout() {
+    // 1. สั่ง Pause หยุดเวลาและสตรีมพิกัดชั่วคราว
     _state.pauseWorkout();
+
+    // 2. แสดง Modal Bottom Sheet สรุปเวลา ระยะทาง แคลอรี
     WorkoutStopActionSheet.showStopActionSheet(
       context: context,
       timeFormatted: _state.formatTime(_state.secondsElapsed),
       distanceKm: _state.distanceKm,
       caloriesBurned: _state.caloriesBurned,
+
+      // กรณีผู้ใช้เลือกกด "บันทึกกิจกรรม" (Save Workout)
       onSave: () async {
         final calBurned = _state.caloriesBurned;
+
+        // แสดงแจ้งเตือนกำลังประมวลผล Map Matching & Polyline Compression หากมีจุดพิกัดเกิน 3 จุด
+        if (mounted && _state.routePoints.length >= 3) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Row(
+                children: [
+                  SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Text('กำลังปรับเทียบพิกัดถนน (Map Matching) และบีบอัดเส้นทาง...'),
+                ],
+              ),
+              duration: Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+
+        // ประมวลผลและบันทึกลง SQLite / Cloud
         await _state.saveWorkout();
+
+        // แจ้งเตือนบันทึกสำเร็จ
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -57,6 +100,8 @@ extension WorkoutTrackingPageActions on _WorkoutTrackingPageState {
           );
         }
       },
+
+      // กรณีผู้ใช้เลือกกด "ละทิ้งกิจกรรม" (Discard Workout)
       onDiscard: () {
         _state.discardWorkout();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -77,6 +122,8 @@ extension WorkoutTrackingPageActions on _WorkoutTrackingPageState {
           ),
         );
       },
+
+      // กรณีผู้ใช้เลือกกด "ออกกำลังกายต่อ" (Resume Workout)
       onResume: () => this._handleStartWorkout(),
     );
   }

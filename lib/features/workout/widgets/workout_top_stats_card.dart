@@ -1,16 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/features/workout/models/workout_models.dart';
 part 'workout_top_stats_card_header.dart';
+
+/// วิดเจ็ตการ์ดแสดงผลสถิติด้านบนของหน้าจอออกกำลังกาย (Workout Top Stats Dashboard Card Widget)
+/// แสดงหมวดหมู่กิจกรรม, สถานะเวลา (นับขึ้น/ถอยหลัง), ระยะทางกิโลเมตร และแคลอรีเผาผลาญ
 class WorkoutTopStatsCard extends StatelessWidget {
+  /// หมวดหมู่กิจกรรมที่กำลังทำอยู่
   final WorkoutCategory category;
+
+  /// สถานะกำลังจับเวลาบันทึกกิจกรรมอยู่
   final bool isRunning;
+
+  /// รูปแบบแผนที่ที่เลือกใช้งาน
   final AppMapType mapType;
+
+  /// ข้อความเวลาที่ฟอร์แมตแล้ว (เช่น 00:15:30)
   final String formattedTime;
+
+  /// ระยะทางสะสม (กิโลเมตร)
   final double distanceKm;
+
+  /// แคลอรีสะสม (kcal)
   final double caloriesBurned;
+
+  /// แอนิเมชันกะพริบสำหรับจุดไฟสถานะ (Pulse Animation)
   final Animation<double> pulseAnimation;
+
+  /// คอลแบ็กเมื่อกดเปลี่ยนหมวดหมู่กิจกรรม
   final VoidCallback? onChangeCategoryTap;
+
+  /// แฟล็กโหมดเวลาเป้าหมายถอยหลัง
   final bool isCountdownMode;
+
   const WorkoutTopStatsCard({
     super.key,
     required this.category,

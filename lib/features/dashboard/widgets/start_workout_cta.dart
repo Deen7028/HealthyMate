@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+/// การ์ดปุ่มกด Call To Action (CTA) สำหรับเริ่มออกกำลังกายทันที
 class StartWorkoutCTA extends StatelessWidget {
   final VoidCallback onStartWorkout;
 

@@ -2,6 +2,7 @@ part of 'dashboard_health_summary_card.dart';
 
 extension _DashboardHealthSummaryCardNutritionHeader
     on DashboardHealthSummaryCard {
+  /// build widget ส่วนหัวของแคลอรี่
   Widget _buildNutritionHeader({
     required bool isDark,
     required Color subtleSurface,

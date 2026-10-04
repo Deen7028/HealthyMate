@@ -10,6 +10,7 @@ import 'main_goal_card_presentation.dart';
 part 'main_goal_card_stat_ui.dart';
 part 'main_goal_card_calculations.dart';
 
+/// การ์ดแสดงผลเป้าหมายหลัก คำนวณความก้าวหน้า คำนวนแคลอรี/ระยะทางเป้าหมายประจำวัน
 class MainGoalCard extends StatelessWidget {
   final DashboardController controller;
   final VoidCallback? onNavigateToPractice;

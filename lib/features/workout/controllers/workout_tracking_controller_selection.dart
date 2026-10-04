@@ -1,11 +1,14 @@
 part of 'workout_tracking_controller.dart';
 
+/// ส่วนขยายจัดการการเลือกหมวดหมู่กิจกรรมและตั้งค่าเป้าหมาย (Workout Selection Logic)
 extension WorkoutTrackingSelection on WorkoutTrackingController {
+  /// เลือกหมวดหมู่กิจกรรมจากข้อความ ID หรือชื่อภาษาไทย
   void selectCategoryByName(String? categoryStr, [int? targetDurationMinutes]) {
     final cat = WorkoutCategory.fromIdOrTitle(categoryStr);
     this.selectCategory(cat, targetDurationMinutes);
   }
 
+  /// เลือกหมวดหมู่กิจกรรมและตั้งค่าเป้าหมายเวลา (ถ้ามี) พร้อมรีเซ็ตตัวแปรสถิติ
   void selectCategory(WorkoutCategory category, [int? targetDurationMinutes]) {
     _selectedCategory = category;
     _status = WorkoutState.initial;
@@ -27,6 +30,7 @@ extension WorkoutTrackingSelection on WorkoutTrackingController {
     this._safeNotifyListeners();
   }
 
+  /// กำหนดเป้าหมายเวลาเป็นนาที (นับถอยหลัง)
   void setTargetDurationMinutes(int? targetMinutes) {
     _targetDurationSeconds = (targetMinutes != null && targetMinutes > 0)
         ? targetMinutes * 60
@@ -37,6 +41,7 @@ extension WorkoutTrackingSelection on WorkoutTrackingController {
     this._safeNotifyListeners();
   }
 
+  /// กลับสู่หน้าจอเลือกหมวดหมู่กิจกรรมและล้างค่าทั้งหมด
   void returnToCategorySelection() {
     _timer?.cancel();
     _workoutStartTime = null;
@@ -55,6 +60,7 @@ extension WorkoutTrackingSelection on WorkoutTrackingController {
     this._safeNotifyListeners();
   }
 
+  /// เปลี่ยนรูปแบบแผนที่ (Standard / Satellite / Terrain / Hybrid)
   void setMapType(AppMapType type) {
     _currentMapType = type;
     this._safeNotifyListeners();

@@ -9,7 +9,6 @@ extension _DashboardHealthSummaryCardNutritionPreview
     required Color textSecondary,
   }) => Column(
     children: [
-      // Row 4: Food items preview or CTA hint
       if (todayNutritionLogs.isNotEmpty) ...[
         const SizedBox(height: 10),
         Wrap(

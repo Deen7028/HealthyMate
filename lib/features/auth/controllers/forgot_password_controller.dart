@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/api_service.dart';
 
+/// คอนโทรลเลอร์จัดการสถานะและลอจิกการลืมรหัสผ่าน (Forgot Password Controller)
+/// ทำหน้าที่ส่ง OTP ยืนยันรหัส OTP และตั้งรหัสผ่านใหม่
 class ForgotPasswordController extends ChangeNotifier {
   bool isLoading = false;
   bool isOtpVerified = false;
   String? errorMessage;
 
+  /// ส่งรหัส OTP ไปยังอีเมลที่ระบุ
   Future<bool> sendOtp(String email) async {
     if (email.isEmpty || !email.contains('@')) {
       errorMessage = 'กรุณากรอกอีเมลที่ถูกต้อง';
@@ -38,12 +41,15 @@ class ForgotPasswordController extends ChangeNotifier {
     }
   }
 
+  /// ทำเครื่องหมายว่า OTP ถูกยืนยันแล้ว
   void markOtpVerified() {
     isOtpVerified = true;
     notifyListeners();
   }
 
-  Future<bool> resetPassword(String email, String newPassword, String confirmPassword) async {
+  /// รีเซ็ตรหัสผ่านใหม่
+  Future<bool> resetPassword(
+      String email, String newPassword, String confirmPassword) async {
     if (newPassword.isEmpty) {
       errorMessage = 'กรุณากรอกรหัสผ่านใหม่';
       notifyListeners();

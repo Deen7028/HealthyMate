@@ -2,6 +2,7 @@ part of 'dashboard_health_summary_card.dart';
 
 extension _DashboardHealthSummaryCardNutritionEnergy
     on DashboardHealthSummaryCard {
+  /// build widget ส่วนแสดงพลังงานที่กินในวันนี้
   Widget _buildNutritionEnergyStats({
     required bool isDark,
     required Color textPrimary,

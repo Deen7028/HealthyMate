@@ -1,5 +1,6 @@
 part of 'forgot_password_page.dart';
 
+/// Extension สำหรับสร้าง UI Structure ของหน้าลืมรหัสผ่าน (สลับระหว่างฟอร์มกรอกอีเมลกับฟอร์มรหัสผ่านใหม่)
 extension _ForgotPasswordPageContent on _ForgotPasswordPageState {
   Widget _buildPage(BuildContext context) {
     return ListenableBuilder(

@@ -4,6 +4,7 @@ import '../utils/dashboard_ui_helpers.dart';
 
 part 'dashboard_other_goals_card_item.dart';
 
+/// การ์ดแสดงรายการเป้าหมายย่อยและกิจวัตรประจำวันอื่นๆ (Routines & Goals)
 class DashboardOtherGoalsCard extends StatelessWidget {
   final Map<String, dynamic>? userGoal;
   final List<Map<String, dynamic>> routines;

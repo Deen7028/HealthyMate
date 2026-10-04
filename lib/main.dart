@@ -31,7 +31,11 @@ void main() async {
   await ThemeService.instance.init();
   await SyncService.instance.init();
   await NotificationService.instance.init();
-  await LocationBackgroundService.instance.initialize();
+  try {
+    await LocationBackgroundService.instance.initialize();
+  } catch (e) {
+    debugPrint('LocationBackgroundService init error: $e');
+  }
   await TtsService.instance.init();
   await GoogleSignIn.instance.initialize(
     serverClientId:

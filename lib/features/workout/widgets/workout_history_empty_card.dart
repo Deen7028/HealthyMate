@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 
+/// วิดเจ็ตแสดงผลกรณีไม่มีประวัติการออกกำลังกาย (Workout History Empty Card Widget)
 class WorkoutHistoryEmptyCard extends StatelessWidget {
+  /// คอลแบ็กเมื่อกดปุ่มดึงข้อมูล Sync จาก Cloud
   final VoidCallback onSyncTap;
 
   const WorkoutHistoryEmptyCard({

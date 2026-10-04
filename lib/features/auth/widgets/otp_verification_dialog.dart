@@ -6,27 +6,34 @@ import 'package:healthymate/shared/theme/app_theme.dart';
 part 'otp_verification_dialog_actions.dart';
 part 'otp_verification_dialog_content.dart';
 
+/// ป๊อบอัพไดอะล็อกป้อนและยืนยันรหัส OTP 6 หลัก (OTP Verification Dialog Component)
 class OtpVerificationDialog extends StatefulWidget {
+  /// อีเมลที่ลงทะเบียน
   final String sEmail;
+  /// callback เมื่อยืนยัน OTP สำเร็จ
   final VoidCallback onVerificationSuccess;
-
   const OtpVerificationDialog({
     super.key,
     required this.sEmail,
     required this.onVerificationSuccess,
   });
-
+  /// สร้าง State ของ OtpVerificationDialog
   @override
   State<OtpVerificationDialog> createState() => _OtpVerificationDialogState();
 }
-
+/// State ของ OtpVerificationDialog
 class _OtpVerificationDialogState extends State<OtpVerificationDialog>
     with SingleTickerProviderStateMixin {
+  /// controller สำหรับกรอกรหัส OTP
   final TextEditingController _otpController = TextEditingController();
+  /// ตัวแปรสำหรับตรวจสอบว่ากำลังโหลดหรือไม่
   bool _isLoading = false;
+  /// ตัวแปรสำหรับนับเวลาถอยหลัง
   int _nCountdown = 60;
   Timer? _timer;
+  /// controller สำหรับ shake
   late final AnimationController _shakeController;
+  /// animation สำหรับ shake
   late final Animation<double> _shakeAnimation;
 
   @override
@@ -57,9 +64,9 @@ class _OtpVerificationDialogState extends State<OtpVerificationDialog>
     _shakeController.dispose();
     super.dispose();
   }
-
+  /// ตัวแปรสำหรับเก็บเวลาสิ้นสุดการนับถอยหลัง
   DateTime? _endTime;
-
+  /// build widget
   @override
   Widget build(BuildContext context) => _buildDialog(context);
 }

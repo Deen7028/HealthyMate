@@ -4,7 +4,9 @@ import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:healthymate/features/workout/pages/workout_share_page.dart';
 import 'history_route_painter.dart';
 
+/// วิดเจ็ตแสดงภาพวาดมินิแมปเส้นทางวิ่งย้อนหลัง (Workout History Route Preview Widget)
 class WorkoutHistoryRoutePreview extends StatelessWidget {
+  /// พิกัดเส้นทางสำหรับนำไปวาดภาพ Vector ด้วย CustomPainter
   final List<LatLng> points;
 
   const WorkoutHistoryRoutePreview({super.key, required this.points});

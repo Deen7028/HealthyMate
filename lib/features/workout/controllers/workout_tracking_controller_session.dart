@@ -9,7 +9,11 @@ extension WorkoutTrackingSession on WorkoutTrackingController {
     _isAutoPaused = false;
     _zeroSpeedSeconds = 0;
     _workoutStartTime = DateTime.now();
+    _kalmanFilter.reset();
     this._safeNotifyListeners();
+
+    // ขอสิทธิ์ยกเว้น Battery Optimization บน Android เพื่อให้ GPS รันต่อเนื่องในเบื้องหลัง
+    LocationBackgroundService.instance.requestBatteryOptimizationExemption();
 
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -27,6 +31,18 @@ extension WorkoutTrackingSession on WorkoutTrackingController {
         _caloriesBurned += caloriesPerSecond;
 
         this._checkAutoPauseCondition();
+
+        // 4. Offline-First Checkpoint: บันทึกข้อมูลสำรองทุก 10 วินาที ป้องกันข้อมูลสูญหายกรณีแอปดับ
+        if (_secondsElapsed % 10 == 0 && _userId > 0) {
+          WorkoutRecoveryService.instance.saveCheckpoint(
+            userId: _userId,
+            categoryId: _selectedCategory.id,
+            distanceKm: _distanceKm,
+            secondsElapsed: _secondsElapsed,
+            caloriesBurned: _caloriesBurned,
+            routePoints: _routePoints,
+          );
+        }
       }
     });
 

@@ -2,10 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'mini_route_painter.dart';
 
+/// วิดเจ็ตการ์ดรูปภาพสรุปการออกกำลังกายสำหรับแชร์ (Workout Share Card Widget)
+/// แสดงสถิติตัวเลขระยะทาง, Pace, ระยะเวลา และมินิแมปเส้นทางวิ่ง Vector
 class WorkoutShareCard extends StatelessWidget {
+  /// ระยะทางสะสม (กิโลเมตร)
   final double distance;
+
+  /// ระยะเวลาที่ใช้ (วินาที)
   final int duration;
+
+  /// รายการจุดพิกัดสำหรับวาดเส้นทางมินิแมป
   final List<LatLng> routePoints;
+
+  /// แฟล็กสลับพื้นหลังโปร่งใส (Glassmorphic) หรือพื้นหลังทึบ
   final bool isTransparent;
 
   const WorkoutShareCard({

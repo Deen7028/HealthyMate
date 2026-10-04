@@ -3,6 +3,7 @@ import 'package:healthymate/shared/theme/app_theme.dart';
 
 part 'calendar_strip_day_item.dart';
 
+/// แถบแสดงปฏิทินกิจวัตรประจำสัปดาห์ พร้อมสรุปสถิติจำนวนครั้ง ระยะทาง และแคลอรี
 class CalendarStripWidget extends StatelessWidget {
   final DateTime now;
   final String thaiMonthName;

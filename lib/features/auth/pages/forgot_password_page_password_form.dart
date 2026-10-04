@@ -1,6 +1,7 @@
 part of 'forgot_password_page.dart';
 
 extension _ForgotPasswordPasswordForm on _ForgotPasswordPageState {
+  /// ฟังก์ชันสร้าง UI ของฟอร์มกรอกรหัสผ่าน
   Widget _buildPasswordForm() {
     return Form(
       key: _formKey,
@@ -134,7 +135,7 @@ extension _ForgotPasswordPasswordForm on _ForgotPasswordPageState {
           ),
 
           const SizedBox(height: 28),
-
+          /// ปุ่มยืนยันการรีเซ็ตรหัสผ่าน
           SizedBox(
             width: double.infinity,
             height: 54,

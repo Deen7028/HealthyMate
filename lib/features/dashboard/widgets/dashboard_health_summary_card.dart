@@ -14,6 +14,7 @@ part 'dashboard_health_summary_card_nutrition_energy.dart';
 part 'dashboard_health_summary_card_nutrition_header.dart';
 part 'dashboard_health_summary_card_nutrition.dart';
 
+/// การ์ดสรุปข้อมูลสุขภาพส่วนบุคคล สัดส่วนร่างกาย การเผาผลาญ และแคลอรีโภชนาการประจำวัน
 class DashboardHealthSummaryCard extends StatelessWidget {
   final TbUser? user;
   final TbHealthRecord? latestRecord;

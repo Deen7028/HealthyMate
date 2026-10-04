@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+/// ยูทิลิตี้แสดงป๊อบอัพ Action Sheet เมื่อกดหยุดกิจกรรม (Workout Stop Action Sheet Dialog)
+/// ให้ผู้ใช้เลือกว่าต้องการ บันทึก (Save), ละทิ้ง (Discard) หรือ ออกกำลังกายต่อ (Resume)
 class WorkoutStopActionSheet {
+  /// แสดง Modal Bottom Sheet สรุปเวลา ระยะทาง และแคลอรี
   static void showStopActionSheet({
     required BuildContext context,
     required String timeFormatted,

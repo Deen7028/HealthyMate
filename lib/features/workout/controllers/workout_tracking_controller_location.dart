@@ -28,6 +28,16 @@ extension WorkoutTrackingLocation on WorkoutTrackingController {
 
     if (_isAutoPaused) return;
 
+    // 1. นำพิกัด GPS ดิบเข้าสู่ Kalman Filter เพื่อลด Noise และ Jitter
+    final filteredCoord = _kalmanFilter.process(
+      lat: latitude,
+      lng: longitude,
+      accuracyMeters: accuracy,
+      timestampMs: newTime.millisecondsSinceEpoch,
+    );
+    final effectiveLat = filteredCoord.latitude;
+    final effectiveLng = filteredCoord.longitude;
+
     if (_lastPosition != null) {
       // ป้องกันพิกัดที่ย้อนหลังหรือมาสลับลำดับเวลา (Chronological Check)
       final timeDifferenceSec =
@@ -39,8 +49,8 @@ extension WorkoutTrackingLocation on WorkoutTrackingController {
       final distanceInMeters = Geolocator.distanceBetween(
         _lastPosition!.latitude,
         _lastPosition!.longitude,
-        latitude,
-        longitude,
+        effectiveLat,
+        effectiveLng,
       );
 
       // คำนวณความเร็วเฉลี่ยระหว่างจุดจริง (Calculated Speed = distance / time)
@@ -81,8 +91,8 @@ extension WorkoutTrackingLocation on WorkoutTrackingController {
         }
 
         _lastPosition = Position(
-          longitude: longitude,
-          latitude: latitude,
+          longitude: effectiveLng,
+          latitude: effectiveLat,
           timestamp: newTime,
           accuracy: accuracy,
           altitude: 0.0,
@@ -93,8 +103,14 @@ extension WorkoutTrackingLocation on WorkoutTrackingController {
           speedAccuracy: 0.0,
         );
 
-        _routePoints.add(LatLng(latitude, longitude));
+        _routePoints.add(LatLng(effectiveLat, effectiveLng));
         this._safeNotifyListeners();
+
+        // อัปเดต Foreground Notification สำหรับ Background Service
+        LocationBackgroundService.instance.updateNotification(
+          title: 'HealthyMate กำลัง${_selectedCategory.title}: ${_distanceKm.toStringAsFixed(2)} กม.',
+          content: 'เวลา ${_secondsElapsed ~/ 60} นาที | ${_caloriesBurned.toStringAsFixed(0)} kcal',
+        );
 
         // 2. Voice Feedback: ทุกๆ 1 กิโลเมตร ให้ ขานบอกระยะทาง เวลา และ Pace
         final currentKmFloor = _distanceKm.floor();
@@ -117,8 +133,8 @@ extension WorkoutTrackingLocation on WorkoutTrackingController {
       }
     } else {
       _lastPosition = Position(
-        longitude: longitude,
-        latitude: latitude,
+        longitude: effectiveLng,
+        latitude: effectiveLat,
         timestamp: newTime,
         accuracy: accuracy,
         altitude: 0.0,
@@ -128,7 +144,7 @@ extension WorkoutTrackingLocation on WorkoutTrackingController {
         speed: speedMs,
         speedAccuracy: 0.0,
       );
-      _routePoints.add(LatLng(latitude, longitude));
+      _routePoints.add(LatLng(effectiveLat, effectiveLng));
       this._safeNotifyListeners();
     }
   }

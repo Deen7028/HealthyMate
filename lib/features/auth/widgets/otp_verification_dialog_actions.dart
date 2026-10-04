@@ -1,5 +1,6 @@
 part of 'otp_verification_dialog.dart';
 
+/// Extension สำหรับจัดการนับเวลาถอยหลัง 60 วินาทีและยืนยัน/ส่งรหัส OTP ซ้ำ
 extension _OtpVerificationDialogActions on _OtpVerificationDialogState {
   void _startCountdown() {
     _endTime = DateTime.now().add(const Duration(seconds: 60));
@@ -17,6 +18,7 @@ extension _OtpVerificationDialogActions on _OtpVerificationDialogState {
     });
   }
 
+  /// ฟังก์ชันยืนยันรหัส OTP
   Future<void> _handleVerify() async {
     final sCode = _otpController.text.trim();
     if (sCode.length != 6) {
@@ -47,6 +49,7 @@ extension _OtpVerificationDialogActions on _OtpVerificationDialogState {
     }
   }
 
+  /// ฟังก์ชันส่งรหัส OTP ใหม่
   Future<void> _handleResend() async {
     if (_nCountdown > 0) return;
     setState(() => _isLoading = true);

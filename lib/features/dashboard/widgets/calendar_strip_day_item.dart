@@ -1,6 +1,7 @@
 part of 'calendar_strip_widget.dart';
 
 extension _CalendarStripDayItem on CalendarStripWidget {
+  /// build UI ของแต่ละวันใน calendar strip
   Widget _buildDayItem(
     String day,
     String date,

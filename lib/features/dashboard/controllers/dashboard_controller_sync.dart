@@ -1,6 +1,8 @@
 part of 'dashboard_controller.dart';
 
+/// Extension สำหรับการซิงค์ข้อมูล Dashboard จาก Remote Server
 extension DashboardControllerSync on DashboardController {
+  /// ดึงข้อมูลสรุปสุขภาพและเป้าหมายจากเซิร์ฟเวอร์มาอัปเดตลงในหน่วยความจำ local
   Future<void> _syncFromServer(int userId) async {
     try {
       final serverData = await DashboardApiService.fetchDashboardData(

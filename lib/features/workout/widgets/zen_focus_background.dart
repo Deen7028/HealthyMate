@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+/// วิดเจ็ตพื้นหลังผ่อนคลายสำหรับกิจกรรมไม่อยู่กับที่ เช่น ทำสมาธิ / โยคะ (Zen Focus Animated Background Widget)
+/// แสดงแอนิเมชันวงกลมรัศมียืดหดตามจังหวะการหายใจ (Breathing Rhythm: เข้า 4 วินาที - ออก 4 วินาที)
 class ZenFocusBackground extends StatefulWidget {
   const ZenFocusBackground({super.key});
 

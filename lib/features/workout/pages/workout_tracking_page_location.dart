@@ -1,11 +1,13 @@
 part of 'workout_tracking_page.dart';
 
+/// ส่วนขยายจัดการขอสิทธิ์ สตรีมสัญญาณ GPS และการควบคุมกล้องแผนที่ (Location & Map Extensions)
 extension WorkoutTrackingPageLocation on _WorkoutTrackingPageState {
+  /// ขอสิทธิ์และดึงตำแหน่ง GPS จริง คืนค่า true ถ้ามีสิทธิ์และ GPS พร้อมใช้งาน
   Future<bool> _initCurrentLocation() async {
     try {
+      // 1. ตรวจสอบว่าบริการตำแหน่ง (GPS) เปิดอยู่ในเครื่องหรือไม่
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        // ถ้าผู้ใช้ยังไม่ได้เปิด GPS ในเครื่อง ให้แจ้งเตือนและพาไปเปิด
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -24,6 +26,7 @@ extension WorkoutTrackingPageLocation on _WorkoutTrackingPageState {
         return false;
       }
 
+      // 2. ตรวจสอบสิทธิ์การเข้าถึงตำแหน่งของแอป
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
@@ -43,6 +46,7 @@ extension WorkoutTrackingPageLocation on _WorkoutTrackingPageState {
         }
       }
 
+      // 3. ป้องกันกรณีถูกปิดสิทธิ์ถาวร (Denied Forever)
       if (permission == LocationPermission.deniedForever) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -63,8 +67,10 @@ extension WorkoutTrackingPageLocation on _WorkoutTrackingPageState {
         return false;
       }
 
+      // 4. เปิดแฟล็ก GPS พร้อมใช้งานใน Controller
       _state.enableGps();
 
+      // 5. ดึงตำแหน่งพิกัด LatLng ปัจจุบันแบบความแม่นยำสูง
       final pos = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,

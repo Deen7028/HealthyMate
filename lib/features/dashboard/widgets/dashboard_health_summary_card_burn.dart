@@ -1,6 +1,7 @@
 part of 'dashboard_health_summary_card.dart';
 
 extension _DashboardHealthSummaryCardBurn on DashboardHealthSummaryCard {
+  /// build widget ส่วนแสดงเป้าหมายการเผาผลาญ
   Widget _buildBurnTargetCard({
     required bool isDark,
     required Color textPrimary,

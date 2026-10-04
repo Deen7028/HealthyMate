@@ -52,4 +52,49 @@ extension WorkoutTrackingLifecycle on WorkoutTrackingController {
       }
     });
   }
+
+  /// ตรวจสอบว่ามีกิจกรรมที่ค้างอยู่จากการปิดแอปหรือ Crash หรือไม่
+  Future<WorkoutCheckpoint?> checkForInterruptedWorkout() async {
+    await _userDataLoad;
+    if (_userId <= 0) return null;
+    return WorkoutRecoveryService.instance.getCheckpoint(_userId);
+  }
+
+  /// กู้คืนสถานะกิจกรรมจาก Checkpoint
+  void restoreFromCheckpoint(WorkoutCheckpoint checkpoint) {
+    // กำหนดหมวดหมู่กิจกรรม
+    final matchedCategory = WorkoutCategory.categories.firstWhere(
+      (c) => c.id == checkpoint.categoryId,
+      orElse: () => WorkoutCategory.categories.first,
+    );
+    _selectedCategory = matchedCategory;
+
+    _distanceKm = checkpoint.distanceKm;
+    _secondsElapsed = checkpoint.secondsElapsed;
+    _accumulatedSeconds = checkpoint.secondsElapsed;
+    secondsElapsedNotifier.value = checkpoint.secondsElapsed;
+    _caloriesBurned = checkpoint.caloriesBurned;
+
+    _routePoints.clear();
+    _routePoints.addAll(checkpoint.routePoints);
+    if (_routePoints.isNotEmpty) {
+      final last = _routePoints.last;
+      _lastPosition = Position(
+        latitude: last.latitude,
+        longitude: last.longitude,
+        timestamp: DateTime.now(),
+        accuracy: 5.0,
+        altitude: 0.0,
+        altitudeAccuracy: 0.0,
+        heading: 0.0,
+        headingAccuracy: 0.0,
+        speed: 0.0,
+        speedAccuracy: 0.0,
+      );
+    }
+
+    _status = WorkoutState.paused;
+    this._safeNotifyListeners();
+    TtsService.instance.speak('กู้คืนกิจกรรมที่ค้างอยู่เรียบร้อยแล้ว');
+  }
 }

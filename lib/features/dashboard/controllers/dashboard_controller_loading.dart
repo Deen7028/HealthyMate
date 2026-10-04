@@ -1,6 +1,8 @@
 part of 'dashboard_controller.dart';
 
+/// Extension สำหรับโหลดและประมวลผลข้อมูลในเครื่อง (SQLite DB) สำหรับ Dashboard
 extension DashboardControllerLoading on DashboardController {
+  /// โหลดข้อมูลสรุปสุขภาพทั้งหมด ทั้งจาก Local DB และ Remote Sync
   Future<void> loadDashboardData({bool silent = false}) async {
     final shouldShowLoading = !silent && user == null;
     if (shouldShowLoading) {

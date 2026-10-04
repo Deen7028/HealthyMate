@@ -11,12 +11,25 @@ import '../controllers/dashboard_controller.dart';
 part 'dashboard_page_actions.dart';
 part 'dashboard_page_content.dart';
 
+/// หน้าจอหลักของแอปพลิเคชัน (Dashboard Main Page Widget)
+/// ศูนย์รวมสรุปข้อมูลสุขภาพ กิจกรรมประจำวัน การออกกำลังกาย แคลอรี และความก้าวหน้าเป้าหมาย
 class DashboardPageUpdated extends StatefulWidget {
+  /// สถานะแท็บปัจจุบันเปิดอยู่นี้หรือไม่
   final bool isActive;
+
+  /// คอลแบ็กสลับไปหน้าคำนวณสุขภาพ (Health Calculator)
   final VoidCallback? onNavigateToCalculator;
+
+  /// คอลแบ็กสลับไปหน้าฝึกปฏิบัติ/เป้าหมาย (Practice / Routine)
   final VoidCallback? onNavigateToPractice;
+
+  /// คอลแบ็กสลับไปหน้าโปรไฟล์ส่วนตัว (Profile)
   final VoidCallback? onNavigateToProfile;
+
+  /// คอลแบ็กนำทางไปหน้าออกกำลังกายตามหมวดหมู่ที่เลือก (Workout Page)
   final Function(String? workoutCategory)? onNavigateToWorkout;
+
+  /// คอลแบ็กเริ่มออกกำลังกายทันที
   final VoidCallback? onStartWorkout;
 
   const DashboardPageUpdated({

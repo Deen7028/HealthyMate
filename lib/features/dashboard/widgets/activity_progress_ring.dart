@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+/// การ์ดแสดงความก้าวหน้ากิจกรรมประจำวันแบบวงกลม (Daily Activity Progress Ring Card)
 class DailyActivityCard extends StatelessWidget {
   final double progress; 
   final VoidCallback onStartWorkout;

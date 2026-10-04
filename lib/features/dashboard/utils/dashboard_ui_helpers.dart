@@ -1,7 +1,9 @@
 // ignore_for_file: non_const_argument_for_const_parameter
 import 'package:flutter/material.dart';
 
+/// ตัวช่วยจัดเตรียม Icon และ Color สำหรับ UI ของ Dashboard ตามประเภทของกิจวัตร/เป้าหมาย
 class DashboardUiHelpers {
+  /// แมป IconData ที่ใช้บ่อยตามรหัส codePoint
   static const Map<int, IconData> knownIcons = {
     0xe6de: Icons.water_drop_rounded,
     0xe1e1: Icons.directions_walk_rounded,

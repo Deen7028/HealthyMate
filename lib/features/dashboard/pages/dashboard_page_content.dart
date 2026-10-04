@@ -1,6 +1,8 @@
 part of 'dashboard_page.dart';
 
+/// Extension สำหรับสร้าง UI layout และโครงสร้างหน้าจอ Dashboard
 extension _DashboardPageContent on _DashboardPageUpdatedState {
+  /// สร้าง UI ส่วนประกอบทั้งหมดของหน้า Dashboard
   Widget _buildPage(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final scaffoldBg = AppTheme.getScaffoldColor(isDark);

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:healthymate/features/dashboard/utils/dashboard_ui_helpers.dart';
 import 'dashboard_main_goal_card_presentation.dart';
 part 'dashboard_main_goal_card_helpers.dart';
+
+/// การ์ดแสดงเป้าหมายหลักประจำวัน (Main Goal Card Component)
 class DashboardMainGoalCard extends StatelessWidget {
   final Map<String, dynamic>? userGoal;
   final List<Map<String, dynamic>> routines;

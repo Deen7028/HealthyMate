@@ -25,13 +25,29 @@ extension WorkoutTrackingPersistence on WorkoutTrackingController {
     _positionStreamSub?.cancel();
     LocationBackgroundService.instance.stopTracking();
 
+    _isProcessingSave = true;
+    this._safeNotifyListeners();
+
     final savedDuration = _secondsElapsed;
     final savedDistance = double.parse(_distanceKm.toStringAsFixed(2));
     final savedCalories = double.parse(_caloriesBurned.toStringAsFixed(1));
 
-    // แปลงพิกัด GPS เส้นทางทั้งหมดเป็น JSON String
-    final routePointsJson = jsonEncode(
-      _routePoints.map((p) => {'lat': p.latitude, 'lng': p.longitude}).toList(),
+    // 2. Map Matching: ดึงเส้นทางไปเทียบเคียงถนน/ทางวิ่งจริง (Post-workout Processing)
+    List<LatLng> processedPoints = _routePoints;
+    if (_selectedCategory.isMoving && _routePoints.length >= 3) {
+      final mode = _selectedCategory.id == 'cycling' ? 'cycling' : 'walking';
+      processedPoints = await MapMatchingService.instance.matchRoute(
+        _routePoints,
+        mode: mode,
+      );
+    }
+
+    // 5. Polyline Encoding & Douglas-Peucker Simplification:
+    // บีบอัดพิกัด GPS นับพันจุดให้เหลือเพียง ASCII String สั้นๆ ประหยัดเน็ตและดาต้าเบส 90%+
+    final encodedRoute = RouteUtils.toEncodedPolyline(
+      processedPoints,
+      simplify: true,
+      toleranceMeters: 2.0,
     );
 
     if (savedDuration >= 1 && _userId > 0) {
@@ -42,8 +58,11 @@ extension WorkoutTrackingPersistence on WorkoutTrackingController {
         distanceKm: savedDistance,
         durationSeconds: savedDuration,
         caloriesBurned: savedCalories,
-        routePoints: routePointsJson,
+        routePoints: encodedRoute,
       );
+
+      // 4. ล้าง Checkpoint การกู้คืนเนื่องจากบันทึกกิจกรรมเสร็จสมบูรณ์แล้ว
+      await WorkoutRecoveryService.instance.clearCheckpoint();
 
       // 🏆 อัปเดตและปลดล็อกเหรียญรางวัล (TbBadges & TbUserBadges)
       try {
@@ -90,6 +109,7 @@ extension WorkoutTrackingPersistence on WorkoutTrackingController {
       unawaited(SyncService.instance.syncPendingData());
     }
 
+    _isProcessingSave = false;
     this.returnToCategorySelection();
     return true;
   }
@@ -99,6 +119,7 @@ extension WorkoutTrackingPersistence on WorkoutTrackingController {
     _timer?.cancel();
     _positionStreamSub?.cancel();
     LocationBackgroundService.instance.stopTracking();
+    unawaited(WorkoutRecoveryService.instance.clearCheckpoint());
     _lastPosition = null;
     _routePoints.clear();
     this.returnToCategorySelection();
