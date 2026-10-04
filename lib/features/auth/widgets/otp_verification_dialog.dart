@@ -1,3 +1,6 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: วิดเจ็ตย่อยของ UI ในฟีเจอร์การยืนยันตัวตนและกู้รหัสผ่าน (otp verification dialog)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/services/api_service.dart';

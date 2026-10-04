@@ -1,3 +1,6 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: เซอร์วิสเชื่อมต่อข้อมูล/อุปกรณ์/ระบบภายนอก สำหรับใช้งานร่วมกันทั้งโปรเจกต์ (auth service)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'package:flutter/foundation.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/api_service.dart';
@@ -14,6 +17,7 @@ class AuthService extends ChangeNotifier {
   bool get isInitialized => _isInitialized;
   String get currentUserEmail => _currentUserEmail;
 
+  // โหลดสถานะเซสชันจากฐานข้อมูลในเครื่องเพียงครั้งเดียวตอนเริ่มใช้งาน
   Future<void> init() async {
     if (_isInitialized) return;
     try {
@@ -126,6 +130,7 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<void> setLoginSession(String email, {String? token}) async {
+    // ทำรูปแบบอีเมลให้เป็นมาตรฐานก่อนบันทึก เพื่อให้ค้นหาบัญชีได้ตรงกัน
     final cleanEmail = email.trim().toLowerCase();
     _isLoggedIn = true;
     _currentUserEmail = cleanEmail;
@@ -134,6 +139,7 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    // ล้างสถานะทั้งในหน่วยความจำและในฐานข้อมูล แล้วแจ้งหน้าจอให้รีเฟรช
     _isLoggedIn = false;
     _currentUserEmail = '';
     await AppDatabase.instance.setLoginStatus(false);

@@ -1,3 +1,4 @@
+/// โมเดลข้อมูลในฟีเจอร์การวิเคราะห์อาหารจากรูปภาพและข้อมูลโภชนาการ (food recognition models)
 class DetectedFoodItem {
   final String id;
   String name;
@@ -7,7 +8,7 @@ class DetectedFoodItem {
   double fat;
   String servingSize;
   double confidence;
-
+/// @nodoc
   DetectedFoodItem({
     required this.id,
     required this.name,
@@ -18,7 +19,7 @@ class DetectedFoodItem {
     this.servingSize = '1 จาน (300g)',
     this.confidence = 0.95,
   });
-
+  /// copyWith
   DetectedFoodItem copyWith({
     String? id,
     String? name,
@@ -53,7 +54,7 @@ class DetectedFoodItem {
       'confidence': confidence,
     };
   }
-
+  /// 
   factory DetectedFoodItem.fromMap(Map<String, dynamic> map) {
     return DetectedFoodItem(
       id: map['id']?.toString() ?? '',

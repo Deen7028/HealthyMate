@@ -1,3 +1,6 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: ธีม สี และรูปแบบหน้าตาแอป ที่หลายฟีเจอร์นำไปใช้ร่วมกัน (theme service)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/database/app_database.dart';
 

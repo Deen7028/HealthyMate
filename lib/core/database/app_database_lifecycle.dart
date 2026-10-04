@@ -1,7 +1,11 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: ฐานข้อมูลภายในเครื่องและ DAO สำหรับใช้งานร่วมกันทั้งโปรเจกต์ (app database lifecycle)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 part of 'app_database.dart';
 
 extension AppDatabaseLifecycle on AppDatabase {
   Future<Database?> _initDatabase() async {
+    // เว็บไม่เปิด SQLite ผ่านเส้นทางนี้ ส่วนแพลตฟอร์มอื่นเปิดฐานข้อมูลตาม path ของเครื่อง
     if (kIsWeb) return null;
 
     AppDatabase.ensureInitialized();
@@ -20,6 +24,7 @@ extension AppDatabaseLifecycle on AppDatabase {
   /// การอัปเกรดฐานข้อมูลแบบปลอดภัย (Safe Schema Migration)
   /// ตรวจสอบและสร้างตารางหรือคอลัมน์ใหม่ที่อาจตกหล่นจากเวอร์ชันก่อนหน้า
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    // สร้างโครงสร้างที่ขาดก่อน แล้วค่อยเติมคอลัมน์ที่เพิ่มในรุ่นใหม่
     // 1. สร้างตารางทั้งหมดที่อาจยังไม่มี (CREATE TABLE IF NOT EXISTS)
     await _onCreate(db, newVersion);
 
@@ -186,6 +191,7 @@ extension AppDatabaseLifecycle on AppDatabase {
     String columnDef,
   ) async {
     try {
+      // อ่าน metadata ของตารางก่อน เพื่อไม่ให้ ALTER TABLE ซ้ำกับคอลัมน์เดิม
       final pragma = await db.rawQuery('PRAGMA table_info($tableName)');
       final columnExists = pragma.any(
         (col) =>

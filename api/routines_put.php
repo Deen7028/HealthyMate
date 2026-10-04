@@ -1,4 +1,7 @@
 <?php
+// ส่วนนี้เป็น API endpoint สำหรับแก้ไขกิจวัตร
+// คอมเมนท์ภาษาไทยช่วยแยกหน้าที่หลักของไฟล์โดยไม่แก้ logic เดิม
+
         $data = json_decode(file_get_contents("php://input"), true);
         $authUserId = requireAuth();
 

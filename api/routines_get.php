@@ -1,4 +1,7 @@
 <?php
+// ส่วนนี้เป็น API endpoint สำหรับดึงข้อมูลกิจวัตร
+// คอมเมนท์ภาษาไทยช่วยแยกหน้าที่หลักของไฟล์โดยไม่แก้ logic เดิม
+
         $userId = requireAuth();
         $date = isset($_GET['date']) ? trim($_GET['date']) : date('Y-m-d');
 

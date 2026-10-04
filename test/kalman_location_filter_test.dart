@@ -1,3 +1,6 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: ชุดทดสอบสำหรับ kalman location filter test เพื่อตรวจพฤติกรรมสำคัญของโปรเจกต์
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:healthymate/features/workout/services/kalman_location_filter.dart';
 

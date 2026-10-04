@@ -1,4 +1,7 @@
 <?php
+// ส่วนนี้เป็น API endpoint สำหรับส่งรหัส OTP สำหรับยืนยันอีเมล
+// คอมเมนท์ภาษาไทยช่วยแยกหน้าที่หลักของไฟล์โดยไม่แก้ logic เดิม
+
 require_once "db_connect.php";
 
 // นำเข้าไฟล์ PHPMailer หากมีติดตั้งไว้ (Composer หรือ โฟลเดอร์ PHPMailer)

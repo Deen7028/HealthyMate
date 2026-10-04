@@ -1,3 +1,6 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: หน้าจอหลัก ในฟีเจอร์แดชบอร์ดสรุปสุขภาพและเป้าหมาย (dashboard page)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/services/routine_state_notifier.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
@@ -56,6 +59,7 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
   @override
   void initState() {
     super.initState();
+    // โหลดข้อมูลครั้งแรก และติดตามการเปลี่ยนแปลง routine เพื่อรีเฟรชสรุปบนแดชบอร์ด
     _controller = DashboardController()..loadDashboardData();
     RoutineStateNotifier.instance.addListener(_onRoutineStateChanged);
   }
@@ -76,6 +80,7 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
 
   @override
   void dispose() {
+    // ถอด listener และปิด controller เมื่อออกจากหน้านี้ เพื่อไม่ให้มีงานค้าง
     RoutineStateNotifier.instance.removeListener(_onRoutineStateChanged);
     _controller.dispose();
     super.dispose();

@@ -1,7 +1,11 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: เซอร์วิสเชื่อมต่อข้อมูล/อุปกรณ์/ระบบภายนอก สำหรับใช้งานร่วมกันทั้งโปรเจกต์ (sync service lifecycle)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 part of 'sync_service.dart';
 
 extension SyncServiceLifecycle on SyncService {
   Future<void> init() async {
+    // ตั้งค่าสถานะเครือข่ายเริ่มต้นก่อนสมัครรับ event เพื่อแสดงผลและเริ่มซิงค์ได้ถูกต้อง
     // 1. ตรวจสอบสถานะการเชื่อมต่อเริ่มต้น
     await checkConnection();
 
@@ -45,6 +49,7 @@ extension SyncServiceLifecycle on SyncService {
   /// ตรวจสอบการเชื่อมต่อ 2 ระดับอย่างละเอียด
   Future<bool> checkConnection() async {
     try {
+      // แยกการมีสัญญาณเครือข่ายออกจากการเข้าถึงอินเทอร์เน็ตจริง
       final connectivityResults = await _connectivity.checkConnectivity();
       final hasHardware = connectivityResults.any(
         (r) => r != ConnectivityResult.none,
