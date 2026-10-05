@@ -8,6 +8,7 @@ import 'package:healthymate/core/services/api_service.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
 import 'package:healthymate/features/health_calculator/models/health_record_model.dart';
 import 'package:healthymate/features/practice/controllers/routine_controller.dart';
+import 'package:healthymate/features/notifications/services/app_notification_service.dart';
 
 part 'dashboard_controller_sync.dart';
 part 'dashboard_controller_loading.dart';
@@ -34,6 +35,7 @@ class DashboardController extends ChangeNotifier {
   Map<int, bool> todayCompletionMap = {};
   Map<int, double> todayProgressValues = {};
   Map<String, Map<String, double>> todayWorkoutStats = {};
+  int unreadNotificationCount = 0;
 
   final DateTime now = DateTime.now();
 

@@ -59,7 +59,25 @@ extension ProfilePageContent on _ProfilePageState {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // 1. Top App Bar (Avatar + Title + Bell)
-              ProfileTopBar(avatarProvider: avatarProvider),
+              ProfileTopBar(
+                avatarProvider: avatarProvider,
+                onNotificationTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => NotificationsPage(
+                        userId: _controller.currentUser?.nUserId ?? 0,
+                        onNavigateTab: (tabIndex, [cat, dur]) {
+                          if (widget.onNavigateTab != null) {
+                            widget.onNavigateTab!(tabIndex, cat, dur);
+                          } else if (tabIndex == 3 && widget.onNavigateToPractice != null) {
+                            widget.onNavigateToPractice!();
+                          }
+                        },
+                      ),
+                    ),
+                  );
+                },
+              ),
 
               // 2. Main Profile Card (Avatar + Name + Email + Goal)
               ProfileHeaderCard(

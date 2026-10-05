@@ -59,6 +59,29 @@ extension _DashboardPageContent on _DashboardPageUpdatedState {
                           greetingText: _controller.getGreeting(),
                           greetingEmoji: _controller.getGreetingEmoji(),
                           onProfileTap: widget.onNavigateToProfile,
+                          unreadCount: _controller.unreadNotificationCount,
+                          onNotificationTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => NotificationsPage(
+                                  userId: _controller.user?.nUserId ?? 0,
+                                  onNavigateTab: (tabIndex, [cat, dur]) {
+                                    if (widget.onNavigateTab != null) {
+                                      widget.onNavigateTab!(tabIndex, cat, dur);
+                                    } else if (tabIndex == 1 && widget.onNavigateToWorkout != null) {
+                                      widget.onNavigateToWorkout!(cat);
+                                    } else if (tabIndex == 2 && widget.onNavigateToCalculator != null) {
+                                      widget.onNavigateToCalculator!();
+                                    } else if (tabIndex == 3 && widget.onNavigateToPractice != null) {
+                                      widget.onNavigateToPractice!();
+                                    } else if (tabIndex == 4 && widget.onNavigateToProfile != null) {
+                                      widget.onNavigateToProfile!();
+                                    }
+                                  },
+                                ),
+                              ),
+                            );
+                          },
                           primaryGreen: primaryGreen,
                           darkGreen: darkGreen,
                         ),

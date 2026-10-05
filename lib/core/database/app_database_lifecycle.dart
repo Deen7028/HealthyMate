@@ -15,7 +15,7 @@ extension AppDatabaseLifecycle on AppDatabase {
 
     return await openDatabase(
       path,
-      version: 13,
+      version: 14,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );

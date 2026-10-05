@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/sync_service.dart';
+import 'package:healthymate/features/workout/models/workout_models.dart';
 
 /// Controller สำหรับจัดการ State และ Business Logic ของหน้าประวัติการออกกำลังกาย (WorkoutHistoryPage)
 class WorkoutHistoryController extends ChangeNotifier {
@@ -13,7 +14,77 @@ class WorkoutHistoryController extends ChangeNotifier {
   int _userId = 0;
   bool _isDisposed = false;
 
+  String _selectedCategoryFilter = 'all';
+  String _searchQuery = '';
+
   int get userId => _userId;
+  String get selectedCategoryFilter => _selectedCategoryFilter;
+  String get searchQuery => _searchQuery;
+
+  void setSelectedCategoryFilter(String categoryId) {
+    if (_selectedCategoryFilter != categoryId) {
+      _selectedCategoryFilter = categoryId;
+      _safeNotifyListeners();
+    }
+  }
+
+  void setSearchQuery(String query) {
+    _searchQuery = query.trim().toLowerCase();
+    _safeNotifyListeners();
+  }
+
+  /// รายการออกกำลังกายที่ผ่านการกรองตามหมวดหมู่และการค้นหา
+  List<Map<String, dynamic>> get filteredWorkouts {
+    return workouts.where((w) {
+      final type = w['sType']?.toString() ?? '';
+      
+      // กรองตามหมวดหมู่
+      if (_selectedCategoryFilter != 'all') {
+        final category = WorkoutCategory.fromIdOrTitle(type);
+        if (category.id != _selectedCategoryFilter) {
+          return false;
+        }
+      }
+
+      // กรองตามคำค้นหา
+      if (_searchQuery.isNotEmpty) {
+        final lowerType = type.toLowerCase();
+        if (!lowerType.contains(_searchQuery)) {
+          return false;
+        }
+      }
+
+      return true;
+    }).toList();
+  }
+
+  /// จำนวนรายการออกกำลังกายทั้งหมด (ตามฟิลเตอร์ปัจจุบัน)
+  int get totalCount => filteredWorkouts.length;
+
+  /// ระยะทางรวมทั้งหมด (กม.) ตามฟิลเตอร์ปัจจุบัน
+  double get totalDistanceKm {
+    return filteredWorkouts.fold<double>(
+      0.0,
+      (sum, item) => sum + ((item['nDistance'] as num?)?.toDouble() ?? 0.0),
+    );
+  }
+
+  /// แคลอรีที่เผาผลาญรวมทั้งหมด (kcal) ตามฟิลเตอร์ปัจจุบัน
+  double get totalCaloriesBurned {
+    return filteredWorkouts.fold<double>(
+      0.0,
+      (sum, item) =>
+          sum + ((item['nCaloriesBurned'] as num?)?.toDouble() ?? 0.0),
+    );
+  }
+
+  /// ระยะเวลารวมทั้งหมด (วินาที) ตามฟิลเตอร์ปัจจุบัน
+  int get totalDurationSeconds {
+    return filteredWorkouts.fold<int>(
+      0,
+      (sum, item) => sum + ((item['nDuration'] as num?)?.toInt() ?? 0),
+    );
+  }
 
   @override
   void dispose() {

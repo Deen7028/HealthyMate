@@ -8,6 +8,7 @@ import 'package:healthymate/shared/widgets/fade_slide_entrance.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/features/practice/widgets/add_main_goal_bottom_sheet.dart';
 import 'package:healthymate/shared/bottom_sheets/food_source_bottom_sheet.dart';
+import 'package:healthymate/features/notifications/pages/notifications_page.dart';
 import '../widgets/index.dart';
 import '../controllers/dashboard_controller.dart';
 
@@ -32,6 +33,9 @@ class DashboardPageUpdated extends StatefulWidget {
   /// คอลแบ็กนำทางไปหน้าออกกำลังกายตามหมวดหมู่ที่เลือก (Workout Page)
   final Function(String? workoutCategory)? onNavigateToWorkout;
 
+  /// คอลแบ็กสลับแท็บใดๆ พร้อมพารามิเตอร์
+  final Function(int tabIndex, [String? workoutCategory, int? targetDurationMinutes])? onNavigateTab;
+
   /// คอลแบ็กเริ่มออกกำลังกายทันที
   final VoidCallback? onStartWorkout;
 
@@ -42,6 +46,7 @@ class DashboardPageUpdated extends StatefulWidget {
     this.onNavigateToPractice,
     this.onNavigateToProfile,
     this.onNavigateToWorkout,
+    this.onNavigateTab,
     this.onStartWorkout,
   });
 

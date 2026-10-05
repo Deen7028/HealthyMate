@@ -15,6 +15,8 @@ class DashboardHeader extends StatelessWidget {
   final String greetingText;
   final String greetingEmoji;
   final VoidCallback? onProfileTap;
+  final VoidCallback? onNotificationTap;
+  final int unreadCount;
   final Color primaryGreen;
   final Color darkGreen;
 
@@ -27,6 +29,8 @@ class DashboardHeader extends StatelessWidget {
     required this.greetingText,
     required this.greetingEmoji,
     this.onProfileTap,
+    this.onNotificationTap,
+    this.unreadCount = 0,
     this.primaryGreen = const Color(0xFF0F9C58),
     this.darkGreen = const Color(0xFF006432),
   });
@@ -119,10 +123,41 @@ class DashboardHeader extends StatelessWidget {
                 children: [
                   const SyncStatusBadge(),
                   const SizedBox(width: 6),
-                  IconButton(
-                    icon: const Icon(Icons.notifications_outlined),
-                    onPressed: () {},
-                    color: isDark ? Colors.white70 : Colors.black87,
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.notifications_outlined),
+                        onPressed: onNotificationTap,
+                        color: isDark ? Colors.white70 : Colors.black87,
+                      ),
+                      if (unreadCount > 0)
+                        Positioned(
+                          right: 8,
+                          top: 8,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFE53935),
+                              shape: BoxShape.circle,
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 16,
+                              minHeight: 16,
+                            ),
+                            child: Text(
+                              unreadCount > 99 ? '99+' : '$unreadCount',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                height: 1.0,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ],
               ),

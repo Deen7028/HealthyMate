@@ -26,6 +26,7 @@ part 'daos/routine_dao_mutations.dart';
 part 'daos/routine_dao_logs.dart';
 part 'daos/routine_dao_history.dart';
 part 'daos/nutrition_dao.dart';
+part 'daos/notification_dao.dart';
 part 'daos/goal_preference_dao.dart';
 part 'daos/goal_preference_dao_keys.dart';
 part 'daos/goal_preference_dao_devices.dart';
@@ -112,6 +113,7 @@ class AppDatabase {
   static const String tableBadges = 'TbBadges';
   static const String tableUserBadges = 'TbUserBadges';
   static const String tableHealthIntegrations = 'TbHealthIntegrations';
+  static const String tableNotifications = 'TbNotifications';
   static const String tableSession = 'TbSession';
   static const String tablePendingDeletions = 'TbPendingDeletions';
 
