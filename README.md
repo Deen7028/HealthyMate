@@ -17,25 +17,19 @@
 * **9. Calorie Intake & Nutrition Log:** ระบบบันทึกรายการอาหารและปริมาณแคลอรีที่ได้รับในแต่ละวัน
 
 
-## 🛠️ Tech Stack
+## 🛠️ เทคโนโลยีที่ใช้ (Tech Stack)
 
 * **Mobile Framework:** Flutter (Dart)
-* **Database:** sqlite & Supabase
-* **Architecture:** Feature-First / Domain-Driven Structure
+* **ฐานข้อมูล (Database):** SQLite & Supabase
+* **สถาปัตยกรรม (Architecture):** โครงสร้างแบบ Feature-First / Domain-Driven
 
-## Local configuration
+---
 
-Copy `.env.example` to `.env`, then fill in the API values:
+## ⚙️ การตั้งค่าสภาพแวดล้อม (Local Configuration)
+
+คัดลอกไฟล์ `.env.example` เป็น `.env` จากนั้นกรอกค่า API Key และการตั้งค่าที่จำเป็น:
 
 ```sh
 cp -n .env.example .env
 flutter run
 ```
-
-Keep `.env` limited to these client settings. Server credentials such as database
-passwords and SMTP credentials must stay on the server; they are not read by the app.
-The Android and iOS native map setup also reads `GOOGLE_MAPS_API_KEY` from `.env`.
-
-Flutter bundles `.env` into the app, so users can extract its values. Restrict the
-Maps key to this app and its required APIs. `APP_KEY` must not be the API's only
-authorization control; enforce user ownership with bearer tokens on the server.
