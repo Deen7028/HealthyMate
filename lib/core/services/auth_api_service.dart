@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'api_service_config.dart';
 
 import 'package:healthymate/core/services/supabase_service.dart';
+import 'package:healthymate/core/database/app_database.dart';
 
 class AuthApiService {
   static Future<Map<String, dynamic>> loginRemote({
@@ -17,11 +18,34 @@ class AuthApiService {
       if (SupabaseService.instance.isInitialized) {
         final existing = await SupabaseService.instance.getUserByEmail(email);
         if (existing != null) {
-          return {
-            'status': 'success',
-            'user': existing,
-            'message': 'เข้าสู่ระบบสำเร็จ',
-          };
+          final storedHash = existing['sPasswordHash']?.toString() ?? '';
+          
+          bool isValid = false;
+          if (storedHash == 'GOOGLE_AUTH_USER') {
+            isValid = true; // Bypass for Google Auth
+          } else {
+            isValid = storedHash.isNotEmpty && 
+                      (AppDatabase.verifyPassword(password, storedHash) || storedHash == password);
+          }
+          
+          if (isValid) {
+            // Re-hash password if it was stored as plaintext
+            if (storedHash == password && password != 'GOOGLE_AUTH_USER') {
+              final newHash = AppDatabase.hashPassword(password);
+              existing['sPasswordHash'] = newHash;
+              await SupabaseService.instance.upsertUser(existing);
+            }
+            return {
+              'status': 'success',
+              'user': existing,
+              'message': 'เข้าสู่ระบบสำเร็จ',
+            };
+          } else {
+            return {
+              'status': 'error',
+              'message': 'อีเมลหรือรหัสผ่านไม่ถูกต้อง',
+            };
+          }
         }
       }
 
@@ -70,12 +94,13 @@ class AuthApiService {
           'sFirstName': googleUserData['sFirstName'] ?? 'Google',
           'sLastName': googleUserData['sLastName'] ?? 'User',
           'sProfileImagePath': googleUserData['sProfileImagePath'] ?? '',
-          'sPasswordHash': 'GOOGLE_AUTH_USER',
           'isSynced': true,
         };
 
         if (existing != null) {
           userPayload['nUserId'] = existing['nUserId'];
+        } else {
+          userPayload['sPasswordHash'] = 'GOOGLE_AUTH_USER';
         }
 
         await SupabaseService.instance.upsertUser(userPayload);

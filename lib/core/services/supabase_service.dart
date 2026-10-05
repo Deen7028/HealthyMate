@@ -84,7 +84,9 @@ class SupabaseService {
       final payload = Map<String, dynamic>.from(userData);
       // ถ้าไม่มี passwordHash และเป็นการอัปเดต ให้ลบ key ออกเพื่อไม่ให้ติด null constraint
       if (existing != null) {
-        payload.remove('sPasswordHash');
+        if (!payload.containsKey('sPasswordHash') || payload['sPasswordHash'] == null || payload['sPasswordHash'].toString().isEmpty) {
+          payload.remove('sPasswordHash');
+        }
         if (email != null && email.isNotEmpty) {
           await client!.from('TbUsers').update(payload).eq('sEmail', email);
         } else if (userId != null) {

@@ -18,13 +18,12 @@ class ProfileApiService {
           ..removeWhere(
             (key, _) => const {
               'sPassword',
-              'sPasswordHash',
               'sGeminiApiKey',
               'sAuthToken',
             }.contains(key),
           );
       } else if (userOrMap is TbUser) {
-        payload = userOrMap.toPublicProfileMap();
+        payload = userOrMap.toMap();
       } else {
         payload = {};
       }

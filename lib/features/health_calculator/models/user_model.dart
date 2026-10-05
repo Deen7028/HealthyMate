@@ -139,7 +139,9 @@ class TbUser {
       nWeight: double.tryParse(map['nWeight']?.toString() ?? '') ?? 0.0,
       sGender: map['sGender']?.toString() ?? 'male',
       sActivityLevel: map['sActivityLevel']?.toString() ?? 'light',
-      isDarkMode: (map['isDarkMode'] as num?)?.toInt() == 1,
+      isDarkMode: map['isDarkMode'] is bool
+          ? map['isDarkMode'] as bool
+          : (map['isDarkMode'] as num?)?.toInt() == 1,
       sProfileImagePath: map['sProfileImagePath']?.toString() ?? '',
       dtCreatedAt: DateTime.tryParse(map['dtCreatedAt']?.toString() ?? '') ?? DateTime.now(),
     );

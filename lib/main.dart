@@ -89,12 +89,13 @@ void main() async {
           'sFirstName': currentFirstName,
           'sLastName': currentLastName,
           'sProfileImagePath': currentAvatar,
-          'sPasswordHash': 'GOOGLE_AUTH_USER',
           'isSynced': true,
         };
 
         if (existing != null) {
           userSyncPayload['nUserId'] = existing['nUserId'];
+        } else {
+          userSyncPayload['sPasswordHash'] = 'GOOGLE_AUTH_USER';
         }
 
         await SupabaseService.instance.upsertUser(userSyncPayload);
@@ -115,7 +116,6 @@ void main() async {
           'sFirstName': currentFirstName,
           'sLastName': currentLastName,
           'sProfileImagePath': currentAvatar,
-          'sPasswordHash': 'GOOGLE_AUTH_USER',
           'nWeight': finalWeight,
           'nHeight': finalHeight,
           'nAge': finalAge,
@@ -123,6 +123,12 @@ void main() async {
           'sActivityLevel': finalActivity,
           'isSynced': true,
         };
+        
+        if (existing == null && localExisting == null) {
+          userPayload['sPasswordHash'] = 'GOOGLE_AUTH_USER';
+        } else {
+          userPayload['sPasswordHash'] = existing?['sPasswordHash'] ?? localExisting?.sPasswordHash ?? '';
+        }
 
         // 2. บันทึกลง SQLite และเริ่ม Session
         final tbUser = await AppDatabase.instance.upsertUserFromServer(userPayload);
