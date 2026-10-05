@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:healthymate/core/services/notification_service.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
