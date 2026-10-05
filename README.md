@@ -12,7 +12,7 @@
 * **4. Smart Health Calculator:** เครื่องคำนวณค่าดัชนีมวลกาย (BMI) และพลังงานที่ร่างกายต้องการต่อวัน (BMR & TDEE) พร้อมบันทึกประวัติ
 * **5. Habit & Routine Notifications:** ระบบสร้างนิสัยและกำหนดกิจวัตรประจำวัน พร้อมระบบแจ้งเตือนอัจฉริยะ
 * **6. Profile & Settings Manager:** จัดการข้อมูลส่วนตัว ตั้งค่าธีม (Dark/Light Mode) และการจัดการบัญชี
-* **7. Health Data Sync:** รองรับการเชื่อมต่อและซิงค์ข้อมูลสุขภาพกับแพลตฟอร์มภายนอก (Apple Health / Google Fit)
+* **7. Health Data Sync:** รองรับการเชื่อมต่อและซิงค์ข้อมูลสุขภาพกับแพลตฟอร์มภายนอก (Apple Health / Google Fit) กำลังพัฒนา...
 * **8. Gamification & Badges:** ระบบสะสมเหรียญรางวัลและป้ายความสำเร็จเพื่อสร้างแรงจูงใจในการออกกำลังกาย
 * **9. Calorie Intake & Nutrition Log:** ระบบบันทึกรายการอาหารและปริมาณแคลอรีที่ได้รับในแต่ละวัน
 
@@ -20,7 +20,7 @@
 ## 🛠️ Tech Stack
 
 * **Mobile Framework:** Flutter (Dart)
-* **Database:** MySQL
+* **Database:** sqlite & Supabase
 * **Architecture:** Feature-First / Domain-Driven Structure
 
 ## Local configuration
