@@ -1,6 +1,10 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: หน้าจอหลัก ในฟีเจอร์การยืนยันตัวตนและกู้รหัสผ่าน (forgot password page password form)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 part of 'forgot_password_page.dart';
 
 extension _ForgotPasswordPasswordForm on _ForgotPasswordPageState {
+  /// ฟังก์ชันสร้าง UI ของฟอร์มกรอกรหัสผ่าน
   Widget _buildPasswordForm() {
     return Form(
       key: _formKey,
@@ -134,7 +138,7 @@ extension _ForgotPasswordPasswordForm on _ForgotPasswordPageState {
           ),
 
           const SizedBox(height: 28),
-
+          /// ปุ่มยืนยันการรีเซ็ตรหัสผ่าน
           SizedBox(
             width: double.infinity,
             height: 54,

@@ -1,3 +1,6 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: วิดเจ็ตย่อยของ UI ในฟีเจอร์แดชบอร์ดสรุปสุขภาพและเป้าหมาย (dashboard health summary card nutrition preview)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 part of 'dashboard_health_summary_card.dart';
 
 extension _DashboardHealthSummaryCardNutritionPreview
@@ -9,7 +12,6 @@ extension _DashboardHealthSummaryCardNutritionPreview
     required Color textSecondary,
   }) => Column(
     children: [
-      // Row 4: Food items preview or CTA hint
       if (todayNutritionLogs.isNotEmpty) ...[
         const SizedBox(height: 10),
         Wrap(

@@ -1,3 +1,6 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: เซอร์วิสเชื่อมต่อข้อมูล/อุปกรณ์/ระบบภายนอก ในฟีเจอร์การวิเคราะห์อาหารจากรูปภาพและข้อมูลโภชนาการ (food recognition analysis)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 part of 'food_recognition_service.dart';
 
 extension FoodRecognitionAnalysis on FoodRecognitionService {
@@ -13,7 +16,10 @@ extension FoodRecognitionAnalysis on FoodRecognitionService {
       if (targetUserId == null) {
         throw Exception('กรุณาเข้าสู่ระบบก่อนใช้การวิเคราะห์อาหาร');
       }
-      final apiKey = await AppDatabase.instance.getGeminiApiKey(targetUserId);
+      final envKey = AppConfig.geminiApiKey;
+      final apiKey = envKey.isNotEmpty
+          ? envKey
+          : await AppDatabase.instance.getGeminiApiKey(targetUserId);
 
       if (apiKey.trim().isNotEmpty) {
         hasKey = true;

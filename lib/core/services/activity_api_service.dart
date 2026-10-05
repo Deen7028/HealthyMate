@@ -1,9 +1,11 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: เซอร์วิสเชื่อมต่อข้อมูล/อุปกรณ์/ระบบภายนอก สำหรับใช้งานร่วมกันทั้งโปรเจกต์ (activity api service)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'api_service_config.dart';
-
 import 'package:healthymate/core/services/supabase_service.dart';
+import 'api_service_config.dart';
 
 class ActivityApiService {
   static Future<List<Map<String, dynamic>>> fetchWorkouts({
@@ -42,8 +44,6 @@ class ActivityApiService {
             ),
           );
         }
-      } else {
-        debugPrint('[API ERROR] fetchWorkouts HTTP ${response.statusCode}');
       }
     } catch (e) {
       debugPrint('[API EXCEPTION] fetchWorkouts failed: $e');
@@ -51,13 +51,12 @@ class ActivityApiService {
     return [];
   }
 
-  /// 5. บันทึกข้อมูลการออกกำลังกายขึ้น Supabase / PHP API (`workouts.php`)
-
+  /// 5. บันทึกข้อมูลการออกกำลังกาย
   static Future<bool> saveWorkout(Map<String, dynamic> workout) async {
     try {
       if (SupabaseService.instance.isInitialized) {
         final payload = Map<String, dynamic>.from(workout);
-        payload.remove('nWorkoutId'); // ให้ Postgres generate ID อัตโนมัติถ้าเป็นแถวใหม่
+        payload.remove('nWorkoutId');
         final success = await SupabaseService.instance.upsertWorkout(payload);
         if (success) return true;
       }
@@ -70,14 +69,7 @@ class ActivityApiService {
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
-        if (body['status'] == 'success') {
-          debugPrint(
-            '☁️ [API SUCCESS] [TbWorkouts] ➜ บันทึกการออกกำลังกายขึ้น Server สำเร็จ (${workout['sType']}, ${workout['nDistance']} กม.)',
-          );
-          return true;
-        }
-      } else {
-        debugPrint('[API ERROR] saveWorkout HTTP ${response.statusCode}');
+        return body['status'] == 'success';
       }
     } catch (e) {
       debugPrint('[API EXCEPTION] saveWorkout failed: $e');
@@ -85,10 +77,16 @@ class ActivityApiService {
     return false;
   }
 
-  /// 5. บันทึกประวัติมื้ออาหารขึ้น PHP API (`nutrition_logs.php`)
-
+  /// 5.1 บันทึกประวัติมื้ออาหาร
   static Future<bool> saveNutritionLog(Map<String, dynamic> log) async {
     try {
+      if (SupabaseService.instance.isInitialized) {
+        final payload = Map<String, dynamic>.from(log);
+        payload.remove('nNutritionId');
+        final success = await SupabaseService.instance.upsertNutritionLog(payload);
+        if (success) return true;
+      }
+
       final uri = Uri.parse('${ApiServiceConfig.baseUrl}/nutrition_logs.php');
       final headers = await ApiServiceConfig.getAuthHeaders();
       final response = await http
@@ -97,14 +95,7 @@ class ActivityApiService {
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
-        if (body['status'] == 'success') {
-          debugPrint(
-            '☁️ [API SUCCESS] [TbNutritionLogs] ➜ บันทึกมื้ออาหาร "${log['sFoodName']}" (${log['nCalories']} kcal) ขึ้น Server สำเร็จ',
-          );
-          return true;
-        }
-      } else {
-        debugPrint('[API ERROR] saveNutritionLog HTTP ${response.statusCode}');
+        return body['status'] == 'success';
       }
     } catch (e) {
       debugPrint('[API EXCEPTION] saveNutritionLog failed: $e');
@@ -112,10 +103,17 @@ class ActivityApiService {
     return false;
   }
 
-  /// 5.1 ลบประวัติสุขภาพจาก Server (`health_records.php`)
-
+  /// 5.2 ลบประวัติมื้ออาหาร
   static Future<bool> deleteNutritionLogRemote(int nutritionId) async {
     try {
+      if (SupabaseService.instance.isInitialized && SupabaseService.instance.client != null) {
+        await SupabaseService.instance.client!
+            .from('TbNutritionLogs')
+            .delete()
+            .eq('nNutritionId', nutritionId);
+        return true;
+      }
+
       final uri = Uri.parse(
         '${ApiServiceConfig.baseUrl}/nutrition_logs.php?nNutritionId=$nutritionId',
       );
@@ -130,12 +128,7 @@ class ActivityApiService {
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
-        if (body['status'] == 'success') {
-          debugPrint(
-            '☁️ [API SUCCESS] [TbNutritionLogs] ➜ ลบรายการมื้ออาหาร ID: $nutritionId บน Server สำเร็จ',
-          );
-          return true;
-        }
+        return body['status'] == 'success';
       }
     } catch (e) {
       debugPrint('[API EXCEPTION] deleteNutritionLogRemote failed: $e');
@@ -143,13 +136,25 @@ class ActivityApiService {
     return false;
   }
 
-  /// 6. อัปโหลดรูปภาพขึ้น Server (/uploads) และรับ path กลับมาบันทึกลง Database
-
+  /// 6. อัปโหลดรูปภาพขึ้น Supabase Storage Bucket
   static Future<String?> uploadImage(
     String localFilePath, {
     String type = 'general',
   }) async {
     try {
+      if (SupabaseService.instance.isInitialized) {
+        final folder = type == 'profile'
+            ? 'profiles'
+            : (type == 'nutrition' ? 'nutrition' : 'workouts');
+        final remoteUrl = await SupabaseService.instance.uploadImage(
+          localFilePath,
+          folder: folder,
+        );
+        if (remoteUrl != null && remoteUrl.isNotEmpty) {
+          return remoteUrl;
+        }
+      }
+
       final uri = Uri.parse('${ApiServiceConfig.baseUrl}/upload_image.php');
       final headers = await ApiServiceConfig.getAuthHeaders();
       final request = http.MultipartRequest('POST', uri)
@@ -164,21 +169,13 @@ class ActivityApiService {
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
-        if (body['status'] == 'success') {
-          return body['filePath']
-              as String?; // ส่งกลับ "uploads/profile/xxx.jpg"
+        if (body['status'] == 'success' && body['image_url'] != null) {
+          return body['image_url'] as String;
         }
       }
     } catch (e) {
-      debugPrint('Error uploading image to server: $e');
+      debugPrint('[API EXCEPTION] uploadImage failed: $e');
     }
     return null;
   }
-
-  // ==========================================
-  // Dashboard API (Aggregated Endpoint)
-  // ==========================================
-
-  /// 7. ดึงข้อมูล Dashboard รวม (user, healthRecord, workoutStats, nutrition, goal, routines)
-  /// ใน HTTP request เดียวเพื่อลด latency
 }

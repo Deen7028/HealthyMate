@@ -1,3 +1,6 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: คอนโทรลเลอร์และ state ของหน้าจอ ในฟีเจอร์กิจวัตรและเป้าหมายประจำวัน (routine controller sync)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 part of 'routine_controller.dart';
 
 extension RoutineControllerSyncing on RoutineController {
@@ -55,8 +58,9 @@ extension RoutineControllerSyncing on RoutineController {
             final linkedWorkout = r['sLinkedWorkout']?.toString() ?? '';
             final color = (r['color'] as num?)?.toInt();
             final iconData = (r['iconData'] as num?)?.toInt();
-            final isNotif =
-                ((r['isNotificationActive'] as num?)?.toInt() ?? 1) == 1;
+            final isNotif = r['isNotificationActive'] is bool
+                ? (r['isNotificationActive'] as bool)
+                : ((r['isNotificationActive'] as num?)?.toInt() ?? 1) == 1;
 
             final newId = await RoutineApiService.insertRoutineRemote(
               userId: userId,

@@ -1,6 +1,9 @@
-import 'dart:convert';
+// ส่วนนี้อธิบายบทบาทของไฟล์: วิดเจ็ตย่อยของ UI ในฟีเจอร์การติดตามและประวัติการออกกำลังกาย (workout history item card)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:healthymate/core/utils/route_utils.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 import 'workout_history_card_sections.dart';
 
@@ -64,20 +67,7 @@ class WorkoutHistoryItemCard extends StatelessWidget {
         (workoutItem['nCaloriesBurned'] as num?)?.toDouble() ?? 0.0;
     final dateStr = workoutItem['dtWorkoutDate']?.toString();
     final rawRoutePoints = workoutItem['sRoutePoints']?.toString();
-    List<LatLng> routePoints = [];
-    if (rawRoutePoints != null && rawRoutePoints.isNotEmpty) {
-      try {
-        final decoded = jsonDecode(rawRoutePoints) as List<dynamic>;
-        routePoints = decoded
-            .map(
-              (pt) => LatLng(
-                (pt['lat'] as num).toDouble(),
-                (pt['lng'] as num).toDouble(),
-              ),
-            )
-            .toList();
-      } catch (_) {}
-    }
+    final List<LatLng> routePoints = RouteUtils.parseRoutePoints(rawRoutePoints);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),

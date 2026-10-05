@@ -1,3 +1,6 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: หน้าจอหลัก ในฟีเจอร์แดชบอร์ดสรุปสุขภาพและเป้าหมาย (dashboard page)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/services/routine_state_notifier.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
@@ -11,12 +14,25 @@ import '../controllers/dashboard_controller.dart';
 part 'dashboard_page_actions.dart';
 part 'dashboard_page_content.dart';
 
+/// หน้าจอหลักของแอปพลิเคชัน (Dashboard Main Page Widget)
+/// ศูนย์รวมสรุปข้อมูลสุขภาพ กิจกรรมประจำวัน การออกกำลังกาย แคลอรี และความก้าวหน้าเป้าหมาย
 class DashboardPageUpdated extends StatefulWidget {
+  /// สถานะแท็บปัจจุบันเปิดอยู่นี้หรือไม่
   final bool isActive;
+
+  /// คอลแบ็กสลับไปหน้าคำนวณสุขภาพ (Health Calculator)
   final VoidCallback? onNavigateToCalculator;
+
+  /// คอลแบ็กสลับไปหน้าฝึกปฏิบัติ/เป้าหมาย (Practice / Routine)
   final VoidCallback? onNavigateToPractice;
+
+  /// คอลแบ็กสลับไปหน้าโปรไฟล์ส่วนตัว (Profile)
   final VoidCallback? onNavigateToProfile;
+
+  /// คอลแบ็กนำทางไปหน้าออกกำลังกายตามหมวดหมู่ที่เลือก (Workout Page)
   final Function(String? workoutCategory)? onNavigateToWorkout;
+
+  /// คอลแบ็กเริ่มออกกำลังกายทันที
   final VoidCallback? onStartWorkout;
 
   const DashboardPageUpdated({
@@ -43,6 +59,7 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
   @override
   void initState() {
     super.initState();
+    // โหลดข้อมูลครั้งแรก และติดตามการเปลี่ยนแปลง routine เพื่อรีเฟรชสรุปบนแดชบอร์ด
     _controller = DashboardController()..loadDashboardData();
     RoutineStateNotifier.instance.addListener(_onRoutineStateChanged);
   }
@@ -63,6 +80,7 @@ class _DashboardPageUpdatedState extends State<DashboardPageUpdated> {
 
   @override
   void dispose() {
+    // ถอด listener และปิด controller เมื่อออกจากหน้านี้ เพื่อไม่ให้มีงานค้าง
     RoutineStateNotifier.instance.removeListener(_onRoutineStateChanged);
     _controller.dispose();
     super.dispose();

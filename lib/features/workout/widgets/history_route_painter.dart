@@ -1,7 +1,13 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: วิดเจ็ตย่อยของ UI ในฟีเจอร์การติดตามและประวัติการออกกำลังกาย (history route painter)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+/// ตัววาดภาพ Vector เส้นทางวิ่งบนการ์ดประวัติย้อนหลัง (History Route Custom Painter)
+/// คำนวณ Bounds ย่อสเกลเส้นทาง พร้อมวาดจุดเริ่มต้น (เขียว) และจุดสิ้นสุด (ส้ม)
 class HistoryRoutePainter extends CustomPainter {
+  /// รายการพิกัดเส้นทางทั้งหมด
   final List<LatLng> points;
 
   HistoryRoutePainter({required this.points});

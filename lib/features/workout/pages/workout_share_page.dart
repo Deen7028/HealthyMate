@@ -1,3 +1,6 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: หน้าจอหลัก ในฟีเจอร์การติดตามและประวัติการออกกำลังกาย (workout share page)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -8,11 +11,22 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../widgets/index.dart';
 
+/// หน้าจอแชร์สรุปผลการออกกำลังกาย (Workout Share & Export Page)
+/// แสดงการ์ดสรุปสถิติและเส้นทาง GPS พร้อมฟังก์ชันเซฟเป็นภาพลง Gallery และแชร์ไปยังโซเชียลมีเดีย
 class WorkoutSharePage extends StatefulWidget {
+  /// ชื่อประเภทกิจกรรมออกกำลังกาย (เช่น วิ่ง, เดิน, ปั่นจักรยาน)
   final String sType;
+
+  /// ระยะทางสะสม (กิโลเมตร)
   final double nDistance;
+
+  /// ระยะเวลาทั้งหมด (วินาที)
   final int nDuration;
+
+  /// จำนวนแคลอรีที่เผาผลาญ (kcal)
   final double nCalories;
+
+  /// รายการจุดพิกัดเส้นทางทั้งหมดสำหรับการวาดมินิแมป
   final List<LatLng> routePoints;
 
   const WorkoutSharePage({
@@ -29,12 +43,19 @@ class WorkoutSharePage extends StatefulWidget {
 }
 
 class _WorkoutSharePageState extends State<WorkoutSharePage> {
+  /// GlobalKey สำหรับอ้างอิง RepaintBoundary เพื่อ Render เป็นไฟล์รูปภาพ PNG
   final GlobalKey _globalKey = GlobalKey();
+
+  /// สถานะสลับการ์ดโหมดโปร่งใส (Glassmorphic) หรือโหมดทึบแสง
   bool _isTransparent = true;
+
+  /// สถานะกำลังประมวลผลเซฟรูปหรือแชร์
   bool _isProcessing = false;
+
+  /// ชนิด Action ที่กำลังประมวลผลอยู่ ('save' หรือ 'share')
   String _processAction = '';
 
-  // แปลง RepaintBoundary เป็นไฟล์รูปภาพ PNG
+  /// แปลง RepaintBoundary บน UI เป็นไฟล์รูปภาพ PNG ความละเอียดสูง (3.0 pixel ratio)
   Future<File?> _generateImageFile() async {
     final boundary = _globalKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
     if (boundary == null) return null;

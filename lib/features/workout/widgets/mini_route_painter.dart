@@ -1,7 +1,13 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: วิดเจ็ตย่อยของ UI ในฟีเจอร์การติดตามและประวัติการออกกำลังกาย (mini route painter)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+/// ตัววาดภาพ Vector เส้นทางมินิแมปบนการ์ดแชร์ (Mini Route Custom Painter)
+/// คำนวณขอบเขตพิกัด LatLng Bounds และย่อสเกลเส้นทางให้พอดีกับกรอบการ์ดแชร์
 class MiniRoutePainter extends CustomPainter {
+  /// รายการพิกัดเส้นทางทั้งหมด
   final List<LatLng> points;
 
   MiniRoutePainter({required this.points});

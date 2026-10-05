@@ -1,6 +1,11 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: หน้าจอหลัก ในฟีเจอร์แดชบอร์ดสรุปสุขภาพและเป้าหมาย (dashboard page actions)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 part of 'dashboard_page.dart';
 
+/// Extension ส่วนจัดการ Action / Event Callbacks ของหน้า Dashboard
 extension _DashboardPageActions on _DashboardPageUpdatedState {
+  /// จัดการเมื่อผู้ใช้กดปุ่มเริ่มออกกำลังกายตามประเภทหรือเป้าหมายที่เลือกไว้
   void _handleStartWorkout([String? category]) {
     final pinnedTitle = _controller.userGoal?['sTitle']?.toString() ?? '';
     final lower = pinnedTitle.toLowerCase();
@@ -45,6 +50,7 @@ extension _DashboardPageActions on _DashboardPageUpdatedState {
     }
   }
 
+  /// เปิด Bottom Sheet สำหรับตั้งค่า/แก้ไขเป้าหมายหลักใหม่
   Future<void> _openAddMainGoalBottomSheet() async {
     final result = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,

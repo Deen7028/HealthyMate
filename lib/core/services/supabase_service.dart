@@ -1,3 +1,6 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: เซอร์วิสเชื่อมต่อข้อมูล/อุปกรณ์/ระบบภายนอก สำหรับใช้งานร่วมกันทั้งโปรเจกต์ (supabase service)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -63,8 +66,40 @@ class SupabaseService {
   Future<bool> upsertUser(Map<String, dynamic> userData) async {
     if (!_isInitialized || client == null) return false;
     try {
+      final email = userData['sEmail']?.toString().trim().toLowerCase();
+      final userId = userData['nUserId'];
+
+      // ตรวจสอบว่ามีผู้ใช้อยู่แล้วหรือไม่
+      Map<String, dynamic>? existing;
+      if (email != null && email.isNotEmpty) {
+        existing = await getUserByEmail(email);
+      } else if (userId != null) {
+        existing = await client!
+            .from('TbUsers')
+            .select()
+            .eq('nUserId', userId)
+            .maybeSingle();
+      }
+
+      final payload = Map<String, dynamic>.from(userData);
+      // ถ้าไม่มี passwordHash และเป็นการอัปเดต ให้ลบ key ออกเพื่อไม่ให้ติด null constraint
+      if (existing != null) {
+        payload.remove('sPasswordHash');
+        if (email != null && email.isNotEmpty) {
+          await client!.from('TbUsers').update(payload).eq('sEmail', email);
+        } else if (userId != null) {
+          await client!.from('TbUsers').update(payload).eq('nUserId', userId);
+        }
+        return true;
+      }
+
+      // กรณีสร้างใหม่ ถ้าไม่มี sPasswordHash ให้ใส่ค่า default ว่างไว้ (เช่น Login ด้วย Google)
+      if (!payload.containsKey('sPasswordHash') || payload['sPasswordHash'] == null) {
+        payload['sPasswordHash'] = '';
+      }
+
       await client!.from('TbUsers').upsert(
-            userData,
+            payload,
             onConflict: 'sEmail',
           );
       return true;

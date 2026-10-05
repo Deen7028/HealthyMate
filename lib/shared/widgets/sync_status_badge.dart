@@ -1,3 +1,6 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: วิดเจ็ตย่อยของ UI ที่หลายฟีเจอร์นำไปใช้ร่วมกัน (sync status badge)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/services/sync_service.dart';
 

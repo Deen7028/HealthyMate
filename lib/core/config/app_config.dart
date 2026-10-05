@@ -1,3 +1,6 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: ค่าคอนฟิกของแอป สำหรับใช้งานร่วมกันทั้งโปรเจกต์ (app config)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -25,4 +28,7 @@ class AppConfig {
 
   /// Secure App Key สำหรับยืนยันการเข้าถึง API
   static String get appKey => dotenv.env['APP_KEY'] ?? '';
+
+  /// Google Gemini API Key สำหรับระบบ AI วิเคราะห์ภาพอาหาร
+  static String get geminiApiKey => dotenv.env['GEMINI_API_KEY'] ?? '';
 }

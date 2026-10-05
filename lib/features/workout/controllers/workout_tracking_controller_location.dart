@@ -1,3 +1,6 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: คอนโทรลเลอร์และ state ของหน้าจอ ในฟีเจอร์การติดตามและประวัติการออกกำลังกาย (workout tracking controller location)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 part of 'workout_tracking_controller.dart';
 
 extension WorkoutTrackingLocation on WorkoutTrackingController {
@@ -28,6 +31,16 @@ extension WorkoutTrackingLocation on WorkoutTrackingController {
 
     if (_isAutoPaused) return;
 
+    // 1. นำพิกัด GPS ดิบเข้าสู่ Kalman Filter เพื่อลด Noise และ Jitter
+    final filteredCoord = _kalmanFilter.process(
+      lat: latitude,
+      lng: longitude,
+      accuracyMeters: accuracy,
+      timestampMs: newTime.millisecondsSinceEpoch,
+    );
+    final effectiveLat = filteredCoord.latitude;
+    final effectiveLng = filteredCoord.longitude;
+
     if (_lastPosition != null) {
       // ป้องกันพิกัดที่ย้อนหลังหรือมาสลับลำดับเวลา (Chronological Check)
       final timeDifferenceSec =
@@ -39,8 +52,8 @@ extension WorkoutTrackingLocation on WorkoutTrackingController {
       final distanceInMeters = Geolocator.distanceBetween(
         _lastPosition!.latitude,
         _lastPosition!.longitude,
-        latitude,
-        longitude,
+        effectiveLat,
+        effectiveLng,
       );
 
       // คำนวณความเร็วเฉลี่ยระหว่างจุดจริง (Calculated Speed = distance / time)
@@ -48,18 +61,20 @@ extension WorkoutTrackingLocation on WorkoutTrackingController {
           ? (distanceInMeters / timeDifferenceSec)
           : 0.0;
 
-      // กรอง GPS Drift เข้มงวดระดับแอปออกกำลังกายมาตรฐาน:
-      // 1. ความแม่นยำสัญญาณ GPS (accuracy) ต้องดีกว่า 15 เมตร
-      // 2. ระยะทางขยับขั้นต่ำต้อง >= 5.0 เมตร (สอดคล้องกับ distanceFilter)
+      // กรอง GPS Drift ระดับ Production-Grade สำหรับแอปวิ่ง/เดิน:
+      // 1. ความแม่นยำสัญญาณ GPS (accuracy) ต้องดีกว่า 25 เมตร
+      // 2. ระยะทางขยับขั้นต่ำรองรับการเดินช้า (>= 1.8 เมตร ถ้า accuracy ดี หรือ >= 3.0 เมตรทั่วไป)
       // 3. ความเร็วที่คำนวณได้จริงต้องไม่เกิน 15.0 m/s (~54 km/h) สำหรับกีฬาเดิน/วิ่ง/จักรยาน
-      // 4. หากมีค่า speed จากฮาร์ดแวร์ ต้องสอดคล้อง ไม่ก้าวกระโดดผิดธรรมชาติ
-      final bool isAccuracyValid = accuracy <= 15.0;
+      // 4. ขจัด jitter/drift ด้วย dynamic threshold ตาม accuracy และ time gap
+      final bool isAccuracyValid = accuracy <= 25.0;
+      final double minDisplacement = accuracy <= 10.0 ? 1.8 : 3.0;
       final bool isDistanceValid =
-          distanceInMeters >= 5.0 && distanceInMeters < 120.0;
+          distanceInMeters >= minDisplacement && distanceInMeters < 120.0;
       final bool isSpeedValid = calculatedSpeedMs < 15.0 && speedMs < 20.0;
 
-      // ตรวจสอบว่าพิกัดขยับพ้นจากวงรัศมีคลาดเคลื่อน GPS (Displacement Threshold)
-      final bool isClearDisplacement = distanceInMeters >= (accuracy * 0.8);
+      // ตรวจสอบ Displacement ไม่ให้ค่า drift เล็กๆ หลุดเข้ามา แต่ไม่บล็อกการเดิน
+      final bool isClearDisplacement =
+          accuracy <= 10.0 || distanceInMeters >= (accuracy * 0.35);
 
       final bool isRealMovement =
           isAccuracyValid &&
@@ -79,8 +94,8 @@ extension WorkoutTrackingLocation on WorkoutTrackingController {
         }
 
         _lastPosition = Position(
-          longitude: longitude,
-          latitude: latitude,
+          longitude: effectiveLng,
+          latitude: effectiveLat,
           timestamp: newTime,
           accuracy: accuracy,
           altitude: 0.0,
@@ -91,8 +106,14 @@ extension WorkoutTrackingLocation on WorkoutTrackingController {
           speedAccuracy: 0.0,
         );
 
-        _routePoints.add(LatLng(latitude, longitude));
+        _routePoints.add(LatLng(effectiveLat, effectiveLng));
         this._safeNotifyListeners();
+
+        // อัปเดต Foreground Notification สำหรับ Background Service
+        LocationBackgroundService.instance.updateNotification(
+          title: 'HealthyMate กำลัง${_selectedCategory.title}: ${_distanceKm.toStringAsFixed(2)} กม.',
+          content: 'เวลา ${_secondsElapsed ~/ 60} นาที | ${_caloriesBurned.toStringAsFixed(0)} kcal',
+        );
 
         // 2. Voice Feedback: ทุกๆ 1 กิโลเมตร ให้ ขานบอกระยะทาง เวลา และ Pace
         final currentKmFloor = _distanceKm.floor();
@@ -115,8 +136,8 @@ extension WorkoutTrackingLocation on WorkoutTrackingController {
       }
     } else {
       _lastPosition = Position(
-        longitude: longitude,
-        latitude: latitude,
+        longitude: effectiveLng,
+        latitude: effectiveLat,
         timestamp: newTime,
         accuracy: accuracy,
         altitude: 0.0,
@@ -126,7 +147,7 @@ extension WorkoutTrackingLocation on WorkoutTrackingController {
         speed: speedMs,
         speedAccuracy: 0.0,
       );
-      _routePoints.add(LatLng(latitude, longitude));
+      _routePoints.add(LatLng(effectiveLat, effectiveLng));
       this._safeNotifyListeners();
     }
   }

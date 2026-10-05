@@ -1,8 +1,12 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: วิดเจ็ตย่อยของ UI ในฟีเจอร์แดชบอร์ดสรุปสุขภาพและเป้าหมาย (dashboard action buttons)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'package:flutter/material.dart';
 import 'package:healthymate/features/practice/widgets/add_main_goal_bottom_sheet.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/routine_state_notifier.dart';
 
+/// ชุดปุ่มลัดสำหรับเริ่มกิจกรรมออกกำลังกาย (วิ่ง เดิน จักรยาน โยคะ สมาธิ) หรือเปิดหน้าต่างตั้งเป้าหมาย
 class DashboardActionButtons extends StatelessWidget {
   final Map<String, dynamic>? userGoal;
   final Function(String? category)? onStartWorkout;

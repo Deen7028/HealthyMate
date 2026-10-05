@@ -1,10 +1,16 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: หน้าจอหลัก ในฟีเจอร์การยืนยันตัวตนและกู้รหัสผ่าน (forgot password page email form)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 part of 'forgot_password_page.dart';
 
+/// Extension สำหรับสร้าง UI ของฟอร์มกรอกอีเมล
 extension _ForgotPasswordEmailForm on _ForgotPasswordPageState {
+  /// Build UI ฟอร์มกรอกอีเมล
   Widget _buildEmailForm() {
     return Column(
       key: const ValueKey('email_form'),
       children: [
+        /// อีเมล
         TextField(
           controller: _emailController,
           keyboardType: TextInputType.emailAddress,
@@ -26,6 +32,7 @@ extension _ForgotPasswordEmailForm on _ForgotPasswordPageState {
           ),
         ),
         const SizedBox(height: 24),
+        /// ปุ่มส่ง OTP
         SizedBox(
           width: double.infinity,
           height: 54,

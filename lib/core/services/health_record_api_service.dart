@@ -1,3 +1,6 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: เซอร์วิสเชื่อมต่อข้อมูล/อุปกรณ์/ระบบภายนอก สำหรับใช้งานร่วมกันทั้งโปรเจกต์ (health record api service)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -89,6 +92,14 @@ class HealthRecordApiService {
 
   static Future<bool> deleteHealthRecordRemote(int recordId) async {
     try {
+      if (SupabaseService.instance.isInitialized && SupabaseService.instance.client != null) {
+        await SupabaseService.instance.client!
+            .from('TbHealthRecords')
+            .delete()
+            .eq('nRecordId', recordId);
+        return true;
+      }
+
       final uri = Uri.parse(
         '${ApiServiceConfig.baseUrl}/health_records.php?nRecordId=$recordId',
       );

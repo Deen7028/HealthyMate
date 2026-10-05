@@ -1,7 +1,11 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: วิดเจ็ตย่อยของ UI ในฟีเจอร์แดชบอร์ดสรุปสุขภาพและเป้าหมาย (dashboard health summary card nutrition energy)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 part of 'dashboard_health_summary_card.dart';
 
 extension _DashboardHealthSummaryCardNutritionEnergy
     on DashboardHealthSummaryCard {
+  /// build widget ส่วนแสดงพลังงานที่กินในวันนี้
   Widget _buildNutritionEnergyStats({
     required bool isDark,
     required Color textPrimary,

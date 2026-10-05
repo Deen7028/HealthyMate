@@ -1,3 +1,6 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: วิดเจ็ตย่อยของ UI ในฟีเจอร์แดชบอร์ดสรุปสุขภาพและเป้าหมาย (dashboard health summary card)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/utils/health_calculator.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
@@ -14,6 +17,7 @@ part 'dashboard_health_summary_card_nutrition_energy.dart';
 part 'dashboard_health_summary_card_nutrition_header.dart';
 part 'dashboard_health_summary_card_nutrition.dart';
 
+/// การ์ดสรุปข้อมูลสุขภาพส่วนบุคคล สัดส่วนร่างกาย การเผาผลาญ และแคลอรีโภชนาการประจำวัน
 class DashboardHealthSummaryCard extends StatelessWidget {
   final TbUser? user;
   final TbHealthRecord? latestRecord;

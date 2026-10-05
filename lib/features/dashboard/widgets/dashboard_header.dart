@@ -1,8 +1,12 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: วิดเจ็ตย่อยของ UI ในฟีเจอร์แดชบอร์ดสรุปสุขภาพและเป้าหมาย (dashboard header)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:healthymate/shared/widgets/sync_status_badge.dart';
 
+/// ส่วนหัวของหน้า Dashboard แสดงทักทายผู้ใช้ วันที่/สัปดาห์ รูปโปรไฟล์ และสถานะการเชื่อมต่อ (Sync Status)
 class DashboardHeader extends StatelessWidget {
   final String userName;
   final String profilePath;

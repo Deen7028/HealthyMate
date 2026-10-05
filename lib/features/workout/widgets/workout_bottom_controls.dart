@@ -1,13 +1,29 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: วิดเจ็ตย่อยของ UI ในฟีเจอร์การติดตามและประวัติการออกกำลังกาย (workout bottom controls)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'package:flutter/material.dart';
 
 part 'workout_bottom_controls_action.dart';
 
+/// วิดเจ็ตแผงปุ่มควบคุมด้านล่าง (Workout Bottom Controls Bar Widget)
+/// ประกอบด้วยปุ่มเริ่ม (Start/Resume), ปุ่มหยุดชั่วคราว (Pause) และปุ่มจบกิจกรรม (Stop) พร้อม Ripple Animation
 class WorkoutBottomControls extends StatefulWidget {
+  /// สถานะกำลังรันกิจกรรมอยู่อย่างต่อเนื่อง
   final bool isRunning;
+
+  /// สถานะหยุดกิจกรรมชั่วคราว
   final bool isPaused;
+
+  /// สถานะอนุญาตให้กดปุ่มจบกิจกรรมได้หรือไม่
   final bool canStop;
+
+  /// คอลแบ็กเมื่อกดปุ่มเริ่ม หรือเล่นต่อ
   final VoidCallback onStartOrResume;
+
+  /// คอลแบ็กเมื่อกดปุ่มหยุดพักชั่วคราว
   final VoidCallback onPause;
+
+  /// คอลแบ็กเมื่อกดปุ่มจบกิจกรรม
   final VoidCallback onStop;
 
   const WorkoutBottomControls({

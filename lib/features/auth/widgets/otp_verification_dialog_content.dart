@@ -1,5 +1,9 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: วิดเจ็ตย่อยของ UI ในฟีเจอร์การยืนยันตัวตนและกู้รหัสผ่าน (otp verification dialog content)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 part of 'otp_verification_dialog.dart';
 
+/// Extension สำหรับสร้าง UI layout ของหน้าต่างยืนยันรหัส OTP (ช่องกรอก 6 หลัก และปุ่มยืนยัน)
 extension _OtpVerificationDialogContent on _OtpVerificationDialogState {
   Widget _buildDialog(BuildContext context) {
     return Dialog(
@@ -9,6 +13,7 @@ extension _OtpVerificationDialogContent on _OtpVerificationDialogState {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            /// แถวหัวข้อและปุ่มปิด
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -36,6 +41,7 @@ extension _OtpVerificationDialogContent on _OtpVerificationDialogState {
               ],
             ),
             const SizedBox(height: 16),
+            /// หัวข้อ "ยืนยันรหัส OTP"
             const Text(
               'ยืนยันรหัส OTP',
               style: TextStyle(
@@ -55,6 +61,7 @@ extension _OtpVerificationDialogContent on _OtpVerificationDialogState {
               ),
             ),
             const SizedBox(height: 20),
+            /// แถวกรอกรหัส OTP
             AnimatedBuilder(
               animation: _shakeAnimation,
               builder: (context, child) {
@@ -86,6 +93,7 @@ extension _OtpVerificationDialogContent on _OtpVerificationDialogState {
               ),
             ),
             const SizedBox(height: 20),
+            /// ปุ่มยืนยัน
             SizedBox(
               width: double.infinity,
               height: 48,
@@ -113,6 +121,7 @@ extension _OtpVerificationDialogContent on _OtpVerificationDialogState {
               ),
             ),
             const SizedBox(height: 12),
+            /// ปุ่มส่งรหัส OTP ใหม่
             TextButton(
               onPressed: _nCountdown > 0 ? null : _handleResend,
               child: Text(
@@ -127,6 +136,7 @@ extension _OtpVerificationDialogContent on _OtpVerificationDialogState {
                 ),
               ),
             ),
+            /// ปุ่มเปลี่ยนที่อยู่อีเมล
             TextButton.icon(
               onPressed: () => Navigator.of(context).pop(),
               icon: const Icon(

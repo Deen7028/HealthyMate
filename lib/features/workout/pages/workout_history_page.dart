@@ -1,10 +1,15 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: หน้าจอหลัก ในฟีเจอร์การติดตามและประวัติการออกกำลังกาย (workout history page)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'package:flutter/material.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:healthymate/features/workout/controllers/workout_history_controller.dart';
 import '../widgets/index.dart';
 
-/// หน้าแสดงประวัติการออกกำลังกายจากตาราง TbWorkouts
+/// หน้าแสดงประวัติการออกกำลังกายย้อนหลังของผู้ใช้ (Workout History Page)
+/// ดึงข้อมูลจากฐานข้อมูล SQLite Local (`TbWorkouts`) และรองรับการดึงข้อมูลจาก Server (Delta Sync)
 class WorkoutHistoryPage extends StatefulWidget {
+  /// รหัสผู้ใช้ (UserId)
   final int userId;
 
   const WorkoutHistoryPage({super.key, required this.userId});
@@ -14,6 +19,7 @@ class WorkoutHistoryPage extends StatefulWidget {
 }
 
 class _WorkoutHistoryPageState extends State<WorkoutHistoryPage> {
+  /// คอนโทรลเลอร์บริหารจัดการดึงประวัติการออกกำลังกายและ Sync ข้อมูล
   late final WorkoutHistoryController _controller;
 
   @override
@@ -24,6 +30,7 @@ class _WorkoutHistoryPageState extends State<WorkoutHistoryPage> {
     _controller.init(widget.userId);
   }
 
+  /// อัปเดต UI เมื่อ Controller มีการเปลี่ยนแปลงสถานะข้อมูล
   void _onControllerChanged() {
     if (mounted) {
       setState(() {});
@@ -37,6 +44,7 @@ class _WorkoutHistoryPageState extends State<WorkoutHistoryPage> {
     super.dispose();
   }
 
+  /// จัดการการรีเฟรชดึงข้อมูลล่าสุดจากเซิร์ฟเวอร์ (Delta Sync / Downstream)
   Future<void> _handlePullSync({bool isInitial = false}) async {
     final pulledCount = await _controller.pullDownstreamData(
       isInitial: isInitial,

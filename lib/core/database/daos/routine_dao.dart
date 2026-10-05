@@ -1,3 +1,6 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: ฐานข้อมูลภายในเครื่องและ DAO สำหรับใช้งานร่วมกันทั้งโปรเจกต์ (routine dao)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 part of '../app_database.dart';
 
 extension AppDatabaseRoutineDao on AppDatabase {
@@ -138,8 +141,11 @@ extension AppDatabaseRoutineDao on AppDatabase {
           'iconData':
               (r['nIconData'] as num?)?.toInt() ??
               (r['iconData'] as num?)?.toInt(),
-          'isNotificationActive':
-              ((r['isNotificationActive'] as num?)?.toInt() ?? 1) == 1 ? 1 : 0,
+          'isNotificationActive': (r['isNotificationActive'] is bool
+                  ? (r['isNotificationActive'] as bool)
+                  : ((r['isNotificationActive'] as num?)?.toInt() ?? 1) == 1)
+              ? 1
+              : 0,
           'dtCreatedAt':
               r['dtCreatedAt']?.toString() ?? DateTime.now().toIso8601String(),
         }, conflictAlgorithm: ConflictAlgorithm.replace);

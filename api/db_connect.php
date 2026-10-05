@@ -1,4 +1,7 @@
 <?php
+// ส่วนนี้เป็น API endpoint สำหรับตั้งค่าการเชื่อมต่อฐานข้อมูลและ helper สำหรับ API
+// คอมเมนท์ภาษาไทยช่วยแยกหน้าที่หลักของไฟล์โดยไม่แก้ logic เดิม
+
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-App-Key, Accept");

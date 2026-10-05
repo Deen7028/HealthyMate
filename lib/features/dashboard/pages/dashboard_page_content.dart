@@ -1,6 +1,11 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: หน้าจอหลัก ในฟีเจอร์แดชบอร์ดสรุปสุขภาพและเป้าหมาย (dashboard page content)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 part of 'dashboard_page.dart';
 
+/// Extension สำหรับสร้าง UI layout และโครงสร้างหน้าจอ Dashboard
 extension _DashboardPageContent on _DashboardPageUpdatedState {
+  /// สร้าง UI ส่วนประกอบทั้งหมดของหน้า Dashboard
   Widget _buildPage(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final scaffoldBg = AppTheme.getScaffoldColor(isDark);

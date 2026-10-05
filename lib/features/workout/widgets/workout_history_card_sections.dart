@@ -1,10 +1,15 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: วิดเจ็ตย่อยของ UI ในฟีเจอร์การติดตามและประวัติการออกกำลังกาย (workout history card sections)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:healthymate/features/workout/pages/workout_share_page.dart';
 import 'history_route_painter.dart';
 
+/// วิดเจ็ตแสดงภาพวาดมินิแมปเส้นทางวิ่งย้อนหลัง (Workout History Route Preview Widget)
 class WorkoutHistoryRoutePreview extends StatelessWidget {
+  /// พิกัดเส้นทางสำหรับนำไปวาดภาพ Vector ด้วย CustomPainter
   final List<LatLng> points;
 
   const WorkoutHistoryRoutePreview({super.key, required this.points});

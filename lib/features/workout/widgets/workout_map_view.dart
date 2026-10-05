@@ -1,13 +1,28 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: วิดเจ็ตย่อยของ UI ในฟีเจอร์การติดตามและประวัติการออกกำลังกาย (workout map view)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:healthymate/features/workout/models/workout_models.dart';
 
+/// วิดเจ็ตแผนที่ Google Maps สำหรับแสดงผลตำแหน่งและเส้นทางวิ่ง Real-Time (Workout Map View Widget)
 class WorkoutMapView extends StatelessWidget {
+  /// รูปแบบแผนที่ (Standard, Satellite, Hybrid)
   final AppMapType mapType;
+
+  /// แสดงการจราจรหรือไม่
   final bool showTraffic;
+
+  /// แสดงจุดสัญลักษณ์ตำแหน่งปัจจุบันของอุปกรณ์หรือไม่
   final bool isGpsEnabled;
+
+  /// รายการพิกัดเส้นทางทั้งหมดเพื่อวาดเป็น Polyline สีส้มบนแผนที่
   final List<LatLng> routePoints;
+
+  /// ตำแหน่งเริ่มต้นของกล้องแผนที่
   final LatLng? initialPosition;
+
+  /// คอลแบ็กเมื่อสร้างแผนที่เสร็จสิ้น
   final void Function(GoogleMapController controller) onMapCreated;
 
   const WorkoutMapView({
@@ -20,6 +35,7 @@ class WorkoutMapView extends StatelessWidget {
     required this.onMapCreated,
   });
 
+  /// แปลง AppMapType เป็น Google Maps MapType
   MapType _getGoogleMapType(AppMapType type) {
     switch (type) {
       case AppMapType.standard:

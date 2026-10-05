@@ -1,8 +1,12 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: วิดเจ็ตย่อยของ UI ในฟีเจอร์แดชบอร์ดสรุปสุขภาพและเป้าหมาย (calendar strip widget)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'package:flutter/material.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 
 part 'calendar_strip_day_item.dart';
 
+/// แถบแสดงปฏิทินกิจวัตรประจำสัปดาห์ พร้อมสรุปสถิติจำนวนครั้ง ระยะทาง และแคลอรี
 class CalendarStripWidget extends StatelessWidget {
   final DateTime now;
   final String thaiMonthName;

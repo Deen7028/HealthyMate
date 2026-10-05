@@ -1,6 +1,10 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: วิดเจ็ตย่อยของ UI ในฟีเจอร์แดชบอร์ดสรุปสุขภาพและเป้าหมาย (daily routine checklist)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'package:flutter/material.dart';
 import '../models/dashboard_data.dart';
 
+/// การ์ดแสดงรายการเช็คลิสต์กิจวัตรประจำวัน (Daily Routine Checklist Widget)
 class DailyRoutineChecklist extends StatelessWidget {
   final List<DailyChecklistItem> items;
   final Function(String id, bool isChecked) onToggleItem;

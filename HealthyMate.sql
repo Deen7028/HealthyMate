@@ -20,7 +20,7 @@ DROP TABLE IF EXISTS "TbUsers" CASCADE;
 CREATE TABLE IF NOT EXISTS "TbUsers" (
   "nUserId" SERIAL PRIMARY KEY,
   "sEmail" VARCHAR(255) NOT NULL UNIQUE,
-  "sPasswordHash" VARCHAR(255) NOT NULL,
+  "sPasswordHash" VARCHAR(255) DEFAULT NULL,
   "sFirstName" VARCHAR(100) NOT NULL,
   "sLastName" VARCHAR(100) NOT NULL,
   "nAge" INT DEFAULT NULL,
@@ -208,3 +208,20 @@ CREATE TABLE IF NOT EXISTS "TbWorkoutCategories" (
   "isMoving" BOOLEAN DEFAULT FALSE,
   "dtCreatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- =========================================================================
+-- Supabase Storage & Migration Helpers (Run in Supabase SQL Editor)
+-- =========================================================================
+-- 1. Allow nullable password for OAuth/Google users:
+-- ALTER TABLE "TbUsers" ALTER COLUMN "sPasswordHash" DROP NOT NULL;
+
+-- 2. Create Public Storage Bucket for Images (healthymate-uploads):
+-- INSERT INTO storage.buckets (id, name, public) 
+-- VALUES ('healthymate-uploads', 'healthymate-uploads', true)
+-- ON CONFLICT (id) DO UPDATE SET public = true;
+
+-- 3. Storage Policies (Allow Public Read & Authenticated/Anon Upload):
+-- CREATE POLICY "Public Access" ON storage.objects FOR SELECT USING (bucket_id = 'healthymate-uploads');
+-- CREATE POLICY "Public Insert" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'healthymate-uploads');
+-- CREATE POLICY "Public Update" ON storage.objects FOR UPDATE USING (bucket_id = 'healthymate-uploads');
+-- CREATE POLICY "Public Delete" ON storage.objects FOR DELETE USING (bucket_id = 'healthymate-uploads');

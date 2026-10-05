@@ -1,4 +1,7 @@
 <?php
+// ส่วนนี้เป็น API endpoint สำหรับบันทึกและอ่านข้อมูลการออกกำลังกาย
+// คอมเมนท์ภาษาไทยช่วยแยกหน้าที่หลักของไฟล์โดยไม่แก้ logic เดิม
+
 require_once "db_connect.php";
 
 $method = $_SERVER['REQUEST_METHOD'];

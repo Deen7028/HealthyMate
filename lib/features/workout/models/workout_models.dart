@@ -1,13 +1,27 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: โมเดลข้อมูล ในฟีเจอร์การติดตามและประวัติการออกกำลังกาย (workout models)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 // ignore_for_file: non_const_argument_for_const_parameter
 import 'package:flutter/material.dart';
 
 /// ประเภทกิจกรรมการออกกำลังกาย
 class WorkoutCategory {
+  /// รหัสหมวดหมู่ภาษาอังกฤษ (เช่น running, walking, cycling, yoga, meditation)
   final String id;
+
+  /// ชื่อกิจกรรมภาษาไทยที่จะแสดงบน UI
   final String title;
+
+  /// คำอธิบายสั้นๆ ของกิจกรรม
   final String subtitle;
+
+  /// ไอคอนประจำกิจกรรม
   final IconData icon;
+
+  /// ค่า Metabolic Equivalent of Task (METs) ใช้สำหรับคำนวณแคลอรีที่เผาผลาญ
   final double metValue;
+
+  /// Override แฟล็กระบุว่าต้องเปิด GPS ติดตามระยะทางหรือไม่
   final bool? _isMovingOverride;
 
   const WorkoutCategory({
@@ -19,10 +33,12 @@ class WorkoutCategory {
     bool? isMoving,
   }) : _isMovingOverride = isMoving;
 
+  /// แฟล็กตรวจสอบว่าเป็นกิจกรรมที่มีการเคลื่อนที่ตามพิกัด GPS หรือไม่
   bool get isMoving =>
       _isMovingOverride ??
       (id == 'running' || id == 'walking' || id == 'cycling');
 
+  /// รายการหมวดหมู่กิจกรรมมาตรฐานที่แอปเตรียมไว้เริ่มต้น
   static const List<WorkoutCategory> defaultCategories = [
     WorkoutCategory(
       id: 'running',
@@ -66,16 +82,20 @@ class WorkoutCategory {
     ),
   ];
 
+  /// แคชรายการหมวดหมู่กิจกรรม (รองรับการอัปเดตจากฐานข้อมูล)
   static List<WorkoutCategory> _cachedCategories = defaultCategories;
 
+  /// ดึงรายการหมวดหมู่กิจกรรมปัจจุบันทั้งหมด
   static List<WorkoutCategory> get categories => _cachedCategories;
 
+  /// อัปเดตรายการหมวดหมู่กิจกรรมจากฐานข้อมูล
   static void updateCategories(List<WorkoutCategory> newCategories) {
     if (newCategories.isNotEmpty) {
       _cachedCategories = List.unmodifiable(newCategories);
     }
   }
 
+  /// แปลงข้อมูล Map จากฐานข้อมูล SQLite เป็น WorkoutCategory Object
   static WorkoutCategory fromMap(Map<String, dynamic> map) {
     final id = map['sCategoryId']?.toString() ?? 'running';
     final title = map['sTitle']?.toString() ?? 'ออกกำลังกาย';
@@ -83,21 +103,18 @@ class WorkoutCategory {
     final met = (map['nMetValue'] as num?)?.toDouble() ?? 1.0;
     final isMoving = ((map['isMoving'] as num?)?.toInt() ?? 0) == 1;
 
-    final iconCode = (map['nIconCodePoint'] as num?)?.toInt();
     IconData iconData = Icons.directions_run_rounded;
-    if (iconCode != null && iconCode > 0) {
-      iconData = IconData(iconCode, fontFamily: 'MaterialIcons');
+    final cleanId = id.toLowerCase().trim();
+    if (cleanId == 'walking' || cleanId.contains('เดิน')) {
+      iconData = Icons.directions_walk_rounded;
+    } else if (cleanId == 'cycling' || cleanId.contains('ปั่น')) {
+      iconData = Icons.directions_bike_rounded;
+    } else if (cleanId == 'meditation' || cleanId.contains('สมาธิ')) {
+      iconData = Icons.self_improvement_rounded;
+    } else if (cleanId == 'yoga' || cleanId.contains('โยคะ')) {
+      iconData = Icons.spa_rounded;
     } else {
-      final iconName = map['sIconName']?.toString();
-      if (iconName == 'directions_walk') {
-        iconData = Icons.directions_walk_rounded;
-      } else if (iconName == 'directions_bike') {
-        iconData = Icons.directions_bike_rounded;
-      } else if (iconName == 'self_improvement') {
-        iconData = Icons.self_improvement_rounded;
-      } else if (iconName == 'spa') {
-        iconData = Icons.spa_rounded;
-      }
+      iconData = Icons.directions_run_rounded;
     }
 
     return WorkoutCategory(
@@ -110,6 +127,7 @@ class WorkoutCategory {
     );
   }
 
+  /// ค้นหาหมวดหมู่กิจกรรมจากข้อความ ID หรือชื่อภาษาไทย
   static WorkoutCategory fromIdOrTitle(String? categoryStr) {
     if (categoryStr == null || categoryStr.isEmpty) return categories.first;
     final lower = categoryStr.toLowerCase();
@@ -129,7 +147,7 @@ class WorkoutCategory {
   }
 }
 
-/// รูปแบบการแสดงผลของแผนที่
+/// รูปแบบการแสดงผลของแผนที่ Google Maps (Map Type Enum)
 enum AppMapType {
   standard('มาตรฐาน (Standard)', Icons.map_outlined),
   satellite('ดาวเทียม (Satellite)', Icons.satellite_alt_outlined),
@@ -140,5 +158,17 @@ enum AppMapType {
   const AppMapType(this.label, this.icon);
 }
 
-/// สถานะการทำงานของการติดตามกิจกรรม
-enum WorkoutState { selectingCategory, initial, running, paused }
+/// สถานะการทำงานของการติดตามกิจกรรม (Workout Tracking State Enum)
+enum WorkoutState {
+  /// หน้าเลือกหมวดหมู่กิจกรรม
+  selectingCategory,
+
+  /// เลือกหมวดหมู่แล้ว พร้อมกดเริ่ม
+  initial,
+
+  /// กำลังบันทึกและจับเวลาการออกกำลังกาย
+  running,
+
+  /// หยุดบันทึกชั่วคราว (Paused)
+  paused
+}

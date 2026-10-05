@@ -1,6 +1,11 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: คอนโทรลเลอร์และ state ของหน้าจอ ในฟีเจอร์แดชบอร์ดสรุปสุขภาพและเป้าหมาย (dashboard controller sync)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 part of 'dashboard_controller.dart';
 
+/// Extension สำหรับการซิงค์ข้อมูล Dashboard จาก Remote Server
 extension DashboardControllerSync on DashboardController {
+  /// ดึงข้อมูลสรุปสุขภาพและเป้าหมายจากเซิร์ฟเวอร์มาอัปเดตลงในหน่วยความจำ local
   Future<void> _syncFromServer(int userId) async {
     try {
       final serverData = await DashboardApiService.fetchDashboardData(

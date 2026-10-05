@@ -1,3 +1,6 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: วิดเจ็ตย่อยของ UI ในฟีเจอร์แดชบอร์ดสรุปสุขภาพและเป้าหมาย (main goal card)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'package:flutter/material.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:healthymate/core/database/app_database.dart';
@@ -10,6 +13,7 @@ import 'main_goal_card_presentation.dart';
 part 'main_goal_card_stat_ui.dart';
 part 'main_goal_card_calculations.dart';
 
+/// การ์ดแสดงผลเป้าหมายหลัก คำนวณความก้าวหน้า คำนวนแคลอรี/ระยะทางเป้าหมายประจำวัน
 class MainGoalCard extends StatelessWidget {
   final DashboardController controller;
   final VoidCallback? onNavigateToPractice;

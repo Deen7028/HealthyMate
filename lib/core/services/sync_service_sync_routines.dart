@@ -1,3 +1,6 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: เซอร์วิสเชื่อมต่อข้อมูล/อุปกรณ์/ระบบภายนอก สำหรับใช้งานร่วมกันทั้งโปรเจกต์ (sync service sync routines)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 part of 'sync_service.dart';
 
 extension SyncServiceSyncRoutines on SyncService {
@@ -33,8 +36,9 @@ extension SyncServiceSyncRoutines on SyncService {
               linkedWorkout: lr['sLinkedWorkout']?.toString() ?? '',
               color: (lr['color'] as num?)?.toInt(),
               iconData: (lr['iconData'] as num?)?.toInt(),
-              isNotificationActive:
-                  ((lr['isNotificationActive'] as num?)?.toInt() ?? 1) == 1,
+              isNotificationActive: lr['isNotificationActive'] is bool
+                  ? (lr['isNotificationActive'] as bool)
+                  : ((lr['isNotificationActive'] as num?)?.toInt() ?? 1) == 1,
             );
             if (newId > 0) {
               syncedTotal++;

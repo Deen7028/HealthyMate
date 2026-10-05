@@ -1,10 +1,16 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: หน้าจอหลัก ในฟีเจอร์การติดตามและประวัติการออกกำลังกาย (workout tracking page content)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 part of 'workout_tracking_page.dart';
 
+/// ส่วนขยายจัดการสร้างโครงสร้าง UI หน้าจอออกกำลังกาย (Workout UI Layout Builder)
 extension WorkoutTrackingPageContent on _WorkoutTrackingPageState {
+  /// สร้างตามสถานะปัจจุบัน (_state.status)
   Widget _buildWorkoutPage(BuildContext context) {
     return ListenableBuilder(
       listenable: _state,
       builder: (context, _) {
+        // 1. หน้าจอเลือกหมวดหมู่กิจกรรม (Category Selection View)
         if (_state.status == WorkoutState.selectingCategory) {
           return CategorySelectionView(
             selectedCategory: _state.selectedCategory,
@@ -19,7 +25,7 @@ extension WorkoutTrackingPageContent on _WorkoutTrackingPageState {
           backgroundColor: const Color(0xFFEBF2EA),
           body: Stack(
             children: [
-              // 1. พื้นหลัง (สลับระหว่าง แผนที่ GPS กับ Zen Focus Mode สำหรับกิจกรรมไม่เคลื่อนที่)
+              // 1. พื้นหลัง (สลับระหว่าง แผนที่ GPS กับ Zen Focus Mode สำหรับกิจกรรมไม่อยู่กับที่)
               Positioned.fill(
                 child: _state.selectedCategory.isMoving
                     ? (activePosition != null

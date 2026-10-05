@@ -1,3 +1,6 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: คอนโทรลเลอร์และ state ของหน้าจอ ในฟีเจอร์กิจวัตรและเป้าหมายประจำวัน (routine controller create)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 part of 'routine_controller.dart';
 
 extension RoutineControllerCreation on RoutineController {
@@ -55,64 +58,65 @@ extension RoutineControllerCreation on RoutineController {
       );
     }
 
-    if (routine.isNotificationEnabled) {
-      final hasPermission = await NotificationService.instance
-          .requestPermission();
-      if (hasPermission) {
-        final timeStr = routine.notificationTime;
-        final intIntervalMatch = RegExp(
-          r'ทุก\s*(\d+)\s*ชั่วโมง',
-        ).firstMatch(timeStr);
+    if (!routine.isNotificationEnabled) return;
 
-        if (intIntervalMatch != null) {
-          final step = int.parse(intIntervalMatch.group(1)!);
-          int slotIndex = 0;
-          for (int h = 8; h <= 22 && slotIndex < 10; h += step) {
-            await NotificationService.instance.scheduleDailyRoutine(
-              id: (routineId * 10) + slotIndex,
-              title: 'ถึงเวลาทำกิจวัตร! 🎯',
-              body: 'ได้เวลา: ${routine.title} แล้วครับ',
-              hour: h,
-              minute: 0,
-            );
-            slotIndex++;
-          }
-        } else if (timeStr.contains('ทุกชั่วโมง')) {
-          await NotificationService.instance.schedulePeriodicRoutine(
-            id: routineId * 10,
-            title: 'ถึงเวลาทำกิจวัตร! 🎯',
-            body: 'ได้เวลา: ${routine.title} แล้วครับ',
-            interval: RepeatInterval.hourly,
+    // ขอ Permission ก่อน แต่ไม่ block การตั้งเวลา
+    // เพราะบน Android 13+ user อาจกด Allow หลัง Dialog ปิดแล้ว
+    // NotificationService จะ fallback เป็น inexact ให้อัตโนมัติ
+    await NotificationService.instance.requestPermission();
+
+    final timeStr = routine.notificationTime;
+    final intIntervalMatch = RegExp(
+      r'ทุก\s*(\d+)\s*ชั่วโมง',
+    ).firstMatch(timeStr);
+
+    if (intIntervalMatch != null) {
+      final step = int.parse(intIntervalMatch.group(1)!);
+      int slotIndex = 0;
+      for (int h = 8; h <= 22 && slotIndex < 10; h += step) {
+        await NotificationService.instance.scheduleDailyRoutine(
+          id: (routineId * 10) + slotIndex,
+          title: 'ถึงเวลาทำกิจวัตร! 🎯',
+          body: 'ได้เวลา: ${routine.title} แล้วครับ',
+          hour: h,
+          minute: 0,
+        );
+        slotIndex++;
+      }
+    } else if (timeStr.contains('ทุกชั่วโมง')) {
+      await NotificationService.instance.schedulePeriodicRoutine(
+        id: routineId * 10,
+        title: 'ถึงเวลาทำกิจวัตร! 🎯',
+        body: 'ได้เวลา: ${routine.title} แล้วครับ',
+        interval: RepeatInterval.hourly,
+      );
+    } else {
+      // ดึงเวลาทั้งหมดในข้อความ ไม่ว่าจะคั่นด้วย comma, &, หรือ "และ"
+      final matches = RegExp(
+        r'(\d{1,2})[:\.](\d{2})',
+      ).allMatches(timeStr).toList();
+      if (matches.isNotEmpty) {
+        for (int i = 0; i < matches.length && i < 10; i++) {
+          final match = matches[i];
+          final hour = int.parse(match.group(1)!);
+          final minute = int.parse(match.group(2)!);
+          await NotificationService.instance.scheduleDailyRoutine(
+            id: (routineId * 10) + i,
+            title: 'กิจวัตรของคุณ 🌟',
+            body: 'อย่าลืมทำ ${routine.title} นะครับ',
+            hour: hour,
+            minute: minute,
           );
-        } else {
-          // ดึงเวลาทั้งหมดในข้อความ ไม่ว่าจะคั่นด้วย comma, &, หรือ "และ"
-          final matches = RegExp(
-            r'(\d{1,2})[:\.](\d{2})',
-          ).allMatches(timeStr).toList();
-          if (matches.isNotEmpty) {
-            for (int i = 0; i < matches.length && i < 10; i++) {
-              final match = matches[i];
-              final hour = int.parse(match.group(1)!);
-              final minute = int.parse(match.group(2)!);
-              await NotificationService.instance.scheduleDailyRoutine(
-                id: (routineId * 10) + i,
-                title: 'กิจวัตรของคุณ 🌟',
-                body: 'อย่าลืมทำ ${routine.title} นะครับ',
-                hour: hour,
-                minute: minute,
-              );
-            }
-          } else {
-            // ค่าเริ่มต้นกรณีระบุเวลาลอยๆ
-            await NotificationService.instance.scheduleDailyRoutine(
-              id: routineId * 10,
-              title: 'กิจวัตรของคุณ 🌟',
-              body: 'อย่าลืมทำ ${routine.title} นะครับ',
-              hour: 8,
-              minute: 0,
-            );
-          }
         }
+      } else {
+        // ค่าเริ่มต้นกรณีระบุเวลาลอยๆ
+        await NotificationService.instance.scheduleDailyRoutine(
+          id: routineId * 10,
+          title: 'กิจวัตรของคุณ 🌟',
+          body: 'อย่าลืมทำ ${routine.title} นะครับ',
+          hour: 8,
+          minute: 0,
+        );
       }
     }
   }

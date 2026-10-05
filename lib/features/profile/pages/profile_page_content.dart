@@ -1,3 +1,6 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: หน้าจอหลัก ในฟีเจอร์โปรไฟล์ การตั้งค่า และบัญชีผู้ใช้ (profile page content)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 part of 'profile_page.dart';
 
 extension ProfilePageContent on _ProfilePageState {
@@ -88,7 +91,6 @@ extension ProfilePageContent on _ProfilePageState {
               SettingsCard(
                 isLocationEnabled: _controller.isLocationEnabled,
                 selectedUnit: _controller.selectedUnit,
-                hasGeminiApiKey: _controller.geminiApiKey.isNotEmpty,
                 onDarkModeChanged: (val) async {
                   await ThemeService.instance.setDarkMode(val);
                   setState(() {});
@@ -97,17 +99,6 @@ extension ProfilePageContent on _ProfilePageState {
                   await _controller.handleLocationTap();
                 },
                 onUnitPickerTap: this._showUnitPicker,
-                onGeminiApiKeyTap: () {
-                  if (user == null) return;
-                  GeminiApiKeyDialog.show(
-                    context,
-                    userId: user.nUserId,
-                    currentKey: _controller.geminiApiKey,
-                    onSaved: (newKey) {
-                      _controller.updateGeminiApiKey(newKey);
-                    },
-                  );
-                },
               ),
 
               const SizedBox(height: 20),

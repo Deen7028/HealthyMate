@@ -1,6 +1,10 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: วิดเจ็ตย่อยของ UI ในฟีเจอร์แดชบอร์ดสรุปสุขภาพและเป้าหมาย (dashboard health summary card burn)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 part of 'dashboard_health_summary_card.dart';
 
 extension _DashboardHealthSummaryCardBurn on DashboardHealthSummaryCard {
+  /// build widget ส่วนแสดงเป้าหมายการเผาผลาญ
   Widget _buildBurnTargetCard({
     required bool isDark,
     required Color textPrimary,

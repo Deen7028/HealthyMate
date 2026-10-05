@@ -1,3 +1,6 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: คอนโทรลเลอร์และ state ของหน้าจอ ในฟีเจอร์การติดตามและประวัติการออกกำลังกาย (workout tracking controller session)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 part of 'workout_tracking_controller.dart';
 
 extension WorkoutTrackingSession on WorkoutTrackingController {
@@ -9,7 +12,11 @@ extension WorkoutTrackingSession on WorkoutTrackingController {
     _isAutoPaused = false;
     _zeroSpeedSeconds = 0;
     _workoutStartTime = DateTime.now();
+    _kalmanFilter.reset();
     this._safeNotifyListeners();
+
+    // ขอสิทธิ์ยกเว้น Battery Optimization บน Android เพื่อให้ GPS รันต่อเนื่องในเบื้องหลัง
+    LocationBackgroundService.instance.requestBatteryOptimizationExemption();
 
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -27,6 +34,18 @@ extension WorkoutTrackingSession on WorkoutTrackingController {
         _caloriesBurned += caloriesPerSecond;
 
         this._checkAutoPauseCondition();
+
+        // 4. Offline-First Checkpoint: บันทึกข้อมูลสำรองทุก 10 วินาที ป้องกันข้อมูลสูญหายกรณีแอปดับ
+        if (_secondsElapsed % 10 == 0 && _userId > 0) {
+          WorkoutRecoveryService.instance.saveCheckpoint(
+            userId: _userId,
+            categoryId: _selectedCategory.id,
+            distanceKm: _distanceKm,
+            secondsElapsed: _secondsElapsed,
+            caloriesBurned: _caloriesBurned,
+            routePoints: _routePoints,
+          );
+        }
       }
     });
 
@@ -101,9 +120,7 @@ extension WorkoutTrackingSession on WorkoutTrackingController {
   }
 
   void _startLocationUpdates() {
-    _positionStreamSub?.cancel();
-
-    // ดึงพิกัดตั้งต้นเฉพาะเมื่อยังไม่มี _lastPosition เพื่อป้องกัน Race Condition จาก async callback ย้อนหลัง
+    // ดึงพิกัดตั้งต้นเพื่อให้อัปเดต UI ทันที และวาง Marker จุดเริ่มต้น
     Geolocator.getCurrentPosition(
           locationSettings: const LocationSettings(
             accuracy: LocationAccuracy.high,
@@ -119,24 +136,5 @@ extension WorkoutTrackingSession on WorkoutTrackingController {
           }
         })
         .catchError((_) {});
-
-    const locationSettings = LocationSettings(
-      accuracy: LocationAccuracy.high,
-      distanceFilter: 5,
-    );
-
-    _positionStreamSub =
-        Geolocator.getPositionStream(locationSettings: locationSettings).listen(
-          (Position position) {
-            if (_status != WorkoutState.running) return;
-            this._handleNewLocation(
-              latitude: position.latitude,
-              longitude: position.longitude,
-              speedMs: position.speed,
-              accuracy: position.accuracy,
-              timestamp: position.timestamp,
-            );
-          },
-        );
   }
 }

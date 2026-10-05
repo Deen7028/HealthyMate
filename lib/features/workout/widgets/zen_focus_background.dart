@@ -1,5 +1,10 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: วิดเจ็ตย่อยของ UI ในฟีเจอร์การติดตามและประวัติการออกกำลังกาย (zen focus background)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'package:flutter/material.dart';
 
+/// วิดเจ็ตพื้นหลังผ่อนคลายสำหรับกิจกรรมไม่อยู่กับที่ เช่น ทำสมาธิ / โยคะ (Zen Focus Animated Background Widget)
+/// แสดงแอนิเมชันวงกลมรัศมียืดหดตามจังหวะการหายใจ (Breathing Rhythm: เข้า 4 วินาที - ออก 4 วินาที)
 class ZenFocusBackground extends StatefulWidget {
   const ZenFocusBackground({super.key});
 

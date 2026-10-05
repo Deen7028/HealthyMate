@@ -1,3 +1,6 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: โมเดลข้อมูล ในฟีเจอร์เครื่องคำนวณสุขภาพและบันทึกค่าสุขภาพ (user model)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'package:healthymate/core/utils/health_calculator.dart';
 import 'package:healthymate/features/health_calculator/models/activity_level.dart';
 

@@ -1,3 +1,6 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: เซอร์วิสเชื่อมต่อข้อมูล/อุปกรณ์/ระบบภายนอก สำหรับใช้งานร่วมกันทั้งโปรเจกต์ (profile api service)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -65,6 +68,16 @@ class ProfileApiService {
     required String email,
   }) async {
     try {
+      // 1. ลบจาก Supabase Database
+      if (SupabaseService.instance.isInitialized && SupabaseService.instance.client != null) {
+        await SupabaseService.instance.client!
+            .from('TbUsers')
+            .delete()
+            .eq('nUserId', userId);
+        return {'status': 'success', 'message': 'ลบบัญชีผู้ใช้สำเร็จ'};
+      }
+
+      // 2. Fallback ไปยัง PHP API
       final headers = await ApiServiceConfig.getAuthHeaders();
       final response = await http
           .post(

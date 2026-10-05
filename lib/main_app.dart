@@ -1,3 +1,6 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: โครงหลักของแอปที่จัดการแท็บหลักและการนำทางระดับบน
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'package:flutter/material.dart';
 import 'package:healthymate/features/dashboard/pages/dashboard_page.dart';
 import 'package:healthymate/features/health_calculator/pages/health_calculator_page.dart';
@@ -8,6 +11,9 @@ import 'package:healthymate/features/workout/pages/workout_tracking_page.dart';
 import 'package:healthymate/shared/bottom_sheets/food_source_bottom_sheet.dart';
 import 'package:healthymate/shared/widgets/vitality_bottom_nav_bar.dart';
 
+/// โครงสร้างหลักของแอปพลิเคชัน (Main App Shell / Tab Navigation Shell)
+/// ควบคุมการสลับหน้าจอ 5 แท็บหลัก (Dashboard, Workout, Health Calculator, Routine, Profile)
+/// พร้อมปุ่มตรงกลางสำหรับสแกนอาหารด้วย AI (Camera Docked FAB)
 class MainAppShell extends StatefulWidget {
   const MainAppShell({super.key});
 
@@ -16,7 +22,10 @@ class MainAppShell extends StatefulWidget {
 }
 
 class _MainAppShellState extends State<MainAppShell> {
-  int _currentIndex = 0; // Default to Dashboard (หน้าหลัก, index 0)
+  /// ดัชนีแท็บปัจจุบันที่เปิดอยู่นี้ (เริ่มต้นแท็บ 0: Dashboard หน้าหลัก)
+  int _currentIndex = 0;
+
+  /// คอนโทรลเลอร์คำนวณสถิติสุขภาพ
   final HealthCalculatorController _healthState = HealthCalculatorController();
 
   @override

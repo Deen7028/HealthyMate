@@ -1,3 +1,6 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: คอนโทรลเลอร์และ state ของหน้าจอ ในฟีเจอร์แดชบอร์ดสรุปสุขภาพและเป้าหมาย (dashboard controller)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:healthymate/core/database/app_database.dart';
@@ -9,6 +12,8 @@ import 'package:healthymate/features/practice/controllers/routine_controller.dar
 part 'dashboard_controller_sync.dart';
 part 'dashboard_controller_loading.dart';
 
+/// คอนโทรลเลอร์สำหรับจัดการข้อมูลและสถานะของหน้า Dashboard
+/// ทำหน้าที่ประสานงานระหว่าง Database, API Service และ View
 class DashboardController extends ChangeNotifier {
   bool isLoading = true;
   TbUser? user;

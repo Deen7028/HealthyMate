@@ -1,5 +1,9 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: วิดเจ็ตย่อยของ UI ในฟีเจอร์แดชบอร์ดสรุปสุขภาพและเป้าหมาย (start workout cta)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'package:flutter/material.dart';
 
+/// การ์ดปุ่มกด Call To Action (CTA) สำหรับเริ่มออกกำลังกายทันที
 class StartWorkoutCTA extends StatelessWidget {
   final VoidCallback onStartWorkout;
 

@@ -1,5 +1,9 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: วิดเจ็ตย่อยของ UI ในฟีเจอร์การยืนยันตัวตนและกู้รหัสผ่าน (otp verification dialog actions)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 part of 'otp_verification_dialog.dart';
 
+/// Extension สำหรับจัดการนับเวลาถอยหลัง 60 วินาทีและยืนยัน/ส่งรหัส OTP ซ้ำ
 extension _OtpVerificationDialogActions on _OtpVerificationDialogState {
   void _startCountdown() {
     _endTime = DateTime.now().add(const Duration(seconds: 60));
@@ -17,6 +21,7 @@ extension _OtpVerificationDialogActions on _OtpVerificationDialogState {
     });
   }
 
+  /// ฟังก์ชันยืนยันรหัส OTP
   Future<void> _handleVerify() async {
     final sCode = _otpController.text.trim();
     if (sCode.length != 6) {
@@ -47,6 +52,7 @@ extension _OtpVerificationDialogActions on _OtpVerificationDialogState {
     }
   }
 
+  /// ฟังก์ชันส่งรหัส OTP ใหม่
   Future<void> _handleResend() async {
     if (_nCountdown > 0) return;
     setState(() => _isLoading = true);

@@ -1,8 +1,12 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: วิดเจ็ตย่อยของ UI ในฟีเจอร์แดชบอร์ดสรุปสุขภาพและเป้าหมาย (key stats grid)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'package:flutter/material.dart';
 import '../models/dashboard_data.dart';
 
 part 'key_stats_grid_cards.dart';
 
+/// Grid แสดงการ์ดสถิติสำคัญประจำวัน (ระยะทาง เวลาออกกำลังกาย แคลอรี และก้าวเดิน)
 class KeyStatsGrid extends StatelessWidget {
   final DashboardStats stats;
 

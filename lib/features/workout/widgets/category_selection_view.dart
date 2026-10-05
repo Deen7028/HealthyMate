@@ -1,11 +1,21 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: วิดเจ็ตย่อยของ UI ในฟีเจอร์การติดตามและประวัติการออกกำลังกาย (category selection view)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 import 'package:flutter/material.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:healthymate/features/workout/models/workout_models.dart';
 import 'package:healthymate/features/workout/pages/workout_history_page.dart';
 
+/// วิดเจ็ตหน้าจอเลือกหมวดหมู่กิจกรรมการออกกำลังกาย (Category Selection View Widget)
+/// แสดงรายการประเภทกีฬา (วิ่ง, เดิน, ปั่นจักรยาน, โยคะ, ทำสมาธิ) พร้อมปุ่มประวัติกิจกรรม
 class CategorySelectionView extends StatelessWidget {
+  /// หมวดหมู่กิจกรรมที่ถูกเลือกอยู่ในปัจจุบัน
   final WorkoutCategory selectedCategory;
+
+  /// รหัสผู้ใช้ปัจจุบัน
   final int userId;
+
+  /// คอลแบ็กเมื่อผู้ใช้กดเลือกหมวดหมู่กิจกรรม
   final ValueChanged<WorkoutCategory> onSelectCategory;
 
   const CategorySelectionView({

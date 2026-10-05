@@ -1,5 +1,9 @@
+// ส่วนนี้อธิบายบทบาทของไฟล์: หน้าจอหลัก ในฟีเจอร์การยืนยันตัวตนและกู้รหัสผ่าน (forgot password page actions)
+// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
+
 part of 'forgot_password_page.dart';
 
+/// Extension จัดการ Action / Events ต่างๆ ของหน้าลืมรหัสผ่าน (ส่ง OTP และบันทึกรหัสผ่านใหม่)
 extension _ForgotPasswordPageActions on _ForgotPasswordPageState {
   Future<void> _handleSendOtp() async {
     final email = _emailController.text.trim();
@@ -22,6 +26,7 @@ extension _ForgotPasswordPageActions on _ForgotPasswordPageState {
     }
   }
 
+  /// จัดการ Action สำหรับรีเซ็ตรหัสผ่าน
   Future<void> _handleResetPassword() async {
     FocusScope.of(context).unfocus();
 
@@ -43,8 +48,9 @@ extension _ForgotPasswordPageActions on _ForgotPasswordPageState {
       newPassword,
       confirmPassword,
     );
+    /// ถ้า state ไม่ mount แล้วไม่ต้องทำอะไรต่อ
     if (!mounted) return;
-
+    /// ถ้าสำเร็จ
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -69,6 +75,7 @@ extension _ForgotPasswordPageActions on _ForgotPasswordPageState {
     }
   }
 
+  /// ฟังก์ชันแสดงข้อความผิดพลาด
   void _showError(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
