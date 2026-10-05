@@ -21,6 +21,8 @@ extension WorkoutTrackingLifecycle on WorkoutTrackingController {
         if (user.nWeight != null && user.nWeight! > 0) {
           _userWeightKg = user.nWeight!;
         }
+        // แจ้ง AppNotificationService ให้รู้ว่า userId ปัจจุบันคือใคร
+        AppNotificationService.instance.setUserId(_userId);
       }
       this._safeNotifyListeners();
     } catch (_) {

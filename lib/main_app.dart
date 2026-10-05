@@ -60,6 +60,7 @@ class _MainAppShellState extends State<MainAppShell> {
             onNavigateToPractice: () => _onTabTapped(3),
             onNavigateToProfile: () => _onTabTapped(4),
             onNavigateToWorkout: (category) => _onTabTapped(1, category),
+            onNavigateTab: _onTabTapped,
           ),
           // 1: Workout (ออกกำลังกาย)
           WorkoutTrackingPage(
@@ -83,6 +84,7 @@ class _MainAppShellState extends State<MainAppShell> {
           ProfilePage(
             isActive: _currentIndex == 4,
             onNavigateToPractice: () => _onTabTapped(3),
+            onNavigateTab: _onTabTapped,
           ),
         ],
       ),

@@ -88,7 +88,10 @@ extension FoodRecognitionGemini on FoodRecognitionService {
     final response = await http
         .post(
           url,
-          headers: {'Content-Type': 'application/json'},
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': apiKey,
+          },
           body: requestBody,
         )
         .timeout(const Duration(seconds: 25));

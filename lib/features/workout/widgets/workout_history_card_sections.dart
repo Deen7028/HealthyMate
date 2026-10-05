@@ -16,8 +16,6 @@ class WorkoutHistoryRoutePreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (points.isEmpty) return const SizedBox.shrink();
-
     return Column(
       children: [
         const SizedBox(height: 12),

@@ -17,6 +17,7 @@ import '../models/workout_models.dart';
 import '../services/kalman_location_filter.dart';
 import '../services/map_matching_service.dart';
 import '../services/workout_recovery_service.dart';
+import 'package:healthymate/features/notifications/services/app_notification_service.dart';
 
 part 'workout_tracking_controller_lifecycle.dart';
 part 'workout_tracking_controller_selection.dart';

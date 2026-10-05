@@ -23,6 +23,11 @@ extension DashboardControllerLoading on DashboardController {
       }
 
       final userId = user!.nUserId;
+      // ตั้งค่า userId ให้ AppNotificationService รู้ว่า user คนปัจจุบันคือใคร
+      AppNotificationService.instance.setUserId(userId);
+      // อ่านจำนวนแจ้งเตือนที่ยังไม่ได้อ่านจาก DB จริง
+      unreadNotificationCount =
+          await db.getUnreadNotificationCount(userId);
       final records = await db.getHealthRecords(userId: userId);
       healthRecords = records;
       latestRecord = records.isNotEmpty ? records.first : null;

@@ -203,5 +203,20 @@ extension AppDatabaseSchema on AppDatabase {
         (4, 'meditation', 'ทำสมาธิ (Meditation)', 'ฝึกสติ ผ่อนคลายความเครียด และฟื้นฟูจิตใจ', 'self_improvement', 58718, 1.50, 0),
         (5, 'yoga', 'โยคะ (Yoga)', 'ยืดเหยียดกล้ามเนื้อ เสริมความยืดหยุ่นและสมดุล', 'spa', 58732, 3.00, 0);
     ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ${AppDatabase.tableNotifications} (
+        nNotificationId INTEGER PRIMARY KEY AUTOINCREMENT,
+        nUserId INTEGER NOT NULL,
+        sType TEXT NOT NULL,
+        sTitle TEXT NOT NULL,
+        sMessage TEXT NOT NULL,
+        sActionType TEXT DEFAULT "",
+        sActionPayload TEXT DEFAULT "",
+        isRead INTEGER DEFAULT 0,
+        dtCreatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (nUserId) REFERENCES ${AppDatabase.tableUsers} (nUserId) ON DELETE CASCADE
+      );
+    ''');
   }
 }

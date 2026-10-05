@@ -34,22 +34,42 @@ extension AppDatabaseWorkoutDao on AppDatabase {
     });
   }
 
-  /// ดึงประวัติการออกกำลังกายทั้งหมดของผู้ใช้ตาม userId
+  /// ดึงประวัติการออกกำลังกายทั้งหมดของผู้ใช้ตาม userId พร้อมกรองข้อมูลซ้ำซ้อน
   Future<List<Map<String, dynamic>>> getWorkouts({required int userId}) async {
     if (kIsWeb) return [];
 
     final db = await database;
     if (db == null) return [];
 
-    return await db.query(
+    final rawList = await db.query(
       AppDatabase.tableWorkouts,
       where: 'nUserId = ?',
       whereArgs: [userId],
       orderBy: 'dtWorkoutDate DESC',
     );
+
+    // ทำ In-Memory Deduplication เพื่อให้แน่ใจว่าประวัติจะไม่แสดงซ้ำกัน
+    final seenKeys = <String>{};
+    final uniqueList = <Map<String, dynamic>>[];
+
+    for (final item in rawList) {
+      final type = item['sType']?.toString() ?? '';
+      final duration = (item['nDuration'] as num?)?.toInt() ?? 0;
+      final distance = ((item['nDistance'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(2);
+      final dateStr = item['dtWorkoutDate']?.toString() ?? '';
+      final normalizedDate = dateStr.length >= 16 ? dateStr.substring(0, 16) : dateStr;
+      
+      final uniqueKey = '$type|$duration|$distance|$normalizedDate';
+      if (seenKeys.add(uniqueKey)) {
+        uniqueList.add(item);
+      }
+    }
+
+    return uniqueList;
   }
 
   /// เขียนข้อมูล Workouts จาก Server ลง SQLite ด้วย UPSERT (INSERT OR REPLACE)
+  /// พร้อมตรวจสอบข้อมูลซ้ำซ้อนที่มีอยู่ในเครื่องก่อนหน้า
   Future<int> upsertWorkoutsFromServer(
     int userId,
     List<Map<String, dynamic>> workouts,
@@ -92,8 +112,41 @@ extension AppDatabaseWorkoutDao on AppDatabase {
         final updatedAt =
             item['dtUpdatedAt']?.toString() ?? DateTime.now().toIso8601String();
 
+        // ตรวจสอบว่าใน SQLite มีรายการนี้อยู่แล้วหรือไม่ (ไม่ว่าจะด้วย nWorkoutId หรือ matching date/type/duration)
+        int? existingLocalId;
+        if (workoutId != null && workoutId > 0) {
+          final byId = await txn.query(
+            AppDatabase.tableWorkouts,
+            columns: ['nWorkoutId'],
+            where: 'nWorkoutId = ?',
+            whereArgs: [workoutId],
+            limit: 1,
+          );
+          if (byId.isNotEmpty) {
+            existingLocalId = byId.first['nWorkoutId'] as int?;
+          }
+        }
+
+        if (existingLocalId == null) {
+          // ตรวจหา local workout ที่ยัง sync ไม่เสร็จ หรือเพิ่งบันทึกลงเครื่อง
+          final datePrefix = workoutDate.length >= 16 ? workoutDate.substring(0, 16) : workoutDate;
+          final byProps = await txn.query(
+            AppDatabase.tableWorkouts,
+            columns: ['nWorkoutId'],
+            where: 'nUserId = ? AND sType = ? AND nDuration = ? AND dtWorkoutDate LIKE ?',
+            whereArgs: [userId, type, duration, '$datePrefix%'],
+            limit: 1,
+          );
+          if (byProps.isNotEmpty) {
+            existingLocalId = byProps.first['nWorkoutId'] as int?;
+          }
+        }
+
         final mapToInsert = <String, dynamic>{
-          if (workoutId != null && workoutId > 0) 'nWorkoutId': workoutId,
+          if (existingLocalId != null)
+            'nWorkoutId': existingLocalId
+          else if (workoutId != null && workoutId > 0)
+            'nWorkoutId': workoutId,
           'nUserId': userId,
           'sType': type,
           'nDistance': distance,

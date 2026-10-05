@@ -67,7 +67,15 @@ extension WorkoutTrackingPersistence on WorkoutTrackingController {
       // 4. ล้าง Checkpoint การกู้คืนเนื่องจากบันทึกกิจกรรมเสร็จสมบูรณ์แล้ว
       await WorkoutRecoveryService.instance.clearCheckpoint();
 
-      // 🏆 อัปเดตและปลดล็อกเหรียญรางวัล (TbBadges & TbUserBadges)
+      // สร้างแจ้งเตือนในแอปหลังบันทึกสำเร็จ
+      unawaited(AppNotificationService.instance.onWorkoutSaved(
+        workoutType: _selectedCategory.title,
+        distanceKm: savedDistance,
+        caloriesBurned: savedCalories,
+        durationSeconds: savedDuration,
+      ));
+
+      // อัปเดตและปลดล็อกเหรียญรางวัล (TbBadges & TbUserBadges)
       try {
         final totalWorkouts = await AppDatabase.instance.getWorkoutCount(
           userId: _userId,
@@ -77,6 +85,9 @@ extension WorkoutTrackingPersistence on WorkoutTrackingController {
             userId: _userId,
             badgeName: 'ผู้เริ่มต้นก้าวแรก',
           );
+          unawaited(AppNotificationService.instance.onBadgeUnlocked(
+            badgeName: 'ผู้เริ่มต้นก้าวแรก',
+          ));
         }
         final workouts = await AppDatabase.instance.getWorkouts(
           userId: _userId,
@@ -99,12 +110,18 @@ extension WorkoutTrackingPersistence on WorkoutTrackingController {
             userId: _userId,
             badgeName: 'วิ่งสะสม 5 กิโลเมตร',
           );
+          unawaited(AppNotificationService.instance.onBadgeUnlocked(
+            badgeName: 'วิ่งสะสม 5 กิโลเมตร',
+          ));
         }
         if (cumulativeCalories >= 500.0) {
           await GoalApiService.unlockBadgeRemote(
             userId: _userId,
             badgeName: 'นักเบิร์นไฟแรง',
           );
+          unawaited(AppNotificationService.instance.onBadgeUnlocked(
+            badgeName: 'นักเบิร์นไฟแรง',
+          ));
         }
       } catch (_) {}
 

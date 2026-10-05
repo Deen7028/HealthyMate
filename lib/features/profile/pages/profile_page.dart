@@ -10,6 +10,7 @@ import 'package:healthymate/core/services/routine_state_notifier.dart';
 import 'package:healthymate/core/services/theme_service.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:healthymate/features/profile/controllers/profile_controller.dart';
+import 'package:healthymate/features/notifications/pages/notifications_page.dart';
 
 // Components, Dialogs & Shared
 import '../widgets/index.dart';
@@ -23,11 +24,13 @@ part 'profile_page_content.dart';
 class ProfilePage extends StatefulWidget {
   final bool isActive;
   final VoidCallback? onNavigateToPractice;
+  final Function(int tabIndex, [String? workoutCategory, int? targetDurationMinutes])? onNavigateTab;
 
   const ProfilePage({
     super.key,
     this.isActive = true,
     this.onNavigateToPractice,
+    this.onNavigateTab,
   });
 
   @override

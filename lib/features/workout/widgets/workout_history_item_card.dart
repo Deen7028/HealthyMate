@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:healthymate/core/utils/route_utils.dart';
+import 'package:healthymate/features/workout/models/workout_models.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 import 'workout_history_card_sections.dart';
 
@@ -41,15 +42,7 @@ class WorkoutHistoryItemCard extends StatelessWidget {
   }
 
   IconData _getCategoryIcon(String type) {
-    final t = type.toLowerCase();
-    if (t.contains('เดิน') || t.contains('walk')) {
-      return Icons.directions_walk_rounded;
-    } else if (t.contains('จักรยาน') ||
-        t.contains('cycl') ||
-        t.contains('bike')) {
-      return Icons.directions_bike_rounded;
-    }
-    return Icons.directions_run_rounded;
+    return WorkoutCategory.fromIdOrTitle(type).icon;
   }
 
   @override
@@ -68,6 +61,8 @@ class WorkoutHistoryItemCard extends StatelessWidget {
     final dateStr = workoutItem['dtWorkoutDate']?.toString();
     final rawRoutePoints = workoutItem['sRoutePoints']?.toString();
     final List<LatLng> routePoints = RouteUtils.parseRoutePoints(rawRoutePoints);
+    final isMovingCategory = WorkoutCategory.fromIdOrTitle(type).isMoving;
+    final shouldShowRouteCard = isMovingCategory;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -166,7 +161,8 @@ class WorkoutHistoryItemCard extends StatelessWidget {
             ],
           ),
 
-          WorkoutHistoryRoutePreview(points: routePoints),
+          if (shouldShowRouteCard)
+            WorkoutHistoryRoutePreview(points: routePoints),
 
           const SizedBox(height: 14),
           Divider(height: 1, color: borderColor),
