@@ -1,5 +1,3 @@
-// ส่วนนี้อธิบายบทบาทของไฟล์: หน้าจอหลัก ในฟีเจอร์การเข้าสู่ระบบ (login page other auth)
-
 part of 'login_page.dart';
 
 extension LoginPageOtherAuth on _LoginPageState {

@@ -1,6 +1,3 @@
-// ส่วนนี้อธิบายบทบาทของไฟล์: วิดเจ็ตย่อยของ UI ในฟีเจอร์การวิเคราะห์อาหารจากรูปภาพและข้อมูลโภชนาการ (food recognition result sheet body)
-// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
-
 part of 'food_recognition_result_sheet.dart';
 
 extension _FoodRecognitionResultSheetBody on _FoodRecognitionResultSheetState {

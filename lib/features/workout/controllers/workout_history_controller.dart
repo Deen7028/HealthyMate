@@ -1,6 +1,3 @@
-// ส่วนนี้อธิบายบทบาทของไฟล์: คอนโทรลเลอร์และ state ของหน้าจอ ในฟีเจอร์การติดตามและประวัติการออกกำลังกาย (workout history controller)
-// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
-
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/sync/sync_service.dart';

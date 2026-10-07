@@ -1,6 +1,3 @@
-// ส่วนนี้อธิบายบทบาทของไฟล์: โครงหลักของแอปที่จัดการแท็บหลักและการนำทางระดับบน
-// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
-
 import 'package:flutter/material.dart';
 import 'package:healthymate/features/dashboard/pages/dashboard_page.dart';
 import 'package:healthymate/features/health_calculator/pages/health_calculator_page.dart';

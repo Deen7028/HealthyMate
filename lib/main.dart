@@ -1,6 +1,3 @@
-// ส่วนนี้อธิบายบทบาทของไฟล์: จุดเริ่มต้นของแอป ใช้เตรียม service หลักและเปิดหน้าแรก
-// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
-
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';

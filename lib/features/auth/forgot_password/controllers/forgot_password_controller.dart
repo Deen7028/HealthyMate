@@ -1,5 +1,3 @@
-// ส่วนนี้อธิบายบทบาทของไฟล์: คอนโทรลเลอร์และ state ของหน้าจอ ในฟีเจอร์การยืนยันตัวตนและกู้รหัสผ่าน (forgot password controller)
-
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/api_service.dart';

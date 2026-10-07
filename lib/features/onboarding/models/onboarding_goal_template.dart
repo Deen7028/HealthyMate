@@ -1,6 +1,3 @@
-// ส่วนนี้อธิบายบทบาทของไฟล์: โมเดลข้อมูล ในฟีเจอร์ขั้นตอนเริ่มต้นใช้งานและตั้งค่าเป้าหมาย (onboarding goal template)
-// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
-
 class OnboardingGoalTemplate {
   final String id;
   final String title;

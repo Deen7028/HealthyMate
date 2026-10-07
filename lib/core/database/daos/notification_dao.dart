@@ -1,6 +1,3 @@
-// ส่วนนี้อธิบายบทบาทของไฟล์: ฐานข้อมูลภายในเครื่องและ DAO สำหรับจัดการการแจ้งเตือน (notification dao)
-// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
-
 part of '../app_database.dart';
 
 extension AppDatabaseNotificationDao on AppDatabase {

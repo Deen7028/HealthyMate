@@ -1,6 +1,3 @@
-// ส่วนนี้อธิบายบทบาทของไฟล์: หน้าจอหลัก ในฟีเจอร์กิจวัตรและเป้าหมายประจำวัน (completed goals empty state)
-// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
-
 part of 'completed_goals_and_routines_page.dart';
 
 extension CompletedGoalsEmptyState on _CompletedGoalsAndRoutinesPageState {

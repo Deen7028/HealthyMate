@@ -1,6 +1,3 @@
-// ส่วนนี้อธิบายบทบาทของไฟล์: วิดเจ็ตย่อยของ UI ในฟีเจอร์การวิเคราะห์อาหารจากรูปภาพและข้อมูลโภชนาการ (gemini api key dialog content)
-// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
-
 part of 'gemini_api_key_dialog.dart';
 
 extension _GeminiApiKeyDialogContent on _GeminiApiKeyDialogState {

@@ -1,5 +1,3 @@
-// ส่วนนี้อธิบายบทบาทของไฟล์: วิดเจ็ตย่อยของ UI ในฟีเจอร์การเข้าสู่ระบบ (login header)
-
 import 'package:flutter/material.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 

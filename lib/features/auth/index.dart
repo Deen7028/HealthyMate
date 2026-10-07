@@ -1,4 +1,3 @@
-// ส่วนนี้อธิบายบทบาทของไฟล์: ไฟล์รวม export เพื่อให้โมดูลอื่น import ได้สั้นและเป็นระเบียบ
 export 'login/index.dart';
 export 'register/index.dart';
 export 'forgot_password/index.dart';

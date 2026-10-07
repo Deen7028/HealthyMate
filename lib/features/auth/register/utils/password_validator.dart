@@ -1,6 +1,3 @@
-// ส่วนนี้อธิบายบทบาทของไฟล์: ฟังก์ชันช่วยคำนวณหรือจัดรูปแบบข้อมูล ในฟีเจอร์การสมัครสมาชิก (password validator)
-// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
-
 /// Helper utility for checking password strength and requirements
 class PasswordValidator {
   static bool hasMinLength(String password) => password.length >= 8;

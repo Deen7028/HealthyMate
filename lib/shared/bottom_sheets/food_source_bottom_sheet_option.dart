@@ -1,6 +1,3 @@
-// ส่วนนี้อธิบายบทบาทของไฟล์: แผ่นตัวเลือกด้านล่าง ที่หลายฟีเจอร์นำไปใช้ร่วมกัน (food source bottom sheet option)
-// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
-
 part of 'food_source_bottom_sheet.dart';
 
 extension _FoodSourceBottomSheetOption on _FoodSourceBottomSheetState {

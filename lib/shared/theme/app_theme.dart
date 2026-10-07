@@ -1,6 +1,3 @@
-// ส่วนนี้อธิบายบทบาทของไฟล์: ธีม สี และรูปแบบหน้าตาแอป ที่หลายฟีเจอร์นำไปใช้ร่วมกัน (app theme)
-// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
-
 import 'package:flutter/material.dart';
 
 /// Centralized Design Tokens & Color System for HealthyMate

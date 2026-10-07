@@ -1,6 +1,3 @@
-// ส่วนนี้อธิบายบทบาทของไฟล์: โมเดลข้อมูล ในฟีเจอร์การติดตามและประวัติการออกกำลังกาย (workout models)
-// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
-
 // ignore_for_file: non_const_argument_for_const_parameter
 import 'package:flutter/material.dart';
 

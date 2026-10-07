@@ -1,6 +1,5 @@
 <?php
 // ส่วนนี้เป็น API endpoint สำหรับลบบัญชีและข้อมูลผู้ใช้
-// คอมเมนท์ภาษาไทยช่วยแยกหน้าที่หลักของไฟล์โดยไม่แก้ logic เดิม
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, OPTIONS');

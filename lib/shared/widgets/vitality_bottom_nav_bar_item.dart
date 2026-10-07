@@ -1,6 +1,3 @@
-// ส่วนนี้อธิบายบทบาทของไฟล์: วิดเจ็ตย่อยของ UI ที่หลายฟีเจอร์นำไปใช้ร่วมกัน (vitality bottom nav bar item)
-// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
-
 part of 'vitality_bottom_nav_bar.dart';
 
 class _VitalityStandardNavItemWidget extends StatefulWidget {
