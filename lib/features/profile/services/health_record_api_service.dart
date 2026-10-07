@@ -26,7 +26,7 @@ class HealthRecordApiService {
       }
 
       final uri = Uri.parse(
-        '${ApiServiceConfig.baseUrl}/health_records.php?nUserId=$userId',
+        '${ApiServiceConfig.baseUrl}/profile/health_records.php?nUserId=$userId',
       );
       final headers = await ApiServiceConfig.getAuthHeaders();
       final response = await http
@@ -64,7 +64,7 @@ class HealthRecordApiService {
         if (success) return true;
       }
 
-      final uri = Uri.parse('${ApiServiceConfig.baseUrl}/health_records.php');
+      final uri = Uri.parse('${ApiServiceConfig.baseUrl}/profile/health_records.php');
       final headers = await ApiServiceConfig.getAuthHeaders();
       final response = await http
           .post(uri, headers: headers, body: jsonEncode(record.toMap()))
@@ -101,7 +101,7 @@ class HealthRecordApiService {
       }
 
       final uri = Uri.parse(
-        '${ApiServiceConfig.baseUrl}/health_records.php?nRecordId=$recordId',
+        '${ApiServiceConfig.baseUrl}/profile/health_records.php?nRecordId=$recordId',
       );
       final headers = await ApiServiceConfig.getAuthHeaders();
       final response = await http

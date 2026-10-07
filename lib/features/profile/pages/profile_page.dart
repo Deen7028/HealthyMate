@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:healthymate/core/services/auth_service.dart';
-import 'package:healthymate/core/services/routine_state_notifier.dart';
+import 'package:healthymate/core/services/routine_state/routine_state_notifier.dart';
 import 'package:healthymate/core/services/theme_service.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:healthymate/features/profile/controllers/profile_controller.dart';

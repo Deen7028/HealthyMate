@@ -9,7 +9,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:healthymate/core/services/api_service.dart';
-import 'package:healthymate/core/services/sync_service.dart';
+import 'package:healthymate/core/services/sync/sync_service.dart';
 import 'package:healthymate/features/health_calculator/models/health_record_model.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
 import 'package:path/path.dart' as p;

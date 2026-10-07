@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/api_service.dart';
-import 'package:healthymate/core/services/audio_service.dart';
-import 'package:healthymate/core/services/notification_service.dart';
-import 'package:healthymate/core/services/routine_state_notifier.dart';
+import 'package:healthymate/core/services/device/audio_service.dart';
+import 'package:healthymate/core/services/device/notification_service.dart';
+import 'package:healthymate/core/services/routine_state/routine_state_notifier.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
 import '../models/routine_item.dart';
 

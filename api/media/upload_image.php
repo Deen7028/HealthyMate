@@ -2,8 +2,8 @@
 // ส่วนนี้เป็น API endpoint สำหรับอัปโหลดรูปภาพจากแอป
 // คอมเมนท์ภาษาไทยช่วยแยกหน้าที่หลักของไฟล์โดยไม่แก้ logic เดิม
 
-require_once "db_connect.php";
-require_once "upload_image_optimizer.php";
+require_once __DIR__ . "/../db_connect.php";
+require_once __DIR__ . "/upload_image_optimizer.php";
 
 $method = $_SERVER['REQUEST_METHOD'];
 

@@ -25,7 +25,7 @@ class ActivityApiService {
         return List<Map<String, dynamic>>.from(res as List);
       }
 
-      var urlStr = '${ApiServiceConfig.baseUrl}/workouts.php?nUserId=$userId';
+      var urlStr = '${ApiServiceConfig.baseUrl}/workouts/workouts.php?nUserId=$userId';
       if (since != null && since.isNotEmpty) {
         urlStr += '&since=${Uri.encodeComponent(since)}';
       }
@@ -61,7 +61,7 @@ class ActivityApiService {
         if (success) return true;
       }
 
-      final uri = Uri.parse('${ApiServiceConfig.baseUrl}/workouts.php');
+      final uri = Uri.parse('${ApiServiceConfig.baseUrl}/workouts/workouts.php');
       final headers = await ApiServiceConfig.getAuthHeaders();
       final response = await http
           .post(uri, headers: headers, body: jsonEncode(workout))
@@ -87,7 +87,7 @@ class ActivityApiService {
         if (success) return true;
       }
 
-      final uri = Uri.parse('${ApiServiceConfig.baseUrl}/nutrition_logs.php');
+      final uri = Uri.parse('${ApiServiceConfig.baseUrl}/nutrition/nutrition_logs.php');
       final headers = await ApiServiceConfig.getAuthHeaders();
       final response = await http
           .post(uri, headers: headers, body: jsonEncode(log))
@@ -115,7 +115,7 @@ class ActivityApiService {
       }
 
       final uri = Uri.parse(
-        '${ApiServiceConfig.baseUrl}/nutrition_logs.php?nNutritionId=$nutritionId',
+        '${ApiServiceConfig.baseUrl}/nutrition/nutrition_logs.php?nNutritionId=$nutritionId',
       );
       final headers = await ApiServiceConfig.getAuthHeaders();
       final response = await http
@@ -155,7 +155,7 @@ class ActivityApiService {
         }
       }
 
-      final uri = Uri.parse('${ApiServiceConfig.baseUrl}/upload_image.php');
+      final uri = Uri.parse('${ApiServiceConfig.baseUrl}/media/upload_image.php');
       final headers = await ApiServiceConfig.getAuthHeaders();
       final request = http.MultipartRequest('POST', uri)
         ..headers.addAll(headers)

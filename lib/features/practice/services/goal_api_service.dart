@@ -89,7 +89,7 @@ class GoalApiService {
         if (success) return true;
       }
 
-      final uri = Uri.parse('${ApiServiceConfig.baseUrl}/goals.php');
+      final uri = Uri.parse('${ApiServiceConfig.baseUrl}/routines/goals.php');
       final headers = await ApiServiceConfig.getAuthHeaders();
       final response = await http
           .post(
@@ -128,7 +128,7 @@ class GoalApiService {
         return true;
       }
 
-      final uri = Uri.parse('${ApiServiceConfig.baseUrl}/goals.php');
+      final uri = Uri.parse('${ApiServiceConfig.baseUrl}/routines/goals.php');
       final headers = await ApiServiceConfig.getAuthHeaders();
       final response = await http
           .delete(
@@ -163,7 +163,7 @@ class GoalApiService {
         return true;
       }
 
-      final uri = Uri.parse('${ApiServiceConfig.baseUrl}/user_preferences.php');
+      final uri = Uri.parse('${ApiServiceConfig.baseUrl}/profile/user_preferences.php');
       final headers = await ApiServiceConfig.getAuthHeaders();
       final response = await http
           .post(
@@ -206,7 +206,7 @@ class GoalApiService {
         }
       }
 
-      final uri = Uri.parse('${ApiServiceConfig.baseUrl}/badges.php');
+      final uri = Uri.parse('${ApiServiceConfig.baseUrl}/routines/badges.php');
       final headers = await ApiServiceConfig.getAuthHeaders();
       final response = await http
           .post(

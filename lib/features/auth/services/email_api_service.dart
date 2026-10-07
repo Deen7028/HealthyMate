@@ -21,7 +21,7 @@ class EmailApiService {
         }
       }
 
-      final uri = Uri.parse('${ApiServiceConfig.baseUrl}/check_email.php');
+      final uri = Uri.parse('${ApiServiceConfig.baseUrl}/auth/check_email.php');
       final response = await http
           .post(
             uri,
@@ -67,7 +67,7 @@ class EmailApiService {
       // 2. Fallback ไปยัง PHP API บน Server (ถ้ายังมีอยู่)
       final response = await http
           .post(
-            Uri.parse('${ApiServiceConfig.baseUrl}/send_email_otp.php'),
+            Uri.parse('${ApiServiceConfig.baseUrl}/auth/send_email_otp.php'),
             headers: ApiServiceConfig.defaultHeaders,
             body: jsonEncode({'sEmail': cleanEmail}),
           )
@@ -129,7 +129,7 @@ class EmailApiService {
       // 2. Fallback ไปยัง PHP API บน Server
       final response = await http
           .post(
-            Uri.parse('${ApiServiceConfig.baseUrl}/verify_email_otp.php'),
+            Uri.parse('${ApiServiceConfig.baseUrl}/auth/verify_email_otp.php'),
             headers: ApiServiceConfig.defaultHeaders,
             body: jsonEncode({'sEmail': cleanEmail, 'sOtpCode': sOtpCode}),
           )
@@ -182,12 +182,12 @@ class EmailApiService {
 
       // 2. Fallback ไปยัง PHP API
       debugPrint(
-        '[API] sendForgotPasswordOtp: ${ApiServiceConfig.baseUrl}/send_forgot_password_otp.php',
+        '[API] sendForgotPasswordOtp: ${ApiServiceConfig.baseUrl}/auth/send_forgot_password_otp.php',
       );
       final response = await http
           .post(
             Uri.parse(
-              '${ApiServiceConfig.baseUrl}/send_forgot_password_otp.php',
+              '${ApiServiceConfig.baseUrl}/auth/send_forgot_password_otp.php',
             ),
             headers: ApiServiceConfig.defaultHeaders,
             body: jsonEncode({'sEmail': cleanEmail}),
@@ -243,7 +243,7 @@ class EmailApiService {
       // 2. Fallback ไปยัง PHP API
       final response = await http
           .post(
-            Uri.parse('${ApiServiceConfig.baseUrl}/reset_password.php'),
+            Uri.parse('${ApiServiceConfig.baseUrl}/auth/reset_password.php'),
             headers: ApiServiceConfig.defaultHeaders,
             body: jsonEncode({'sEmail': cleanEmail, 'sNewPassword': sNewPassword}),
           )

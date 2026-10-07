@@ -2,17 +2,17 @@
 // ส่วนนี้เป็น API endpoint สำหรับส่งรหัส OTP สำหรับยืนยันอีเมล
 // คอมเมนท์ภาษาไทยช่วยแยกหน้าที่หลักของไฟล์โดยไม่แก้ logic เดิม
 
-require_once "db_connect.php";
+require_once __DIR__ . "/../db_connect.php";
 
 // นำเข้าไฟล์ PHPMailer หากมีติดตั้งไว้ (Composer หรือ โฟลเดอร์ PHPMailer)
 $hasPHPMailer = false;
-if (file_exists(__DIR__ . '/vendor/autoload.php')) {
-    require_once __DIR__ . '/vendor/autoload.php';
+if (file_exists(dirname(__DIR__) . '/vendor/autoload.php')) {
+    require_once dirname(__DIR__) . '/vendor/autoload.php';
     $hasPHPMailer = class_exists('PHPMailer\PHPMailer\PHPMailer');
-} elseif (file_exists(__DIR__ . '/PHPMailer/src/PHPMailer.php')) {
-    require_once __DIR__ . '/PHPMailer/src/Exception.php';
-    require_once __DIR__ . '/PHPMailer/src/PHPMailer.php';
-    require_once __DIR__ . '/PHPMailer/src/SMTP.php';
+} elseif (file_exists(dirname(__DIR__) . '/PHPMailer/src/PHPMailer.php')) {
+    require_once dirname(__DIR__) . '/PHPMailer/src/Exception.php';
+    require_once dirname(__DIR__) . '/PHPMailer/src/PHPMailer.php';
+    require_once dirname(__DIR__) . '/PHPMailer/src/SMTP.php';
     $hasPHPMailer = class_exists('PHPMailer\PHPMailer\PHPMailer');
 }
 

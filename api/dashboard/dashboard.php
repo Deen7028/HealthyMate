@@ -2,7 +2,7 @@
 // ส่วนนี้เป็น API endpoint สำหรับรวมข้อมูลสรุปสำหรับหน้าแดชบอร์ด
 // คอมเมนท์ภาษาไทยช่วยแยกหน้าที่หลักของไฟล์โดยไม่แก้ logic เดิม
 
-require_once "db_connect.php";
+require_once __DIR__ . "/../db_connect.php";
 
 // dashboard.php: รวมข้อมูลสำหรับหน้า Dashboard ทั้งหมดในคำขอเดียว
 // เพื่อลดจำนวน HTTP requests

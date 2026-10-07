@@ -49,7 +49,7 @@ class AuthApiService {
         }
       }
 
-      final uri = Uri.parse('${ApiServiceConfig.baseUrl}/login.php');
+      final uri = Uri.parse('${ApiServiceConfig.baseUrl}/auth/login.php');
       final Map<String, dynamic> payload = {
         'sEmail': email,
         'sPassword': password,
@@ -116,7 +116,7 @@ class AuthApiService {
 
       final response = await http
           .post(
-            Uri.parse('${ApiServiceConfig.baseUrl}/google_login.php'),
+            Uri.parse('${ApiServiceConfig.baseUrl}/auth/google_login.php'),
             headers: ApiServiceConfig.defaultHeaders,
             body: jsonEncode(googleUserData),
           )

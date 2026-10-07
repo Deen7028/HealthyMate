@@ -3,7 +3,7 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:healthymate/core/services/audio_service.dart';
+import 'package:healthymate/core/services/device/audio_service.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 
 /// Mini Countdown Timer Dialog Widget

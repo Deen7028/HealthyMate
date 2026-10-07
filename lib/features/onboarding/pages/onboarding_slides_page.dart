@@ -3,7 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:healthymate/features/onboarding/services/onboarding_service.dart';
-import 'package:healthymate/features/login/pages/login_page.dart';
+import 'package:healthymate/features/auth/login/pages/login_page.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 
 class OnboardingSlideItem {

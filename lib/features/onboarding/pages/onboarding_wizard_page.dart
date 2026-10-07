@@ -7,7 +7,7 @@ import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/api_service.dart';
 import 'package:healthymate/core/services/auth_service.dart';
 import 'package:healthymate/features/onboarding/services/onboarding_service.dart';
-import 'package:healthymate/core/services/routine_state_notifier.dart';
+import 'package:healthymate/core/services/routine_state/routine_state_notifier.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
 import 'package:healthymate/features/onboarding/models/onboarding_goal_template.dart';
 import 'package:healthymate/features/onboarding/widgets/step1_welcome_view.dart';

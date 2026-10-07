@@ -4,7 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:healthymate/features/auth/widgets/otp_verification_dialog.dart';
-import 'package:healthymate/features/register/widgets/password_requirements_card.dart';
+import 'package:healthymate/features/auth/register/widgets/password_requirements_card.dart';
 import '../controllers/forgot_password_controller.dart';
 
 part 'forgot_password_page_actions.dart';

@@ -60,7 +60,7 @@ class DashboardApiService {
 
       // 2. Fallback PHP API
       final uri = Uri.parse(
-        '${ApiServiceConfig.baseUrl}/dashboard.php?nUserId=$userId',
+        '${ApiServiceConfig.baseUrl}/dashboard/dashboard.php?nUserId=$userId',
       );
       final headers = await ApiServiceConfig.getAuthHeaders();
       final response = await http

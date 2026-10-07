@@ -3,7 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/database/app_database.dart';
-import 'package:healthymate/core/services/sync_service.dart';
+import 'package:healthymate/core/services/sync/sync_service.dart';
 import 'package:healthymate/features/workout/models/workout_models.dart';
 
 /// Controller สำหรับจัดการ State และ Business Logic ของหน้าประวัติการออกกำลังกาย (WorkoutHistoryPage)

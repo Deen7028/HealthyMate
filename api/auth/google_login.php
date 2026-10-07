@@ -2,7 +2,7 @@
 // ส่วนนี้เป็น API endpoint สำหรับเข้าสู่ระบบด้วย Google และเชื่อมข้อมูลผู้ใช้
 // คอมเมนท์ภาษาไทยช่วยแยกหน้าที่หลักของไฟล์โดยไม่แก้ logic เดิม
 
-require_once "db_connect.php";
+require_once __DIR__ . "/../db_connect.php";
 
 $method = $_SERVER['REQUEST_METHOD'];
 if ($method !== 'POST') {

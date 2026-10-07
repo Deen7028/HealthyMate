@@ -5,7 +5,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:healthymate/core/services/routine_state_notifier.dart';
+import 'package:healthymate/core/services/routine_state/routine_state_notifier.dart';
 import 'package:healthymate/features/food_recognition/widgets/food_recognition_result_sheet.dart';
 import 'package:healthymate/features/food_recognition/services/food_recognition_service.dart';
 

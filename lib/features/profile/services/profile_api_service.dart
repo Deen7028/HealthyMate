@@ -38,7 +38,7 @@ class ProfileApiService {
       }
 
       // 2. Fallback ไป PHP API
-      final uri = Uri.parse('${ApiServiceConfig.baseUrl}/user_profile.php');
+      final uri = Uri.parse('${ApiServiceConfig.baseUrl}/profile/user_profile.php');
       final headers = await ApiServiceConfig.getAuthHeaders();
       final response = await http
           .post(uri, headers: headers, body: jsonEncode(payload))
@@ -80,7 +80,7 @@ class ProfileApiService {
       final headers = await ApiServiceConfig.getAuthHeaders();
       final response = await http
           .post(
-            Uri.parse('${ApiServiceConfig.baseUrl}/delete_account.php'),
+            Uri.parse('${ApiServiceConfig.baseUrl}/profile/delete_account.php'),
             headers: headers,
             body: jsonEncode({'nUserId': userId, 'sEmail': email}),
           )
