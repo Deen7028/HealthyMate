@@ -42,6 +42,7 @@ class _LoginPageState extends State<LoginPage>
   late final AnimationController _shakeController;
   late final Animation<double> _shakeAnimation;
 
+  ///initState() เรียกครั้งเดียวเมื่อ widget ถูกสร้าง — กำหนดค่าเริ่มต้นให้ animation
   @override
   void initState() {
     super.initState();
@@ -62,10 +63,12 @@ class _LoginPageState extends State<LoginPage>
         );
   }
 
+  /// _triggerShake() เริ่มการ shake — ใช้เมื่อเกิด error
   void _triggerShake() {
     _shakeController.forward(from: 0.0);
   }
 
+  /// _showError() แสดง error message — ใช้เมื่อเกิด error
   void _showError(String message) {
     setState(() {
       _errorMessage = message;
