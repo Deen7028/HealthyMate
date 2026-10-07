@@ -18,7 +18,7 @@ class SocialLoginButtons extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Divider with Text
+        // เส้นคั่นและข้อความ "หรือเข้าสู่ระบบด้วย"
         const Row(
           children: [
             Expanded(
@@ -43,10 +43,10 @@ class SocialLoginButtons extends StatelessWidget {
 
         const SizedBox(height: 24),
 
-        // Social Login Buttons Row
+        // แถวปุ่ม Social Login
         Row(
           children: [
-            // Google Button
+            // ปุ่ม Google
             Expanded(
               child: OutlinedButton(
                 onPressed: onGoogleLogin,

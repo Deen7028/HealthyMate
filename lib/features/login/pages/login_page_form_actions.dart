@@ -18,9 +18,9 @@ extension LoginPageFormActions on _LoginPageState {
     // 1. ตรวจสอบการถูกระงับชั่วคราว (Lockout Security)
     if (_lockoutUntil != null && DateTime.now().isBefore(_lockoutUntil!)) {
       final waitSeconds = _lockoutUntil!.difference(DateTime.now()).inSeconds;
-      setState(() {
-        _errorMessage =
-            'คุณพยายามเข้าสู่ระบบผิดบ่อยเกินไป กรุณารอ $waitSeconds วินาที';
+      setState(() { 
+        // แสดงข้อความเตือนเมื่อถูกระงับชั่วคราวและ เวลา
+        _errorMessage = 'คุณพยายามเข้าสู่ระบบผิดบ่อยเกินไป กรุณารอ $waitSeconds วินาที';
       });
       _triggerShake();
       return;
@@ -69,6 +69,7 @@ extension LoginPageFormActions on _LoginPageState {
     }
 
     setState(() {
+      // กำหนดสถานะ _isLoading เป็น true และเคลียร์ข้อความผิดพลาด
       _isLoading = true;
       _errorMessage = null;
     });

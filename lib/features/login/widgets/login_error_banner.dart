@@ -6,11 +6,9 @@ import 'package:flutter/material.dart';
 class LoginErrorBanner extends StatelessWidget {
   final String errorMessage;
 
-  const LoginErrorBanner({
-    super.key,
-    required this.errorMessage,
-  });
+  const LoginErrorBanner({super.key, required this.errorMessage});
 
+  // ฟังก์ชันแสดงข้อผิดพลาด
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -31,10 +29,7 @@ class LoginErrorBanner extends StatelessWidget {
           Expanded(
             child: Text(
               errorMessage,
-              style: const TextStyle(
-                color: Color(0xFF9B1C1C),
-                fontSize: 13,
-              ),
+              style: const TextStyle(color: Color(0xFF9B1C1C), fontSize: 13),
             ),
           ),
         ],

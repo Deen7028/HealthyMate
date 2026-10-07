@@ -1,14 +1,15 @@
 // ส่วนนี้อธิบายบทบาทของไฟล์: หน้าจอหลัก ในฟีเจอร์การเข้าสู่ระบบ (login page other auth)
-// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
 
 part of 'login_page.dart';
 
 extension LoginPageOtherAuth on _LoginPageState {
+  /// สแกนลายนิ้วมือเพื่อเข้าสู่ระบบ
   Future<void> _handleBiometricSignIn() async {
-    final available = await BiometricAuthService.instance
-        .isBiometricAvailable();
+    // ตรวจสอบว่า Biometric พร้อมใช้งานหรือไม่
+    final available = await BiometricAuthService.instance.isBiometricAvailable();
     if (!mounted) return;
     if (!available) {
+      // ถ้า Biometric ไม่พร้อมใช้งาน
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -21,19 +22,24 @@ extension LoginPageOtherAuth on _LoginPageState {
       return;
     }
 
+    // ดึงข้อมูลยืนยันตัวตน
     final credentials = await BiometricAuthService.instance.getCredentials();
     if (credentials == null) {
+      // ถ้าไม่มีข้อมูลยืนยันตัวตน
       _showError(
         'กรุณาเข้าสู่ระบบด้วยอีเมลและรหัสผ่านในครั้งแรกเพื่อเปิดใช้งานสแกนนิ้ว',
       );
       return;
     }
 
+    // ยืนยันตัวตนด้วย FaceID / TouchID
     final authenticated = await BiometricAuthService.instance.authenticate(
       reason: 'ยืนยันตัวตนด้วย FaceID / TouchID เพื่อเข้าสู่ระบบ HealthyMate',
     );
 
+    // ถ้าสแกนลายนิ้วมือสำเร็จ
     if (authenticated) {
+      // กำหนดสถานะ _isLoading เป็น true และเคลียร์ข้อความผิดพลาด
       setState(() => _isLoading = true);
 
       final loginResult = await AuthService.instance.login(

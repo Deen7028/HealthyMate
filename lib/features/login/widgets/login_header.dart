@@ -1,5 +1,4 @@
 // ส่วนนี้อธิบายบทบาทของไฟล์: วิดเจ็ตย่อยของ UI ในฟีเจอร์การเข้าสู่ระบบ (login header)
-// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
 
 import 'package:flutter/material.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
@@ -11,6 +10,7 @@ class LoginHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        // ไอคอนโลโก้
         Center(
           child: Container(
             width: 84,
@@ -38,6 +38,7 @@ class LoginHeader extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 24),
+        // ข้อความยินดีต้อนรับกลับมา
         const Center(
           child: Text(
             'ยินดีต้อนรับกลับมา',
@@ -50,6 +51,7 @@ class LoginHeader extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
+        // ข้อความกรุณาเข้าสู่ระบบเพื่อดำเนินการต่อ
         const Center(
           child: Text(
             'กรุณาเข้าสู่ระบบเพื่อดำเนินการต่อ',

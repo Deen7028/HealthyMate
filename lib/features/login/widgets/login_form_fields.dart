@@ -32,7 +32,7 @@ class LoginFormFields extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Field 1 Label
+        // ข้อความกรอกอีเมลหรือชื่อผู้ใช้
         const Text(
           'อีเมลหรือชื่อผู้ใช้',
           style: TextStyle(
@@ -44,7 +44,7 @@ class LoginFormFields extends StatelessWidget {
 
         const SizedBox(height: 8),
 
-        // Field 1 Input: Email/Username
+        // ช่องกรอกอีเมลหรือชื่อผู้ใช้
         TextFormField(
           controller: emailController,
           focusNode: emailFocusNode,
@@ -87,7 +87,7 @@ class LoginFormFields extends StatelessWidget {
 
         const SizedBox(height: 24),
 
-        // Field 2 Label & Forgot Password Row
+        // ข้อความรหัสผ่านและปุ่มลืมรหัสผ่าน
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -121,7 +121,7 @@ class LoginFormFields extends StatelessWidget {
 
         const SizedBox(height: 8),
 
-        // Field 2 Input: Password
+        // ช่องกรอกรหัสผ่าน
         TextFormField(
           controller: passwordController,
           focusNode: passwordFocusNode,

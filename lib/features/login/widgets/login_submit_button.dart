@@ -16,6 +16,7 @@ class LoginSubmitButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ปุ่มเข้าสู่ระบบ
     return SizedBox(
       width: double.infinity,
       height: 54,
@@ -30,6 +31,7 @@ class LoginSubmitButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(30),
           ),
         ),
+        // สวิตช์สำหรับแสดง Loading หรือ Text ปุ่มเข้าสู่ระบบ
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 300),
           transitionBuilder: (child, animation) => FadeTransition(

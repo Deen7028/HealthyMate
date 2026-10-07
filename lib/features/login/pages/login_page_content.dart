@@ -1,5 +1,4 @@
 // ส่วนนี้อธิบายบทบาทของไฟล์: หน้าจอหลัก ในฟีเจอร์การเข้าสู่ระบบ (login page content)
-// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
 
 part of 'login_page.dart';
 
@@ -16,7 +15,7 @@ extension LoginPageContent on _LoginPageState {
           children: [
             SizedBox(height: topPadding + 16),
 
-            // Top Header Bar
+            // ส่วนบนสุด เป็นโลโก้ HealthyMate
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Center(
@@ -45,7 +44,7 @@ extension LoginPageContent on _LoginPageState {
 
             const SizedBox(height: 24),
 
-            // Main Login Sheet Container
+            // ส่วนล่าง เป็นการ์ดสไลด์ลงมาจากด้านบน
             Expanded(
               child: Container(
                 width: double.infinity,
@@ -66,13 +65,14 @@ extension LoginPageContent on _LoginPageState {
                   ),
                   child: Column(
                     children: [
-                      // Top Green Accent Border Line
+                      // เส้นขีดสีเขียวด้านบนสุดของการ์ด
                       Container(
                         height: 4,
                         width: double.infinity,
                         color: AppTheme.primaryGreen,
                       ),
 
+                      // ส่วนเนื้อหา
                       Expanded(
                         child: SingleChildScrollView(
                           padding: const EdgeInsets.all(28.0),
@@ -91,12 +91,12 @@ extension LoginPageContent on _LoginPageState {
                                 children: [
                                   const SizedBox(height: 12),
 
-                                  // Heading Text
+                                  // ส่วนข้อความต้อนรับ
                                   const LoginHeader(),
 
                                   const SizedBox(height: 32),
 
-                                  // Error Message Banner if any (Smooth Dropdown)
+                                  // ส่วนแสดงข้อความ error message (ถ้ามี)
                                   AnimatedSize(
                                     duration: const Duration(milliseconds: 300),
                                     curve: Curves.easeOutCubic,
@@ -112,7 +112,7 @@ extension LoginPageContent on _LoginPageState {
                                         : const SizedBox.shrink(),
                                   ),
 
-                                  // Login Input Fields
+                                  // ส่วนกรอกข้อมูล
                                   LoginFormFields(
                                     emailController: _emailController,
                                     passwordController: _passwordController,
@@ -135,7 +135,7 @@ extension LoginPageContent on _LoginPageState {
 
                                   const SizedBox(height: 32),
 
-                                  // Primary Login Button
+                                  // ปุ่ม Login หลัก
                                   LoginSubmitButton(
                                     isLoading: _isLoading,
                                     onSubmit: this._handleLogin,
@@ -143,7 +143,7 @@ extension LoginPageContent on _LoginPageState {
 
                                   const SizedBox(height: 32),
 
-                                  // Social Login Buttons
+                                  // ปุ่ม Social Login และ Biometric Login
                                   SocialLoginButtons(
                                     onGoogleLogin: () =>
                                         this._handleSocialLogin('Google'),
@@ -153,7 +153,7 @@ extension LoginPageContent on _LoginPageState {
 
                                   const SizedBox(height: 28),
 
-                                  // Register Navigation Link
+                                  // ส่วนล่างสุด เป็นลิงก์ไปยังหน้า Register
                                   LoginFooterLink(
                                     onRegisterTap: () {
                                       Navigator.of(context).push(

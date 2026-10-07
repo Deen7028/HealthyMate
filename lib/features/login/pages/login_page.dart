@@ -1,5 +1,4 @@
 // ส่วนนี้อธิบายบทบาทของไฟล์: หน้าจอหลัก ในฟีเจอร์การเข้าสู่ระบบ (login page)
-// คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
 
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/database/app_database.dart';
@@ -63,7 +62,7 @@ class _LoginPageState extends State<LoginPage>
         );
   }
 
-  /// _triggerShake() เริ่มการ shake — ใช้เมื่อเกิด error
+  /// _triggerShake() เริ่มการ shake เพื่อสร้างเอฟเฟกต์ "สั่น"  — ใช้เมื่อเกิด error
   void _triggerShake() {
     _shakeController.forward(from: 0.0);
   }
@@ -79,9 +78,10 @@ class _LoginPageState extends State<LoginPage>
   bool _isPasswordVisible = false;
   bool _isLoading = false;
   String? _errorMessage;
-  int _failedAttempts = 0;
-  DateTime? _lockoutUntil;
+  int _failedAttempts = 0; // จำนวนครั้งที่ login ผิด
+  DateTime? _lockoutUntil; // เวลาที่จะปลดล็อก
 
+  ///dispose() ทำความสะอาด — เรียกเมื่อ widget ถูกลบ
   @override
   void dispose() {
     _shakeController.dispose();
@@ -92,6 +92,7 @@ class _LoginPageState extends State<LoginPage>
     super.dispose();
   }
 
+  ///build(BuildContext context) สร้าง UI ของหน้าจอ login  — ใช้เมื่อเกิด error
   @override
   Widget build(BuildContext context) => this._buildLoginPage(context);
 }
