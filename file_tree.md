@@ -6,31 +6,31 @@
 ```text
 ├── 📁 core      # แกนหลักของแอปพลิเคชัน (Config, Database, Services ทั่วไป)
 │   ├── 📁 config
-│   │   └── 📄 app_config.dart                 # จัดการค่า Configuration และ Environment Variables ของแอป
+│   │   └── 📄 app_config.dart # จัดการค่า Configuration และ Environment Variables ของแอป
 │   ├── 📁 database
-│   │   ├── 📁 daos                            # Data Access Objects สำหรับจัดการตารางฐานข้อมูล SQLite
-│   │   │   ├── 📁 activity_and_goals          # จัดการข้อมูลกิจกรรม สุขภาพ โภชนาการ และการแจ้งเตือน
-│   │   │   │   ├── 📄 goal_preference_dao.dart            # บันทึกและดึงข้อมูลเป้าหมายและการตั้งค่า
-│   │   │   │   ├── 📄 goal_preference_dao_devices.dart    # จัดการข้อมูลอุปกรณ์ที่เชื่อมต่อ (เช่น Smartwatch)
-│   │   │   │   ├── 📄 goal_preference_dao_keys.dart       # จัดการเก็บ API Key (Gemini Vision)
+│   │   ├── 📁 daos # Data Access Objects สำหรับจัดการตารางฐานข้อมูล SQLite
+│   │   │   ├── 📁 activity_and_goals    # จัดการข้อมูลกิจกรรม สุขภาพ โภชนาการ และการแจ้งเตือน
+│   │   │   │   ├── 📄 goal_preference_dao.dart       # บันทึกและดึงข้อมูลเป้าหมายและการตั้งค่า
+│   │   │   │   ├── 📄 goal_preference_dao_devices.dart # จัดการข้อมูลอุปกรณ์ที่เชื่อมต่อ (เช่น Smartwatch)
+│   │   │   │   ├── 📄 goal_preference_dao_keys.dart # จัดการเก็บ API Key (Gemini Vision)
 │   │   │   │   ├── 📄 goal_preference_dao_pending_sync.dart # จัดการคิวข้อมูลที่รอซิงค์ขึ้น Cloud
 │   │   │   │   ├── 📄 goal_preference_dao_sync_records.dart # จัดการบันทึกสถานะการซิงค์ข้อมูล
-│   │   │   │   ├── 📄 health_record_dao.dart              # จัดการประวัติการบันทึกค่าน้ำหนัก ส่วนสูง BMI
+│   │   │   │   ├── 📄 health_record_dao.dart # จัดการประวัติการบันทึกค่าน้ำหนัก ส่วนสูง BMI
 │   │   │   │   ├── 📄 notification_dao.dart               # จัดการรายการแจ้งเตือนในระบบ
-│   │   │   │   ├── 📄 nutrition_dao.dart                  # จัดการประวัติการบันทึกสารอาหารและมื้ออาหาร
-│   │   │   │   └── 📄 workout_dao.dart                    # จัดการประวัติการออกกำลังกายและพิกัดเส้นทาง
-│   │   │   ├── 📁 routine                     # จัดการข้อมูลกิจวัตรประจำวัน
-│   │   │   │   ├── 📄 routine_dao.dart                    # ดึงข้อมูลรายการกิจวัตรของผู้ใช้
-│   │   │   │   ├── 📄 routine_dao_history.dart            # ดึงประวัติความสำเร็จของกิจวัตรย้อนหลัง
-│   │   │   │   ├── 📄 routine_dao_logs.dart               # บันทึก Log การปฏิบัติกิจวัตรในแต่ละวัน
-│   │   │   │   └── 📄 routine_dao_mutations.dart          # เพิ่ม ลบ แก้ไข ข้อมูลกิจวัตร
+│   │   │   │   ├── 📄 nutrition_dao.dart     # จัดการประวัติการบันทึกสารอาหารและมื้ออาหาร
+│   │   │   │   └── 📄 workout_dao.dart       # จัดการประวัติการออกกำลังกายและพิกัดเส้นทาง
+│   │   │   ├── 📁 routine                    # จัดการข้อมูลกิจวัตรประจำวัน
+│   │   │   │   ├── 📄 routine_dao.dart         # ดึงข้อมูลรายการกิจวัตรของผู้ใช้
+│   │   │   │   ├── 📄 routine_dao_history.dart  # ดึงประวัติความสำเร็จของกิจวัตรย้อนหลัง
+│   │   │   │   ├── 📄 routine_dao_logs.dart     # บันทึก Log การปฏิบัติกิจวัตรในแต่ละวัน
+│   │   │   │   └── 📄 routine_dao_mutations.dart  # เพิ่ม ลบ แก้ไข ข้อมูลกิจวัตร
 │   │   │   └── 📁 user                        # จัดการข้อมูลบัญชีผู้ใช้
-│   │   │       ├── 📄 user_dao.dart                       # ค้นหาและดึงข้อมูลโปรไฟล์ผู้ใช้
-│   │   │       ├── 📄 user_dao_credentials.dart           # ตรวจสอบรหัสผ่านและความปลอดภัย
-│   │   │       ├── 📄 user_dao_registration.dart          # สมัครสมาชิกและบันทึกผู้ใช้ใหม่
-│   │   │       └── 📄 user_dao_session.dart               # จัดการสถานะการเข้าสู่ระบบและ Session
-│   │   ├── 📄 app_database.dart               # คลาสหลักเชื่อมต่อฐานข้อมูล SQLite
-│   │   ├── 📄 app_database_lifecycle.dart     # จัดการเปิด-ปิด และการเริ่มต้น Database Connection
+│   │   │       ├── 📄 user_dao.dart              # ค้นหาและดึงข้อมูลโปรไฟล์ผู้ใช้
+│   │   │       ├── 📄 user_dao_credentials.dart  # ตรวจสอบรหัสผ่านและความปลอดภัย
+│   │   │       ├── 📄 user_dao_registration.dart # สมัครสมาชิกและบันทึกผู้ใช้ใหม่
+│   │   │       └── 📄 user_dao_session.dart      # จัดการสถานะการเข้าสู่ระบบและ Session
+│   │   ├── 📄 app_database.dart           # คลาสหลักเชื่อมต่อฐานข้อมูล SQLite
+│   │   ├── 📄 app_database_lifecycle.dart # จัดการเปิด-ปิด และการเริ่มต้น Database Connection
 │   │   └── 📄 app_database_schema.dart        # สร้างตารางและโครงสร้าง Schema ของ SQLite
 │   ├── 📁 services
 │   │   ├── 📁 device                          # เซอร์วิสระดับฮาร์ดแวร์ของอุปกรณ์
