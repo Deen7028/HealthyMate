@@ -1,6 +1,9 @@
 part of 'profile_controller.dart';
 
+// ส่วนโหลดข้อมูลโปรไฟล์ (ProfileControllerLoading)
+// ทำหน้าที่ดึงข้อมูลผู้ใช้, สถิติกิจกรรม, การคำนวณ Active Days และ Avatar Provider
 extension ProfileControllerLoading on ProfileController {
+  // ฟังก์ชัน: ตรวจสอบสถานะการเปิดใช้งาน GPS Location Service
   Future<void> checkLocationService() async {
     try {
       final enabled = await Geolocator.isLocationServiceEnabled();
@@ -11,8 +14,7 @@ extension ProfileControllerLoading on ProfileController {
     }
   }
 
-  /// คำนวณวัน Active โดยตั้งเวลาเป็น 00:00:00 ของทั้งสองวันก่อนนำมาลบกัน
-  /// เพื่อป้องกันปัญหาการลบเวลาดิบแล้ววันขาดไป 1 วันเมื่อสมัครดึก
+  // ฟังก์ชัน: คำนวณจำนวนวันที่ใช้งาน (Active Days) โดยนับจากเวลา 00:00:00
   int calculateActiveDays(DateTime createdAt, DateTime now) {
     final createdDate = DateTime(
       createdAt.year,
@@ -24,20 +26,20 @@ extension ProfileControllerLoading on ProfileController {
     return diffInDays >= 0 ? diffInDays + 1 : 1;
   }
 
-  /// โหลดข้อมูลผู้ใช้ สถิติ และการตั้งค่าทั้งหมด
-  /// คืนค่า true หากพบผู้ใช้งาน และคืนค่า false หากไม่พบบัญชีผู้ใช้ (ต้องบังคับ Logout)
+  // ฟังก์ชัน: โหลดข้อมูลผู้ใช้ สถิติ และการตั้งค่าทั้งหมด (Load Profile Data)
   Future<bool> loadUserData() async {
     try {
       isLoading = true;
       this._notifyProfileListeners();
 
+      // 1. ตรวจสอบอีเมลผู้ใช้ที่เข้าสู่ระบบ
       final email = AuthService.instance.currentUserEmail;
       TbUser? user;
       if (email.isNotEmpty) {
         user = await AppDatabase.instance.getUserByEmail(email);
       }
 
-      // ป้องกันช่องโหว่ Data Leak: หาก Authentication ผิดพลาดหรือไม่พบบัญชี ให้ logout ทันที
+      // หากไม่พบบัญชีผู้ใช้ในระบบ ให้ส่งกลับ false
       if (user == null) {
         debugPrint('ProfileController: No valid authenticated user found.');
         isLoading = false;
@@ -47,6 +49,7 @@ extension ProfileControllerLoading on ProfileController {
 
       final currentUserId = user.nUserId;
 
+      // 2. ดึงข้อมูลสถิติ, เป้าหมาย, อุปกรณ์ และ API Key แบบขนาน (Future.wait)
       final results = await Future.wait([
         AppDatabase.instance.getWorkoutCount(userId: currentUserId),
         AppDatabase.instance.getUserGoal(currentUserId),
@@ -63,9 +66,10 @@ extension ProfileControllerLoading on ProfileController {
       isLocationEnabled = results[4] as bool;
       geminiApiKey = results[5] as String;
 
-      // คำนวณวัน Active ด้วยตรรกะที่ถูกต้อง (00:00:00)
+      // 3. คำนวณ Active Days
       activeDays = calculateActiveDays(user.dtCreatedAt, DateTime.now());
 
+      // 4. แปลงข้อมูลเป้าหมายหลัก
       if (goalData != null) {
         mainGoalTitle = goalData['sTitle']?.toString() ?? '';
         goalProgress = (goalData['nProgress'] as num?)?.toDouble() ?? 0.0;
@@ -88,7 +92,7 @@ extension ProfileControllerLoading on ProfileController {
     }
   }
 
-  /// คืนค่า ImageProvider สำหรับแสดงรูปโปรไฟล์
+  // ฟังก์ชัน: ดึง ImageProvider สำหรับแสดงรูปโปรไฟล์ (Local File หรือ Network URL)
   ImageProvider? getAvatarImageProvider() {
     final path = currentUser?.sProfileImagePath ?? '';
     if (path.isNotEmpty) {
@@ -102,6 +106,4 @@ extension ProfileControllerLoading on ProfileController {
     }
     return null;
   }
-
-  /// เลือกรูปภาพจาก Camera/Gallery
 }

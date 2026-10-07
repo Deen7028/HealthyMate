@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 
+// ส่วนฟอร์มกรอกอีเมลสำหรับขอ OTP (ForgotPasswordEmailForm)
+// ทำหน้าที่รับอีเมลของผู้ใช้ และแสดงปุ่มกดส่ง OTP พร้อมสถานะ Loading
 class ForgotPasswordEmailForm extends StatelessWidget {
   final TextEditingController emailController;
   final bool isLoading;
@@ -18,6 +20,7 @@ class ForgotPasswordEmailForm extends StatelessWidget {
     return Column(
       key: const ValueKey('email_form'),
       children: [
+        // 1. ช่องกรอกอีเมล
         TextField(
           controller: emailController,
           keyboardType: TextInputType.emailAddress,
@@ -39,6 +42,7 @@ class ForgotPasswordEmailForm extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 24),
+        // 2. ปุ่มกดขอรับรหัส OTP พร้อม Animation สลับสถานะกำลังโหลด
         SizedBox(
           width: double.infinity,
           height: 54,

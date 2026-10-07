@@ -4,6 +4,8 @@ import 'package:healthymate/features/auth/widgets/otp_verification_dialog.dart';
 import '../controllers/forgot_password_controller.dart';
 import '../widgets/index.dart';
 
+// ส่วนหน้าจอลืมรหัสผ่าน (ForgotPasswordPage)
+// ทำหน้าที่ประกอบ Widget หน้าจอสำหรับกรอกอีเมลรับ OTP และตั้งรหัสผ่านใหม่
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
 
@@ -12,6 +14,7 @@ class ForgotPasswordPage extends StatefulWidget {
 }
 
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
+  // 1. ประกาศ Controller และ State สำหรับฟอร์ม
   late final ForgotPasswordController _controller;
   final _formKey = GlobalKey<FormState>();
 
@@ -25,11 +28,13 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   @override
   void initState() {
     super.initState();
+    // 2. กำหนดค่าเริ่มต้น Controller
     _controller = ForgotPasswordController();
   }
 
   @override
   void dispose() {
+    // 3. คืนทรัพยากร Controller และ FocusNode ทั้งหมดเมื่อออกจากหน้า
     _controller.dispose();
     _emailController.dispose();
     _newPasswordController.dispose();
@@ -39,12 +44,17 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     super.dispose();
   }
 
+  // ฟังก์ชัน: จัดการการส่งรหัส OTP ไปยังอีเมล
   Future<void> _handleSendOtp() async {
+    // 1. ซ่อนคีย์บอร์ด
     FocusScope.of(context).unfocus();
     final email = _emailController.text.trim();
+
+    // 2. เรียก Controller ส่ง OTP
     final success = await _controller.sendOtp(email);
     if (!mounted) return;
 
+    // 3. หากส่งสำเร็จ เปิด Dialog ให้ผู้ใช้กรอกรหัส OTP ยืนยัน
     if (success) {
       showDialog(
         context: context,
@@ -67,7 +77,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     }
   }
 
+  // ฟังก์ชัน: จัดการการรีเซ็ตรหัสผ่านใหม่
   Future<void> _handleResetPassword() async {
+    // 1. ซ่อนคีย์บอร์ดและตรวจสอบความถูกต้องของฟอร์ม
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) {
       return;
@@ -77,6 +89,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     final newPassword = _newPasswordController.text;
     final confirmPassword = _confirmPasswordController.text;
 
+    // 2. เรียก Controller เปลี่ยนรหัสผ่านใหม่
     final success = await _controller.resetPassword(
       email,
       newPassword,
@@ -85,6 +98,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
     if (!mounted) return;
 
+    // 3. หากเปลี่ยนสำเร็จ แสดง SnackBar แจ้งเตือนและพากลับหน้าเข้าสู่ระบบ
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -107,6 +121,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     }
   }
 
+  // ฟังก์ชัน: แสดงข้อความแจ้งเตือนข้อผิดพลาด
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -124,6 +139,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 4. ผูกการแสดงผลเข้ากับ Controller ด้วย ListenableBuilder
     return ListenableBuilder(
       listenable: _controller,
       builder: (context, _) {
@@ -147,6 +163,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 10),
+                  // หัวข้อและคำอธิบายเปลี่ยนตามสถานะ OTP
                   Text(
                     _controller.isOtpVerified ? 'ตั้งรหัสผ่านใหม่' : 'ลืมรหัสผ่าน?',
                     style: const TextStyle(
@@ -163,6 +180,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
                   ),
                   const SizedBox(height: 32),
+                  // สลับแบบฟอร์มด้วย Animation (กรอกอีเมล ➔ ตั้งรหัสผ่านใหม่)
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 400),
                     transitionBuilder: (child, animation) => FadeTransition(

@@ -11,10 +11,14 @@ part 'food_recognition_gemini.dart';
 part 'food_recognition_parsing.dart';
 part 'food_recognition_values.dart';
 
+// ส่วนบริการวิเคราะห์อาหารด้วยระบบ AI (Food Recognition Service)
+// บริการหลักในการตรวจจับและจำแนกสารอาหารจากรูปภาพด้วยโมเดล Gemini Vision
 class FoodRecognitionService {
   FoodRecognitionService._();
   static final FoodRecognitionService instance = FoodRecognitionService._();
 
-  /// วิเคราะห์ภาพอาหารด้วย Google Gemini 1.5 Flash Vision หากมี API Key ใน Database
-  /// หากไม่มี API Key หรือการเชื่อมต่อไม่สำเร็จ จะคืนผลลัพธ์ที่มีรายการอาหารว่างเปล่า พร้อม error message ที่ชัดเจน (ไม่มีการสุ่ม mock data)
+  /// ฟังก์ชัน: วิเคราะห์ภาพอาหารด้วย Google Gemini 3.5 Flash Vision
+  /// 1. ตรวจสอบและดึง API Key จากฐานข้อมูลหรือการตั้งค่าสภาพแวดล้อม
+  /// 2. ส่งภาพไปยังโมเดลวิเคราะห์ข้อมูลโภชนาการ (แคลอรี โปรตีน คาร์โบไฮเดรต ไขมัน)
+  /// 3. หากไม่มี API Key หรือเชื่อมต่อไม่สำเร็จ จะคืนผลลัพธ์ว่างพร้อมข้อความระบุสาเหตุ
 }

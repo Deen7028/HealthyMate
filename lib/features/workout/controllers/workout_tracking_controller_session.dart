@@ -1,10 +1,16 @@
 part of 'workout_tracking_controller.dart';
 
+// ส่วนจัดการเซสชันการออกกำลังกาย (WorkoutTrackingSession)
+// ทำหน้าที่จับเวลา, คำนวณแคลอรีตามสูตร METs, ระบบหยุดอัตโนมัติ (Auto-Pause) และ Checkpoint
 extension WorkoutTrackingSession on WorkoutTrackingController {
+  // ฟังก์ชัน: เริ่มเซสชันการออกกำลังกาย (Start Workout Session)
   void startWorkout() {
+    // 1. ตรวจสอบสถานะ GPS และ ID ของผู้ใช้
     if (!_isGpsEnabled || _userId <= 0) {
       return;
     }
+
+    // 2. ตั้งค่าสถานะเริ่มต้นของเซสชัน
     _status = WorkoutState.running;
     _isAutoPaused = false;
     _zeroSpeedSeconds = 0;
@@ -12,12 +18,14 @@ extension WorkoutTrackingSession on WorkoutTrackingController {
     _kalmanFilter.reset();
     this._safeNotifyListeners();
 
-    // ขอสิทธิ์ยกเว้น Battery Optimization บน Android เพื่อให้ GPS รันต่อเนื่องในเบื้องหลัง
+    // 3. ขอสิทธิ์ยกเว้น Battery Optimization บน Android เพื่อให้ GPS รันต่อเนื่องในเบื้องหลัง
     LocationBackgroundService.instance.requestBatteryOptimizationExemption();
 
+    // 4. เริ่มตัวนับเวลา (Timer Loop ทุก 1 วินาที)
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_status == WorkoutState.running && !_isAutoPaused) {
+        // คำนวณเวลาที่ผ่านไป (วินาที)
         if (_workoutStartTime != null) {
           _secondsElapsed =
               _accumulatedSeconds +
@@ -30,9 +38,10 @@ extension WorkoutTrackingSession on WorkoutTrackingController {
         final caloriesPerSecond = (activeMet * 0.0175 * _userWeightKg) / 60.0;
         _caloriesBurned += caloriesPerSecond;
 
+        // ตรวจสอบเงื่อนไขการหยุดชั่วคราวอัตโนมัติ
         this._checkAutoPauseCondition();
 
-        // 4. Offline-First Checkpoint: บันทึกข้อมูลสำรองทุก 10 วินาที ป้องกันข้อมูลสูญหายกรณีแอปดับ
+        // บันทึก Checkpoint ทุก 10 วินาที ป้องกันข้อมูลสูญหายกรณีแอปปิดตัวกะทันหัน
         if (_secondsElapsed % 10 == 0 && _userId > 0) {
           WorkoutRecoveryService.instance.saveCheckpoint(
             userId: _userId,
@@ -46,11 +55,12 @@ extension WorkoutTrackingSession on WorkoutTrackingController {
       }
     });
 
+    // 5. เปิดระบบติดตามพิกัด GPS เบื้องหลัง
     LocationBackgroundService.instance.startTracking();
     this._startLocationUpdates();
   }
 
-  /// คำนวณค่า METs ไดนามิกตามประเภทกิจกรรมและความเร็วปัจจุบัน (กม./ชม.)
+  // ฟังก์ชัน: คำนวณค่า METs ไดนามิกตามประเภทกิจกรรมและความเร็วปัจจุบัน (กม./ชม.)
   double _calculateCurrentMet() {
     // 1. กิจกรรมไม่อยู่กับที่ (ทำสมาธิ / โยคะ)
     if (_selectedCategory.id == 'meditation') {
@@ -60,12 +70,12 @@ extension WorkoutTrackingSession on WorkoutTrackingController {
       return 3.3;
     }
 
-    // 2. กิจกรรมเคลื่อนที่ หากหยุดนิ่งอยู่กับที่ (_zeroSpeedSeconds > 0) คิดเป็น Resting MET = 1.0
+    // 2. หากหยุดนิ่งอยู่กับที่ (_zeroSpeedSeconds > 0) คิดเป็น Resting MET = 1.0
     if (_zeroSpeedSeconds > 0) {
       return 1.0;
     }
 
-    // คำนวณความเร็ว (กม./ชม.) จากพิกัดล่าสุด หรือความเร็วเฉลี่ยสะสม
+    // 3. คำนวณความเร็ว (กม./ชม.) จากพิกัดล่าสุด หรือความเร็วเฉลี่ยสะสม
     double speedKmh = 0.0;
     if (_lastPosition != null && _lastPosition!.speed > 0) {
       speedKmh = _lastPosition!.speed * 3.6;
@@ -78,6 +88,7 @@ extension WorkoutTrackingSession on WorkoutTrackingController {
       return 1.0;
     }
 
+    // 4. คำนวณ METs ตามประเภทการออกกำลังกายและความเร็ว
     switch (_selectedCategory.id) {
       case 'walking':
         // เดิน (Walking)
@@ -107,6 +118,7 @@ extension WorkoutTrackingSession on WorkoutTrackingController {
     }
   }
 
+  // ฟังก์ชัน: ตรวจสอบการหยุดชั่วคราวอัตโนมัติ (Auto-Pause)
   void _checkAutoPauseCondition() {
     // หากความเร็วเข้าใกล้ 0 ต่อเนื่องเกิน 12 วินาที เข้าสู่สถานะ Auto-Pause
     if (_zeroSpeedSeconds >= 12 && !_isAutoPaused) {
@@ -116,6 +128,7 @@ extension WorkoutTrackingSession on WorkoutTrackingController {
     }
   }
 
+  // ฟังก์ชัน: เริ่มรับพิกัดตำแหน่งเริ่มต้น (Initial Location Updates)
   void _startLocationUpdates() {
     // ดึงพิกัดตั้งต้นเพื่อให้อัปเดต UI ทันที และวาง Marker จุดเริ่มต้น
     Geolocator.getCurrentPosition(

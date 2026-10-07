@@ -3,13 +3,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:healthymate/features/workout/models/workout_models.dart';
 import 'package:healthymate/features/workout/controllers/workout_tracking_controller.dart';
-import 'package:healthymate/features/workout/widgets/workout_dialog_utils.dart';
-import 'package:healthymate/features/workout/widgets/category_selection_view.dart';
-import 'package:healthymate/features/workout/widgets/workout_top_stats_card.dart';
-import 'package:healthymate/features/workout/widgets/workout_bottom_controls.dart';
-import 'package:healthymate/features/workout/widgets/map_floating_buttons.dart';
-import 'package:healthymate/features/workout/widgets/workout_map_view.dart';
-import 'package:healthymate/features/workout/widgets/zen_focus_background.dart';
+import 'package:healthymate/features/workout/widgets/index.dart';
 import 'package:healthymate/features/workout/services/workout_recovery_service.dart';
 
 /// หน้าจอ Workout Tracking

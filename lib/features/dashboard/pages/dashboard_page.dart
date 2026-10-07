@@ -3,7 +3,7 @@ import 'package:healthymate/core/services/routine_state/routine_state_notifier.d
 import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:healthymate/shared/widgets/fade_slide_entrance.dart';
 import 'package:healthymate/core/database/app_database.dart';
-import 'package:healthymate/features/practice/widgets/add_main_goal_bottom_sheet.dart';
+import 'package:healthymate/features/practice/widgets/index.dart';
 import 'package:healthymate/shared/bottom_sheets/food_source_bottom_sheet.dart';
 import 'package:healthymate/features/notifications/pages/notifications_page.dart';
 import '../widgets/index.dart';

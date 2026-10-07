@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:healthymate/features/dashboard/pages/dashboard_page.dart';
 import 'package:healthymate/features/health_calculator/pages/health_calculator_page.dart';
 import 'package:healthymate/features/health_calculator/controllers/health_calculator_controller.dart';
-import 'package:healthymate/features/practice/pages/routine_notification_page.dart';
+import 'package:healthymate/features/practice/pages/routine_notification/routine_notification_page.dart';
 import 'package:healthymate/features/profile/pages/profile_page.dart';
 import 'package:healthymate/features/workout/pages/workout_tracking_page.dart';
 import 'package:healthymate/shared/bottom_sheets/food_source_bottom_sheet.dart';

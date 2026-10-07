@@ -6,19 +6,19 @@ import 'package:healthymate/core/services/device/audio_service.dart';
 import 'package:healthymate/core/services/device/notification_service.dart';
 import 'package:healthymate/core/services/routine_state/routine_state_notifier.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
-import '../models/routine_item.dart';
+import 'package:healthymate/features/practice/models/routine_item.dart';
 
-part 'routine_controller_load.dart';
-part 'routine_controller_load_rows.dart';
-part 'routine_controller_workout_stats.dart';
-part 'routine_controller_workout_sync.dart';
-part 'routine_controller_goal_sync.dart';
-part 'routine_controller_overall_progress.dart';
-part 'routine_controller_sync.dart';
-part 'routine_controller_create.dart';
-part 'routine_controller_progress.dart';
-part 'routine_controller_goals.dart';
-part 'routine_controller_mutations.dart';
+part 'crud/routine_controller_load.dart';
+part 'crud/routine_controller_load_rows.dart';
+part 'sync/routine_controller_workout_stats.dart';
+part 'sync/routine_controller_workout_sync.dart';
+part 'sync/routine_controller_goal_sync.dart';
+part 'sync/routine_controller_overall_progress.dart';
+part 'sync/routine_controller_sync.dart';
+part 'crud/routine_controller_create.dart';
+part 'crud/routine_controller_progress.dart';
+part 'crud/routine_controller_goals.dart';
+part 'crud/routine_controller_mutations.dart';
 
 class RoutineController extends ChangeNotifier {
   bool isLoading = true;

@@ -1,6 +1,9 @@
 part of 'register_page.dart';
 
+// ส่วนการทำงานและเหตุการณ์ของหน้าลงทะเบียน (_RegisterPageActions)
+// ทำหน้าที่จัดการการกดปุ่มสมัครสมาชิก, แสดง OTP Dialog, เปิด Bottom Sheet เงื่อนไข และแจ้งเตือน SnackBar
 extension _RegisterPageActions on _RegisterPageState {
+  // ฟังก์ชัน: แสดงข้อความแจ้งเตือน SnackBar
   void _showSnackBar(String message, Color bgColor, IconData icon) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -19,7 +22,9 @@ extension _RegisterPageActions on _RegisterPageState {
     );
   }
 
+  // ฟังก์ชัน: จัดการการส่งข้อมูลสมัครสมาชิก
   void _handleRegister() async {
+    // 1. ซ่อนคีย์บอร์ดและตรวจสอบความถูกต้องของฟอร์ม
     FocusScope.of(context).unfocus();
 
     if (!_formKey.currentState!.validate()) {
@@ -29,6 +34,7 @@ extension _RegisterPageActions on _RegisterPageState {
     final sEmail = _emailController.text.trim();
     final sPassword = _passwordController.text;
 
+    // 2. เรียก Controller ประมวลผลและส่ง OTP ไปยังอีเมล
     final status = await _controller.processRegister(
       email: sEmail,
       password: sPassword,
@@ -38,6 +44,7 @@ extension _RegisterPageActions on _RegisterPageState {
 
     if (!mounted) return;
 
+    // 3. หากส่ง OTP สำเร็จ ให้เปิด Dialog เพื่อยืนยันรหัส 6 หลัก
     if (status == RegisterStatus.otpSentSuccess) {
       showDialog(
         context: context,
@@ -45,6 +52,7 @@ extension _RegisterPageActions on _RegisterPageState {
         builder: (ctx) => OtpVerificationDialog(
           sEmail: sEmail,
           onVerificationSuccess: () async {
+            // เมื่อยืนยัน OTP ถูกต้อง บันทึกข้อมูลผู้ใช้ลงระบบ
             final success = await _controller.saveUserAfterOtpVerified(
               email: sEmail,
               password: sPassword,
@@ -75,6 +83,7 @@ extension _RegisterPageActions on _RegisterPageState {
         ),
       );
     } else if (_controller.errorMessage != null) {
+      // 4. กรณีเกิดข้อผิดพลาดหรือยังไม่ยอมรับเงื่อนไข
       final color = status == RegisterStatus.termsNotAccepted
           ? Colors.orange.shade800
           : Colors.red.shade700;
@@ -85,6 +94,7 @@ extension _RegisterPageActions on _RegisterPageState {
     }
   }
 
+  // ฟังก์ชัน: เปิดแผ่นหน้าต่างเงื่อนไขการใช้งาน (Terms of Service)
   void _showTermsBottomSheet() {
     TermsPrivacySheets.showTermsBottomSheet(
       context: context,
@@ -92,6 +102,7 @@ extension _RegisterPageActions on _RegisterPageState {
     );
   }
 
+  // ฟังก์ชัน: เปิดแผ่นหน้าต่างนโยบายความเป็นส่วนตัว (Privacy Policy)
   void _showPrivacyBottomSheet() {
     TermsPrivacySheets.showPrivacyBottomSheet(
       context: context,
@@ -99,6 +110,7 @@ extension _RegisterPageActions on _RegisterPageState {
     );
   }
 
+  // ฟังก์ชัน: ตรวจสอบเมื่อผู้ใช้กดปุ่มสมัครในขณะที่ยังไม่ได้ยอมรับข้อตกลง
   void _handleDisabledTap() {
     if (!_acceptTerms || !_acceptPrivacy) {
       ScaffoldMessenger.of(context).clearSnackBars();

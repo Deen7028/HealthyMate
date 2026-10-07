@@ -4,6 +4,8 @@ import 'package:healthymate/features/auth/register/pages/register_page.dart';
 import '../controllers/login_controller.dart';
 import '../widgets/index.dart';
 
+// ส่วนหน้าจอเข้าสู่ระบบ (LoginPage)
+// ทำหน้าที่ประกอบ Widget หน้าเข้าสู่ระบบ รองรับ Email/Password, Google Sign-In, และ Biometrics
 class LoginPage extends StatefulWidget {
   final VoidCallback? onClose;
   final VoidCallback? onLoginSuccess;
@@ -15,6 +17,7 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixin {
+  // 1. ประกาศ Controller และ State
   late final LoginController _controller;
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
@@ -24,6 +27,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
 
   bool _isPasswordVisible = false;
 
+  // 2. แอนิเมชันสั่นเมื่อเกิดข้อผิดพลาด (Shake Animation)
   late final AnimationController _shakeController;
   late final Animation<double> _shakeAnimation;
 
@@ -47,12 +51,14 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     );
   }
 
+  // ฟังก์ชัน: เล่นแอนิเมชันสั่นฟอร์มเมื่อล็อกอินไม่สำเร็จ
   void _triggerShake() {
     _shakeController.forward(from: 0.0);
   }
 
   @override
   void dispose() {
+    // 3. คืนทรัพยากร Controller และ Animation
     _controller.dispose();
     _shakeController.dispose();
     _emailController.dispose();
@@ -62,8 +68,12 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     super.dispose();
   }
 
+  // ฟังก์ชัน: จัดการเข้าสู่ระบบด้วยอีเมลและรหัสผ่าน
   Future<void> _handleLogin() async {
+    // 1. ซ่อนคีย์บอร์ด
     FocusScope.of(context).unfocus();
+
+    // 2. เรียก Controller เข้าสู่ระบบ
     final success = await _controller.login(
       rawEmail: _emailController.text.trim(),
       rawPassword: _passwordController.text,
@@ -71,11 +81,13 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
 
     if (!mounted) return;
 
+    // 3. หากไม่สำเร็จ สั่งสั่นฟอร์ม
     if (!success) {
       _triggerShake();
       return;
     }
 
+    // 4. หากสำเร็จ แสดง SnackBar และเรียก Callback
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('เข้าสู่ระบบสำเร็จ! ยินดีต้อนรับกลับมา'),
@@ -89,6 +101,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     }
   }
 
+  // ฟังก์ชัน: จัดการเข้าสู่ระบบด้วย Google Sign-In
   Future<void> _handleGoogleLogin() async {
     FocusScope.of(context).unfocus();
     final result = await _controller.loginWithGoogle();
@@ -109,6 +122,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     }
   }
 
+  // ฟังก์ชัน: จัดการเข้าสู่ระบบด้วยสแกนลายนิ้วมือ / ใบหน้า (Biometrics)
   Future<void> _handleBiometricLogin() async {
     FocusScope.of(context).unfocus();
     final result = await _controller.loginWithBiometric();
@@ -140,6 +154,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     final mediaQuery = MediaQuery.of(context);
     final topPadding = mediaQuery.padding.top;
 
+    // 4. ผูก ListenableBuilder เข้ากับ Controller เพื่ออัปเดต UI เมื่อ State เปลี่ยน
     return ListenableBuilder(
       listenable: _controller,
       builder: (context, _) {
@@ -220,6 +235,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                       const SizedBox(height: 12),
                                       const LoginHeader(),
                                       const SizedBox(height: 32),
+                                      // กล่องข้อความแจ้งเตือนข้อผิดพลาด
                                       AnimatedSize(
                                         duration: const Duration(milliseconds: 300),
                                         curve: Curves.easeOutCubic,
@@ -232,6 +248,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                               )
                                             : const SizedBox.shrink(),
                                       ),
+                                      // ช่องกรอกอีเมลและรหัสผ่าน
                                       LoginFormFields(
                                         emailController: _emailController,
                                         passwordController: _passwordController,
@@ -247,16 +264,19 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                         onSubmit: _handleLogin,
                                       ),
                                       const SizedBox(height: 32),
+                                      // ปุ่มส่งข้อมูลเข้าสู่ระบบ
                                       LoginSubmitButton(
                                         isLoading: _controller.isLoading,
                                         onSubmit: _handleLogin,
                                       ),
                                       const SizedBox(height: 28),
+                                      // ปุ่มเข้าสู่ระบบด้วย Google และ Biometrics
                                       SocialLoginButtons(
                                         onGoogleLogin: _handleGoogleLogin,
                                         onBiometricLogin: _handleBiometricLogin,
                                       ),
                                       const SizedBox(height: 32),
+                                      // ลิงก์นำทางไปยังหน้าลงทะเบียน
                                       LoginFooterLink(
                                         onRegisterTap: () {
                                           Navigator.of(context).push(

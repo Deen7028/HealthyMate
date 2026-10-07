@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:healthymate/features/auth/register/widgets/password_requirements_card.dart';
 
+// ส่วนฟอร์มกำหนดรหัสผ่านใหม่ (ForgotPasswordNewPasswordForm)
+// ทำหน้าที่รับรหัสผ่านใหม่และยืนยันรหัสผ่าน พร้อมแสดงการ์ดตรวจความแข็งแรงของรหัสผ่านแบบเรียลไทม์
 class ForgotPasswordNewPasswordForm extends StatefulWidget {
   final GlobalKey<FormState> formKey;
   final TextEditingController newPasswordController;
@@ -27,9 +29,11 @@ class ForgotPasswordNewPasswordForm extends StatefulWidget {
 }
 
 class _ForgotPasswordNewPasswordFormState extends State<ForgotPasswordNewPasswordForm> {
+  // สถานะการซ่อน/แสดงรหัสผ่าน
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
+  // ตัวตรวจสอบเงื่อนไขความปลอดภัยของรหัสผ่าน
   bool get _hasMinLength => widget.newPasswordController.text.length >= 8;
   bool get _hasUppercase => RegExp(r'[A-Z]').hasMatch(widget.newPasswordController.text);
   bool get _hasLowercase => RegExp(r'[a-z]').hasMatch(widget.newPasswordController.text);
@@ -44,6 +48,7 @@ class _ForgotPasswordNewPasswordFormState extends State<ForgotPasswordNewPasswor
         key: const ValueKey('password_form'),
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 1. ช่องกรอกรหัสผ่านใหม่
           TextFormField(
             controller: widget.newPasswordController,
             focusNode: widget.passwordFocusNode,
@@ -90,6 +95,7 @@ class _ForgotPasswordNewPasswordFormState extends State<ForgotPasswordNewPasswor
             },
           ),
           const SizedBox(height: 8),
+          // 2. การ์ดแสดงเงื่อนไขความปลอดภัยของรหัสผ่าน (Password Requirements)
           AnimatedSize(
             duration: const Duration(milliseconds: 350),
             curve: Curves.easeOutCubic,
@@ -103,6 +109,7 @@ class _ForgotPasswordNewPasswordFormState extends State<ForgotPasswordNewPasswor
                   ),
           ),
           const SizedBox(height: 18),
+          // 3. ช่องกรอกยืนยันรหัสผ่านใหม่
           TextFormField(
             controller: widget.confirmPasswordController,
             focusNode: widget.confirmPasswordFocusNode,
@@ -148,6 +155,7 @@ class _ForgotPasswordNewPasswordFormState extends State<ForgotPasswordNewPasswor
             },
           ),
           const SizedBox(height: 28),
+          // 4. ปุ่มบันทึกรหัสผ่านใหม่
           SizedBox(
             width: double.infinity,
             height: 54,

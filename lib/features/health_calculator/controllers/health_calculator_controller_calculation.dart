@@ -1,15 +1,19 @@
 part of 'health_calculator_controller.dart';
 
+/// Extension จัดการการคำนวณและประมวลผลดัชนีสุขภาพ (BMI, BMR, TDEE, Calorie Targets)
 extension HealthCalculatorCalculation on HealthCalculatorController {
+  /// ดำเนินการคำนวณ BMI, BMR, TDEE และบันทึกลงประวัติสุขภาพ
   Future<void> calculate({
     bool recordHistory = false,
     bool syncToDb = false,
   }) async {
+    // 1. คำนวณค่า BMI (ดัชนีมวลกาย)
     final calculatedBmi = HealthCalculator.calculateBMI(
       weightKg: _weight,
       heightCm: _height,
     );
 
+    // 2. คำนวณค่า BMR (อัตราการเผาผลาญพลังงานพื้นฐาน)
     final calculatedBmr = HealthCalculator.calculateBMR(
       gender: _gender,
       weightKg: _weight,
@@ -17,11 +21,13 @@ extension HealthCalculatorCalculation on HealthCalculatorController {
       age: _age,
     );
 
+    // 3. คำนวณค่า TDEE (อัตราการใช้พลังงานรวมในแต่ละวันตามระดับกิจกรรม)
     final calculatedTdee = HealthCalculator.calculateTDEE(
       bmr: calculatedBmr,
       activityMultiplier: _activityLevel.multiplier,
     );
 
+    // 4. บันทึกผลลัพธ์ลงตัวแปรและจัดหมวดหมู่เกณฑ์ BMI
     _bmi = double.parse(calculatedBmi.toStringAsFixed(1));
     _bmr = calculatedBmr.roundToDouble();
     _tdee = calculatedTdee.roundToDouble();
@@ -34,6 +40,7 @@ extension HealthCalculatorCalculation on HealthCalculatorController {
       return;
     }
 
+    // 5. หากต้องการบันทึกลงประวัติการคำนวณ (History)
     if (recordHistory) {
       final newRecord = TbHealthRecord(
         nRecordId: 0,
@@ -47,9 +54,10 @@ extension HealthCalculatorCalculation on HealthCalculatorController {
         activityLevelTitle: _activityLevel.title,
       );
 
+      // แทรกรายการใหม่ไว้บนสุดของประวัติ
       _historyList.insert(0, newRecord);
 
-      // บันทึกลง Local Database (isSynced = 0) แล้วซิงค์ขึ้น Cloud
+      // 6. บันทึกลง Local Database (isSynced = 0) แล้วสั่งซิงค์ขึ้น Cloud
       try {
         final savedRecord = await _db.insertHealthRecord(newRecord);
         if (!_isDisposed) {
@@ -59,43 +67,12 @@ extension HealthCalculatorCalculation on HealthCalculatorController {
             notifyListeners();
           }
         }
-        // ซิงค์ขึ้น Cloud ในเบื้องหลังทันที
-        await SyncService.instance.updatePendingCount();
-        unawaited(SyncService.instance.syncPendingData());
       } catch (e) {
-        debugPrint('Error saving health record to local db: $e');
+        debugPrint('HealthCalculator: Failed to save record to DB: $e');
       }
     }
 
-    if (syncToDb) {
-      _currentUser = TbUser(
-        nUserId: activeUserId,
-        sEmail: _currentUser?.sEmail ?? AuthService.instance.currentUserEmail,
-        sPasswordHash: _currentUser?.sPasswordHash ?? '',
-        sFirstName: _currentUser?.sFirstName ?? 'ผู้ใช้งาน',
-        sLastName: _currentUser?.sLastName ?? '',
-        nAge: _age,
-        nHeight: _height,
-        nWeight: _weight,
-        sGender: _gender.name,
-        sActivityLevel: _activityLevel.id,
-        isDarkMode: _currentUser?.isDarkMode ?? false,
-      );
-
-      // อัปเดตลง Local Database & ส่งไปอัปเดตบน PHP Database Server
-      final userToUpdate = _currentUser!;
-      try {
-        await _db.updateUser(userToUpdate);
-      } catch (e) {
-        debugPrint('Error updating user locally: $e');
-      }
-      try {
-        await ProfileApiService.updateUserProfile(userToUpdate);
-      } catch (e) {
-        debugPrint('Error updating user profile to API: $e');
-      }
-    }
-
+    // 7. แจ้งเตือนผู้ฟัง (Listeners)
     _safeNotifyListeners();
   }
 }

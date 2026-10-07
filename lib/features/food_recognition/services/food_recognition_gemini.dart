@@ -1,18 +1,23 @@
 part of 'food_recognition_service.dart';
 
+// ส่วนขยายการเรียกใช้งานโมเดลวิสัยทัศน์คอมพิวเตอร์ Google Gemini Vision (Food Recognition Gemini Extension)
 extension FoodRecognitionGemini on FoodRecognitionService {
+  // ฟังก์ชัน: ส่งคำขอไปยัง Google Gemini Vision API (Call Gemini Vision API)
   Future<List<DetectedFoodItem>?> _callGeminiVisionApi(
     File imageFile,
     String apiKey,
   ) async {
+    // 1. ตรวจสอบขนาดไฟล์ภาพไม่ให้เกิน 10 MB
     final fileSize = await imageFile.length();
     if (fileSize > 10 * 1024 * 1024) {
       throw Exception('ไฟล์ภาพใหญ่เกินไป กรุณาเลือกรูปที่มีขนาดไม่เกิน 10 MB');
     }
+
+    // 2. แปลงข้อมูลไฟล์ภาพเป็น Base64
     final bytes = await imageFile.readAsBytes();
     final base64Image = base64Encode(bytes);
 
-    // กำหนด MIME type จากนามสกุลไฟล์
+    // 3. กำหนด MIME type ให้ตรงกับนามสกุลไฟล์
     String mimeType = 'image/jpeg';
     final lowerPath = imageFile.path.toLowerCase();
     if (lowerPath.endsWith('.png')) {
@@ -21,6 +26,7 @@ extension FoodRecognitionGemini on FoodRecognitionService {
       mimeType = 'image/webp';
     }
 
+    // 4. เตรียม URL ปลายทางของ Gemini 1.5/2.0/3.5 endpoint
     final url = Uri.parse(
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=$apiKey',
     );
@@ -65,6 +71,7 @@ extension FoodRecognitionGemini on FoodRecognitionService {
 ]
 ''';
 
+    // 5. สร้างคำสั่งและโครงสร้าง JSON สำหรับส่งคำขอ
     final requestBody = jsonEncode({
       "contents": [
         {
@@ -82,6 +89,7 @@ extension FoodRecognitionGemini on FoodRecognitionService {
       },
     });
 
+    // 6. ส่งคำขอแบบ POST ผ่าน HTTP ไปยัง Gemini Endpoint
     final response = await http
         .post(
           url,
@@ -93,6 +101,7 @@ extension FoodRecognitionGemini on FoodRecognitionService {
         )
         .timeout(const Duration(seconds: 25));
 
+    // 7. ตรวจสอบสถานะการตอบกลับและดึงผลลัพธ์ JSON
     if (response.statusCode == 200) {
       final data =
           jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
@@ -106,6 +115,7 @@ extension FoodRecognitionGemini on FoodRecognitionService {
         }
       }
     } else {
+      // 8. จัดการกรณี API ตอบกลับข้อผิดพลาด (เช่น โควตาหมด หรือคีย์ไม่ถูกต้อง)
       String errDetail = 'HTTP ${response.statusCode}';
       try {
         final errJson = jsonDecode(response.body);

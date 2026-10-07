@@ -8,14 +8,22 @@ import 'package:healthymate/core/services/device/biometric_apple_auth_service.da
 import 'package:healthymate/core/services/supabase_service.dart';
 import 'package:healthymate/core/services/sync/sync_service.dart';
 
+/// คอนโทรลเลอร์จัดการการเข้าสู่ระบบ (Login Controller)
+/// รองรับ Login ด้วย Email/Password, Google OAuth และ Biometric (FaceID/Fingerprint)
 class LoginController extends ChangeNotifier {
+  // สถานะการโหลด
   bool isLoading = false;
+  // ข้อความแสดงความผิดพลาด
   String? errorMessage;
+  // จำนวนครั้งที่เข้าสู่ระบบผิด
   int failedAttempts = 0;
+  // เวลาที่ระงับการเข้าสู่ระบบชั่วคราว
   DateTime? lockoutUntil;
 
+  // อินสแตนซ์สำหรับ Google Sign In
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
 
+  /// ตรวจสอบความถูกต้องของรูปแบบอีเมล
   bool isValidEmail(String email) {
     final emailRegex = RegExp(
       r'^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+$',
@@ -23,6 +31,7 @@ class LoginController extends ChangeNotifier {
     return emailRegex.hasMatch(email);
   }
 
+  /// บันทึกจำนวนครั้งที่เข้าสู่ระบบผิดพลาด และล็อค 30 วินาทีเมื่อผิดครบ 5 ครั้ง
   void registerFailedAttempt() {
     failedAttempts++;
     if (failedAttempts >= 5) {
@@ -30,6 +39,7 @@ class LoginController extends ChangeNotifier {
     }
   }
 
+  /// ล้างประวัติการเข้าสู่ระบบผิดพลาดเมื่อสำเร็จ
   void clearFailedAttempts() {
     failedAttempts = 0;
     lockoutUntil = null;
@@ -48,38 +58,45 @@ class LoginController extends ChangeNotifier {
       return false;
     }
 
+    // 2. เช็คว่าอีเมลไม่ว่างเปล่า
     if (rawEmail.isEmpty) {
       errorMessage = 'กรุณากรอกอีเมลของคุณ';
       notifyListeners();
       return false;
     }
 
+    // 3. ตรวจสอบรูปแบบอีเมล
     if (!isValidEmail(rawEmail)) {
       errorMessage = 'รูปแบบอีเมลไม่ถูกต้อง (เช่น example@domain.com)';
       notifyListeners();
       return false;
     }
 
+    // 4. เช็คว่ารหัสผ่านไม่ว่างเปล่า
     if (rawPassword.isEmpty) {
       errorMessage = 'กรุณากรอกรหัสผ่าน';
       notifyListeners();
       return false;
     }
 
+    // 5. เช็คความยาวรหัสผ่านอย่างน้อย 6 ตัวอักษร
     if (rawPassword.length < 6) {
       errorMessage = 'รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร';
       notifyListeners();
       return false;
     }
 
+    // กำหนดสถานะกำลังโหลด
     isLoading = true;
     errorMessage = null;
     notifyListeners();
 
     try {
+      // 6. ดำเนินการเข้าสู่ระบบผ่าน AuthService
       final loginResult = await AuthService.instance.login(rawEmail, rawPassword);
       final isSuccess = loginResult['success'] == true;
 
+      // ถ้าเข้าสู่ระบบไม่สำเร็จ
       if (!isSuccess) {
         registerFailedAttempt();
         isLoading = false;
@@ -88,18 +105,22 @@ class LoginController extends ChangeNotifier {
         return false;
       }
 
+      // 7. บันทึกข้อมูลสำหรับใช้งาน Biometric ในครั้งต่อไป
       await BiometricAuthService.instance.saveCredentials(rawEmail, rawPassword);
       clearFailedAttempts();
 
+      // 8. เริ่มซิงค์ข้อมูลกับเซิร์ฟเวอร์
       final currentUser = await AppDatabase.instance.getUserByEmail(rawEmail);
       if (currentUser != null && currentUser.nUserId > 0) {
         SyncService.instance.syncPendingData();
       }
 
+      // เข้าสู่ระบบสำเร็จ
       isLoading = false;
       notifyListeners();
       return true;
     } catch (e) {
+      // จัดการเมื่อเกิดข้อผิดพลาด
       isLoading = false;
       errorMessage = 'เกิดข้อผิดพลาด: $e';
       notifyListeners();
@@ -107,13 +128,15 @@ class LoginController extends ChangeNotifier {
     }
   }
 
-  /// เข้าสู่ระบบด้วย Google
+  /// เข้าสู่ระบบด้วย Google Account
   Future<Map<String, dynamic>> loginWithGoogle() async {
+    // กำหนดสถานะกำลังโหลด
     isLoading = true;
     errorMessage = null;
     notifyListeners();
 
     try {
+      // 1. ถ้าใช้ Supabase ให้ล็อกอินผ่าน OAuth Supabase
       if (SupabaseService.instance.isInitialized && SupabaseService.instance.client != null) {
         await SupabaseService.instance.client!.auth.signInWithOAuth(
           OAuthProvider.google,
@@ -124,11 +147,13 @@ class LoginController extends ChangeNotifier {
         return {'status': 'success', 'message': 'เข้าสู่ระบบด้วย Google สำเร็จ'};
       }
 
+      // 2. เรียก Native Google Sign-In SDK
       final GoogleSignInAccount user = await _googleSignIn.authenticate();
       final names = user.displayName?.split(' ') ?? ['Google', 'User'];
       final firstName = names.isNotEmpty ? names.first : 'Google';
       final lastName = names.length > 1 ? names.sublist(1).join(' ') : '';
 
+      // 3. เตรียมข้อมูลผู้ใช้
       final googleData = {
         'sEmail': user.email,
         'sFirstName': firstName,
@@ -136,8 +161,10 @@ class LoginController extends ChangeNotifier {
         'sGoogleId': user.id,
       };
 
+      // 4. ส่งข้อมูลไปยัง Backend API
       final result = await AuthApiService.loginWithGoogle(googleData);
 
+      // ถ้าล็อกอินสำเร็จ
       if (result['status'] == 'success') {
         final userData = result['user'];
         final String? token = result['token']?.toString();
@@ -149,6 +176,7 @@ class LoginController extends ChangeNotifier {
         notifyListeners();
         return {'status': 'success', 'message': 'เข้าสู่ระบบสำเร็จ!'};
       } else {
+        // ถ้าล็อกอินไม่สำเร็จให้ Sign Out ออก
         await _googleSignIn.signOut();
         isLoading = false;
         errorMessage = result['message'] ?? 'เข้าสู่ระบบด้วย Google ไม่สำเร็จ';
@@ -156,6 +184,7 @@ class LoginController extends ChangeNotifier {
         return {'status': 'error', 'message': errorMessage};
       }
     } catch (error) {
+      // จัดการเมื่อเกิดข้อผิดพลาด
       isLoading = false;
       errorMessage = 'เกิดข้อผิดพลาด: $error';
       notifyListeners();
@@ -163,13 +192,15 @@ class LoginController extends ChangeNotifier {
     }
   }
 
-  /// เข้าสู่ระบบด้วย Biometric
+  /// เข้าสู่ระบบด้วย Biometric (สแกนลายนิ้วมือ / Face ID)
   Future<Map<String, dynamic>> loginWithBiometric() async {
+    // 1. ตรวจสอบว่าเครื่องรองรับ Biometric หรือไม่
     final available = await BiometricAuthService.instance.isBiometricAvailable();
     if (!available) {
       return {'status': 'unavailable', 'message': 'อุปกรณ์นี้ไม่รองรับการสแกนลายนิ้วมือหรือใบหน้า'};
     }
 
+    // 2. ดึง Credential ที่เคยบันทึกไว้ใน Secure Storage
     final credentials = await BiometricAuthService.instance.getCredentials();
     if (credentials == null) {
       return {'status': 'no_credentials', 'message': 'กรุณาเข้าสู่ระบบด้วยอีเมลและรหัสผ่านในครั้งแรกเพื่อเปิดใช้งานสแกนนิ้ว'};
@@ -182,10 +213,12 @@ class LoginController extends ChangeNotifier {
       return {'status': 'no_credentials', 'message': 'ไม่พบข้อมูลยืนยันตัวตน'};
     }
 
+    // 3. เริ่มขั้นตอนสแกนใบหน้า/ลายนิ้วมือ
     final authenticated = await BiometricAuthService.instance.authenticate(
       reason: 'ยืนยันตัวตนด้วย FaceID / TouchID เพื่อเข้าสู่ระบบ HealthyMate',
     );
 
+    // 4. ถ้าสแกนผ่าน ให้ทำการเข้าสู่ระบบ
     if (authenticated) {
       isLoading = true;
       errorMessage = null;

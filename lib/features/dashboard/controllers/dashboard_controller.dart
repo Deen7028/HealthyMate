@@ -4,7 +4,6 @@ import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/api_service.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
 import 'package:healthymate/features/health_calculator/models/health_record_model.dart';
-import 'package:healthymate/features/practice/controllers/routine_controller.dart';
 import 'package:healthymate/features/notifications/services/app_notification_service.dart';
 
 part 'dashboard_controller_sync.dart';

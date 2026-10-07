@@ -1,4 +1,6 @@
-/// โมเดลข้อมูลในฟีเจอร์การวิเคราะห์อาหารจากรูปภาพและข้อมูลโภชนาการ (food recognition models)
+// โมเดลข้อมูลในฟีเจอร์การวิเคราะห์อาหารจากรูปภาพและข้อมูลโภชนาการ (Food Recognition Models)
+
+/// โมเดลข้อมูลรายการอาหารที่ตรวจพบจากภาพ (Detected Food Item)
 class DetectedFoodItem {
   final String id;
   String name;
@@ -8,7 +10,7 @@ class DetectedFoodItem {
   double fat;
   String servingSize;
   double confidence;
-/// @nodoc
+
   DetectedFoodItem({
     required this.id,
     required this.name,
@@ -19,7 +21,8 @@ class DetectedFoodItem {
     this.servingSize = '1 จาน (300g)',
     this.confidence = 0.95,
   });
-  /// copyWith
+
+  // ฟังก์ชัน: โคลนอ็อบเจกต์พร้อมแก้ไขค่าบางฟิลด์ (Copy With)
   DetectedFoodItem copyWith({
     String? id,
     String? name,
@@ -42,6 +45,7 @@ class DetectedFoodItem {
     );
   }
 
+  // ฟังก์ชัน: แปลงเป็น Map สำหรับบันทึกหรือส่ง API (To Map)
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -54,7 +58,8 @@ class DetectedFoodItem {
       'confidence': confidence,
     };
   }
-  /// 
+
+  // ฟังก์ชัน: สร้างอ็อบเจกต์จาก Map (From Map)
   factory DetectedFoodItem.fromMap(Map<String, dynamic> map) {
     return DetectedFoodItem(
       id: map['id']?.toString() ?? '',
@@ -69,6 +74,7 @@ class DetectedFoodItem {
   }
 }
 
+/// หมวดหมู่ของมื้ออาหารประจำวัน (Meal Category)
 enum MealCategory {
   breakfast('breakfast', 'มื้อเช้า', '06:00 - 10:00'),
   lunch('lunch', 'มื้อกลางวัน', '11:00 - 14:00'),
@@ -81,6 +87,7 @@ enum MealCategory {
 
   const MealCategory(this.key, this.label, this.timeRange);
 
+  // ฟังก์ชัน: ตรวจสอบหมวดมื้ออาหารจากเวลาปัจจุบัน (From Current Time)
   static MealCategory fromCurrentTime() {
     final hour = DateTime.now().hour;
     if (hour >= 5 && hour < 11) {
@@ -94,6 +101,7 @@ enum MealCategory {
     }
   }
 
+  // ฟังก์ชัน: ดึงหมวดมื้ออาหารจากคีย์ระบุ (From Key)
   static MealCategory fromKey(String key) {
     return MealCategory.values.firstWhere(
       (element) => element.key == key,
@@ -102,6 +110,7 @@ enum MealCategory {
   }
 }
 
+/// โมเดลผลลัพธ์การสแกนและวิเคราะห์คุณค่าทางโภชนาการ (Meal Nutrition Scan Result)
 class MealNutritionScanResult {
   final String imagePath;
   MealCategory category;

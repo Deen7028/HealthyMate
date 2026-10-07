@@ -8,6 +8,8 @@ import '../controllers/register_controller.dart';
 part 'register_page_actions.dart';
 part 'register_page_content.dart';
 
+// ส่วนหน้าจอลงทะเบียนสมาชิก (RegisterPage)
+// ทำหน้าที่ประกอบฟอร์มลงทะเบียน ข้อมูลส่วนตัว รหัสผ่าน และการยอมรับเงื่อนไขนโยบาย
 class RegisterPage extends StatefulWidget {
   final VoidCallback? onRegisterSuccess;
   final VoidCallback? onLoginTap;
@@ -19,10 +21,11 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
+  // 1. ฟอร์มคีย์และคอนโทรลเลอร์
   final _formKey = GlobalKey<FormState>();
   late final RegisterController _controller;
 
-  // Form Controllers
+  // คอนโทรลเลอร์ช่องกรอกข้อมูล
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -30,13 +33,13 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _confirmPasswordController =
       TextEditingController();
 
-  // Focus Nodes
+  // โฟกัสโหนดสำหรับเลื่อน Cursor ไปยังช่องถัดไป
   final FocusNode _lastNameFocusNode = FocusNode();
   final FocusNode _emailFocusNode = FocusNode();
   final FocusNode _passwordFocusNode = FocusNode();
   final FocusNode _confirmPasswordFocusNode = FocusNode();
 
-  // State Variables
+  // สถานะการซ่อนรหัสผ่านและการยอมรับเงื่อนไข
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _acceptTerms = false;
@@ -45,11 +48,13 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   void initState() {
     super.initState();
+    // 2. กำหนดค่าเริ่มต้น RegisterController
     _controller = RegisterController();
   }
 
   @override
   void dispose() {
+    // 3. คืนทรัพยากร Controller และ FocusNode ทั้งหมด
     _controller.dispose();
     _firstNameController.dispose();
     _lastNameController.dispose();
@@ -63,6 +68,7 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
+  // ตัวตรวจสอบความแข็งแรงของรหัสผ่าน (Password Strength Indicators)
   bool get _hasMinLength => _passwordController.text.length >= 8;
   bool get _hasUppercase => RegExp(r'[A-Z]').hasMatch(_passwordController.text);
   bool get _hasLowercase => RegExp(r'[a-z]').hasMatch(_passwordController.text);

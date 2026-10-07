@@ -1,10 +1,12 @@
 part of 'food_recognition_service.dart';
 
+// ส่วนขยายการแปลงข้อมูล JSON ผลลัพธ์จากโมเดล AI (Food Recognition Parsing Extension)
 extension FoodRecognitionParsing on FoodRecognitionService {
+  // ฟังก์ชัน: แปลงข้อความตอบกลับของ Gemini ให้เป็นรายการ DetectedFoodItem (Parse Gemini JSON)
   List<DetectedFoodItem> _parseGeminiJson(String text) {
     try {
+      // 1. ทำความสะอาดข้อความและตัดบล็อก Markdown (```json ... ```) ออก
       var cleanText = text.trim();
-      // ตัด markdown code block ออกถ้ามี
       if (cleanText.startsWith('```json')) {
         cleanText = cleanText.substring(7);
       } else if (cleanText.startsWith('```')) {
@@ -15,20 +17,21 @@ extension FoodRecognitionParsing on FoodRecognitionService {
       }
       cleanText = cleanText.trim();
 
-      // ค้นหาขอบเขต JSON ที่เป็น Array [...] หรือ Object {...}
+      // 2. ค้นหาขอบเขต JSON ที่เป็น Array [...] หรือ Object {...}
       final startBracket = cleanText.indexOf('[');
       final endBracket = cleanText.lastIndexOf(']');
       if (startBracket != -1 && endBracket != -1 && endBracket > startBracket) {
         cleanText = cleanText.substring(startBracket, endBracket + 1);
       }
 
+      // 3. ถอดรหัสโครงสร้าง JSON
       final decoded = jsonDecode(cleanText);
       final rawList = <dynamic>[];
 
+      // 4. แยกข้อมูลกรณีผลลัพธ์เป็น List โดยตรง หรือถูกห่อไว้ใน Object
       if (decoded is List) {
         rawList.addAll(decoded);
       } else if (decoded is Map<String, dynamic>) {
-        // กรณี Gemini ส่งกลับมาในรูป { "items": [...] } หรือ { "foods": [...] }
         final possibleList =
             decoded['items'] ??
             decoded['foods'] ??
@@ -41,6 +44,7 @@ extension FoodRecognitionParsing on FoodRecognitionService {
         }
       }
 
+      // 5. แปลง Map ของอาหารแต่ละรายการเป็น Model DetectedFoodItem
       final items = <DetectedFoodItem>[];
       for (int i = 0; i < rawList.length; i++) {
         final map = rawList[i];
@@ -63,6 +67,8 @@ extension FoodRecognitionParsing on FoodRecognitionService {
           }
         }
       }
+
+      // 6. คืนค่ารายการอาหารที่ตรวจพบ
       if (items.isNotEmpty) return items;
     } catch (e) {
       debugPrint('Error parsing Gemini JSON: $e');

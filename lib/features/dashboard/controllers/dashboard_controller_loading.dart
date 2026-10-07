@@ -1,9 +1,10 @@
 part of 'dashboard_controller.dart';
 
-/// Extension สำหรับโหลดและประมวลผลข้อมูลในเครื่อง (SQLite DB) สำหรับ Dashboard
+/// Extension สำหรับโหลดและประมวลผลข้อมูลในเครื่อง (SQLite DB) สำหรับหน้า Dashboard
 extension DashboardControllerLoading on DashboardController {
-  /// โหลดข้อมูลสรุปสุขภาพทั้งหมด ทั้งจาก Local DB และ Remote Sync
+  /// โหลดข้อมูลสรุปสุขภาพทั้งหมด ทั้งจาก Local DB และสั่ง Background Sync
   Future<void> loadDashboardData({bool silent = false}) async {
+    // 1. ตรวจสอบว่าจะแสดง Loading Spinner หรือไม่
     final shouldShowLoading = !silent && user == null;
     if (shouldShowLoading) {
       isLoading = true;
@@ -11,8 +12,10 @@ extension DashboardControllerLoading on DashboardController {
     }
     try {
       final db = AppDatabase.instance;
+      // 2. ดึงข้อมูล User ปัจจุบันจาก SQLite
       user = await db.getCurrentUser();
 
+      // ถ้าไม่พบผู้ใช้ในเครื่อง ให้สิ้นสุดการโหลด
       if (user == null) {
         isLoading = false;
         notifyListeners();
@@ -20,15 +23,18 @@ extension DashboardControllerLoading on DashboardController {
       }
 
       final userId = user!.nUserId;
-      // ตั้งค่า userId ให้ AppNotificationService รู้ว่า user คนปัจจุบันคือใคร
+      // 3. ตั้งค่า userId ให้ระบบแจ้งเตือน AppNotificationService
       AppNotificationService.instance.setUserId(userId);
-      // อ่านจำนวนแจ้งเตือนที่ยังไม่ได้อ่านจาก DB จริง
-      unreadNotificationCount =
-          await db.getUnreadNotificationCount(userId);
+
+      // 4. อ่านจำนวนการแจ้งเตือนที่ยังไม่ได้อ่าน
+      unreadNotificationCount = await db.getUnreadNotificationCount(userId);
+
+      // 5. ดึงประวัติสุขภาพ (Health Records) และเก็บบันทึกล่าสุด
       final records = await db.getHealthRecords(userId: userId);
       healthRecords = records;
       latestRecord = records.isNotEmpty ? records.first : null;
 
+      // 6. ดึงประวัติการออกกำลังกายและคำนวณสถิติรวม (ระยะทาง, แคลอรี่, เวลา)
       final workouts = await db.getWorkouts(userId: userId);
       this.workouts = workouts;
       workoutCount = workouts.length;
@@ -56,48 +62,56 @@ extension DashboardControllerLoading on DashboardController {
         }
       }
 
-      // ดึงข้อมูลแคลอรี่จากบันทึกอาหารด้วย AI Food Scanner ในวันนี้ (อิงเวลาปัจจุบันสดใหม่เสมอ)
-      final currentNow = DateTime.now();
-      final dbInstance = await db.database;
-      final todayStr = DateFormat('yyyy-MM-dd').format(currentNow);
-      List<Map<String, dynamic>> nutritionToday = [];
-
-      if (dbInstance != null) {
-        // Nutrition logs are private to the authenticated user.
-        nutritionToday = await dbInstance.query(
-          AppDatabase.tableNutritionLogs,
-          where: 'nUserId = ? AND dtLoggedAt LIKE ?',
-          whereArgs: [userId, '$todayStr%'],
-          orderBy: 'nNutritionId DESC',
+      // 7. ดึงข้อมูลแคลอรี่จากบันทึกอาหาร AI Food Scanner ประจำวันนี้
+      try {
+        final rawNutrition = await db.getNutritionLogsToday(userId);
+        todayNutritionLogs = rawNutrition;
+        todayScannedFoodCount = rawNutrition.length;
+        todayNutritionCalories = rawNutrition.fold<int>(
+          0,
+          (sum, item) => sum + ((item['nCalories'] as num?)?.toInt() ?? 0),
         );
-      } else {
-        nutritionToday = await db.getNutritionLogsToday(userId);
+      } catch (e) {
+        debugPrint('DashboardController: Failed to load local nutrition logs: $e');
       }
 
-      todayNutritionLogs = List<Map<String, dynamic>>.from(nutritionToday);
-      todayScannedFoodCount = todayNutritionLogs.length;
-      todayNutritionCalories = 0;
-      for (final n in todayNutritionLogs) {
-        todayNutritionCalories += (n['nCalories'] as num?)?.toInt() ?? 0;
-      }
+      // 8. ดึงข้อมูลเป้าหมายหลักของผู้ใช้ (Main Goal)
+      userGoal = await db.getUserGoal(userId);
 
+      // 9. ดึงข้อมูลกิจวัตรประจำวัน (Routines) และสถานะของวันนี้
       routines = await db.getRoutines(userId: userId);
+      final currentNow = DateTime.now();
+      final todayStr =
+          "${currentNow.year}-${currentNow.month.toString().padLeft(2, '0')}-${currentNow.day.toString().padLeft(2, '0')}";
+      final allLogsToday = await db.getRoutineLogsForDate(
+        userId: userId,
+        dateStr: todayStr,
+      );
+
+      final Map<int, Map<String, dynamic>> logsMap = {};
+      for (final log in allLogsToday) {
+        final rId = (log['nRoutineId'] as num?)?.toInt() ?? 0;
+        logsMap[rId] = log;
+      }
+
       todayCompletionMap.clear();
       todayProgressValues.clear();
       for (final r in routines) {
-        final rId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
-        final targetVal = (r['targetValue'] as num?)?.toDouble() ?? 1.0;
-        final log = await db.getRoutineLogForDate(
-          routineId: rId,
-          dateStr: todayStr,
-        );
+        final routineId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
+        final targetVal = (r['targetValue'] as num?)?.toDouble() ??
+            (r['nTargetValue'] as num?)?.toDouble() ??
+            1.0;
+        final log = logsMap[routineId];
         final isDone = (log?['isCompleted'] as num?)?.toInt() == 1;
-        final progressVal = (log?['nProgressValue'] as num?)?.toDouble();
+        final logProgress = (log?['nProgressValue'] as num?)?.toDouble() ??
+            (log?['progressValue'] as num?)?.toDouble();
 
-        todayCompletionMap[rId] = isDone;
-        todayProgressValues[rId] = progressVal ?? (isDone ? targetVal : 0.0);
+        todayCompletionMap[routineId] = isDone;
+        todayProgressValues[routineId] =
+            logProgress ?? (isDone ? targetVal : 0.0);
       }
 
+      // 10. คำนวณสถิติออกกำลังกายของวันนี้แยกตามประเภทกิจกรรม
       todayWorkoutStats.clear();
       for (final w in workouts) {
         final workoutDate = w['dtWorkoutDate']?.toString() ?? '';
@@ -108,35 +122,28 @@ extension DashboardControllerLoading on DashboardController {
           final durationMin = durationSec > 0 ? (durationSec / 60.0) : 0.0;
           final calories = (w['nCaloriesBurned'] as num?)?.toDouble() ?? 0.0;
 
-          final normType = RoutineController.normalizeCategoryType(type);
-          final keysToUpdate = {type, normType};
-
-          for (final k in keysToUpdate) {
-            todayWorkoutStats.putIfAbsent(
-              k,
-              () => {'distance': 0.0, 'duration': 0.0, 'caloriesBurned': 0.0},
-            );
-            todayWorkoutStats[k]!['distance'] =
-                (todayWorkoutStats[k]!['distance'] ?? 0) + dist;
-            todayWorkoutStats[k]!['duration'] =
-                (todayWorkoutStats[k]!['duration'] ?? 0) + durationMin;
-            todayWorkoutStats[k]!['caloriesBurned'] =
-                (todayWorkoutStats[k]!['caloriesBurned'] ?? 0) + calories;
-          }
+          todayWorkoutStats.putIfAbsent(
+            type,
+            () => {'distance': 0.0, 'duration': 0.0, 'caloriesBurned': 0.0},
+          );
+          todayWorkoutStats[type]!['distance'] =
+              (todayWorkoutStats[type]!['distance'] ?? 0) + dist;
+          todayWorkoutStats[type]!['duration'] =
+              (todayWorkoutStats[type]!['duration'] ?? 0) + durationMin;
+          todayWorkoutStats[type]!['caloriesBurned'] =
+              (todayWorkoutStats[type]!['caloriesBurned'] ?? 0) + calories;
         }
       }
 
-      userGoal = await db.getUserGoal(userId);
-      if (isLoading) {
-        isLoading = false;
-      }
+      // โหลดข้อมูลในเครื่องเสร็จสิ้น -> สั่งอัปเดตหน้าจอทันที
+      isLoading = false;
       notifyListeners();
+
+      // 11. ซิงค์ข้อมูลล่าสุดกับ Server ในเบื้องหลัง (ถ้าต่ออินเทอร์เน็ต)
       _syncFromServer(userId);
     } catch (e) {
-      debugPrint('loadDashboardData error: $e');
-      if (isLoading) {
-        isLoading = false;
-      }
+      debugPrint('DashboardController Error: $e');
+      isLoading = false;
       notifyListeners();
     }
   }

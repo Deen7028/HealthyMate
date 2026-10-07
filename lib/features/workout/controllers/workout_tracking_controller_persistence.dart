@@ -1,7 +1,10 @@
 part of 'workout_tracking_controller.dart';
 
+// ส่วนจัดการการบันทึกและสถานะกิจกรรม (WorkoutTrackingPersistence)
+// ทำหน้าที่หยุด/ทำต่อ, บันทึกผลการออกกำลังกาย (SQLite + Remote), ปลดล็อกเหรียญ และจัดการ Checkpoint
 extension WorkoutTrackingPersistence on WorkoutTrackingController {
   void pauseWorkout() {
+    // 1. สะสมเวลาที่บันทึกไว้ และยกเลิกตัวจับเวลา
     if (_workoutStartTime != null) {
       _accumulatedSeconds += DateTime.now()
           .difference(_workoutStartTime!)
@@ -11,16 +14,20 @@ extension WorkoutTrackingPersistence on WorkoutTrackingController {
     _timer?.cancel();
     _positionStreamSub?.cancel();
     LocationBackgroundService.instance.stopTracking();
+
+    // 2. ปรับสถานะเป็น Paused และแจ้งเตือน UI
     _status = WorkoutState.paused;
     this._safeNotifyListeners();
   }
 
+  // ฟังก์ชัน: ทำการออกกำลังกายต่อ (Resume Workout)
   void resumeWorkout() {
     this.startWorkout();
   }
-
-  /// บันทึกกิจกรรมลงฐานข้อมูลตาราง TbWorkouts (SQLite + Remote Server)
+  
+  // ฟังก์ชัน: บันทึกกิจกรรมการออกกำลังกาย (Save Workout)
   Future<bool> saveWorkout() async {
+    // 1. หยุดตัวจับเวลาและปิดการจับตำแหน่ง GPS
     _timer?.cancel();
     _positionStreamSub?.cancel();
     LocationBackgroundService.instance.stopTracking();
@@ -42,8 +49,7 @@ extension WorkoutTrackingPersistence on WorkoutTrackingController {
       );
     }
 
-    // 5. Polyline Encoding & Douglas-Peucker Simplification:
-    // บีบอัดพิกัด GPS นับพันจุดให้เหลือเพียง ASCII String สั้นๆ ประหยัดเน็ตและดาต้าเบส 90%+
+    // 3. Polyline Encoding: บีบอัดพิกัด GPS นับพันจุดให้เหลือเพียง String สั้นๆ
     final encodedRoute = RouteUtils.toEncodedPolyline(
       processedPoints,
       simplify: true,
@@ -51,7 +57,7 @@ extension WorkoutTrackingPersistence on WorkoutTrackingController {
     );
 
     if (savedDuration >= 1 && _userId > 0) {
-      // 1. บันทึกลง SQLite (isSynced = 0)
+      // 4. บันทึกลงฐานข้อมูล SQLite ประจำเครื่อง
       await AppDatabase.instance.insertWorkout(
         userId: _userId,
         type: _selectedCategory.title,
@@ -61,10 +67,10 @@ extension WorkoutTrackingPersistence on WorkoutTrackingController {
         routePoints: encodedRoute,
       );
 
-      // 4. ล้าง Checkpoint การกู้คืนเนื่องจากบันทึกกิจกรรมเสร็จสมบูรณ์แล้ว
+      // 5. ล้าง Checkpoint การกู้คืนเนื่องจากบันทึกกิจกรรมเสร็จสมบูรณ์แล้ว
       await WorkoutRecoveryService.instance.clearCheckpoint();
 
-      // สร้างแจ้งเตือนในแอปหลังบันทึกสำเร็จ
+      // 6. สร้างการแจ้งเตือนสรุปผลในแอป
       unawaited(AppNotificationService.instance.onWorkoutSaved(
         workoutType: _selectedCategory.title,
         distanceKm: savedDistance,
@@ -72,7 +78,7 @@ extension WorkoutTrackingPersistence on WorkoutTrackingController {
         durationSeconds: savedDuration,
       ));
 
-      // อัปเดตและปลดล็อกเหรียญรางวัล (TbBadges & TbUserBadges)
+      // 7. ตรวจสอบและปลดล็อกเหรียญรางวัลความสำเร็จ (Badges Gamification)
       try {
         final totalWorkouts = await AppDatabase.instance.getWorkoutCount(
           userId: _userId,
@@ -122,7 +128,7 @@ extension WorkoutTrackingPersistence on WorkoutTrackingController {
         }
       } catch (_) {}
 
-      // แจ้งเตือน SyncService ให้เริ่มเช็คและส่งข้อมูลขึ้น Cloud ทันทีถ้ามีเน็ต
+      // 8. สั่ง SyncService ให้อัปโหลดข้อมูลที่ค้างอยู่ขึ้น Cloud ทันที
       unawaited(SyncService.instance.syncPendingData());
     }
 
@@ -131,7 +137,7 @@ extension WorkoutTrackingPersistence on WorkoutTrackingController {
     return true;
   }
 
-  /// ละทิ้งกิจกรรม
+  // ฟังก์ชัน: ละทิ้งกิจกรรมการออกกำลังกาย (Discard Workout)
   void discardWorkout() {
     _timer?.cancel();
     _positionStreamSub?.cancel();
@@ -142,6 +148,7 @@ extension WorkoutTrackingPersistence on WorkoutTrackingController {
     this.returnToCategorySelection();
   }
 
+  // ฟังก์ชัน: จัดรูปแบบเวลาเป็น HH:mm:ss
   String formatTime(int totalSeconds) {
     final hours = (totalSeconds ~/ 3600).toString().padLeft(2, '0');
     final minutes = ((totalSeconds % 3600) ~/ 60).toString().padLeft(2, '0');

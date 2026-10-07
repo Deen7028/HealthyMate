@@ -18,24 +18,28 @@ part 'profile_controller_devices.dart';
 part 'profile_controller_account.dart';
 part 'profile_controller_api_key.dart';
 
+// คอนโทรลเลอร์หน้าโปรไฟล์ผู้ใช้ (ProfileController)
+// ทำหน้าที่จัดการข้อมูลโปรไฟล์, รูปภาพ, สถิติกิจกรรม, การตั้งค่าอุปกรณ์, ส่งออก PDF และการจัดการบัญชี
 class ProfileController extends ChangeNotifier {
   void _notifyProfileListeners() => notifyListeners();
 
+  // 1. สถานะการทำงานทั่วไป
   bool isLoading = true;
   bool isUploadingImage = false;
   bool isLocationEnabled = true;
   TbUser? currentUser;
 
+  // 2. สถิติและข้อมูลเป้าหมาย
   int workoutCount = 0;
   int activeDays = 0;
   String mainGoalTitle = '';
   double goalProgress = 0.0;
   String goalRemainingText = '';
+
+  // 3. อุปกรณ์และการตั้งค่าระบบ
   List<Map<String, dynamic>> connectedDevices = [];
   String selectedUnit = 'Kilometers, Kilograms';
   String geminiApiKey = '';
 
   final ImagePicker _picker = ImagePicker();
-
-  /// ตรวจสอบสถานะ GPS Location Service
 }

@@ -1,6 +1,9 @@
 part of 'health_calculator_controller.dart';
 
+// ส่วนโหลดข้อมูลประวัติสุขภาพ (HealthCalculatorLoading)
+// ทำหน้าที่ดึงข้อมูลผู้ใช้ปัจจุบันและประวัติสุขภาพจากทั้ง Local DB และเซิร์ฟเวอร์
 extension HealthCalculatorLoading on HealthCalculatorController {
+  // ฟังก์ชัน: โหลดข้อมูลโปรไฟล์และประวัติสุขภาพ (Load Health Data)
   Future<void> loadData() async {
     _isLoading = true;
     _safeNotifyListeners();
@@ -17,7 +20,7 @@ extension HealthCalculatorLoading on HealthCalculatorController {
         user = await _db.getUserByEmail(loggedInEmail);
       }
 
-      // ป้องกันช่องโหว่ Hardcode User ID: หากไม่มี valid user ให้ logout
+      // ป้องกันกรณีไม่มี Session ผู้ใช้ ให้ทำการ Logout ทันที
       if (user == null) {
         debugPrint(
           'HealthCalculatorState: No valid authenticated user found, forcing logout.',
@@ -35,7 +38,7 @@ extension HealthCalculatorLoading on HealthCalculatorController {
 
       final activeUserId = user.nUserId;
 
-      // 2. ดึงประวัติสุขภาพของคนนั้นๆ (แยกตาม userId)
+      // 2. ดึงประวัติสุขภาพของผู้ใช้ (แยกตาม userId)
       final serverRecords = await HealthRecordApiService.fetchHealthRecords(
         userId: activeUserId,
       );
@@ -48,7 +51,7 @@ extension HealthCalculatorLoading on HealthCalculatorController {
         if (latest.nWeight > 0) _weight = latest.nWeight;
         if (latest.nHeight > 0) _height = latest.nHeight;
       } else {
-        // ดึงจาก Local Database Cache ตาม userId ของแต่ละคน
+        // กรณีออฟไลน์ ดึงจาก Local Database Cache
         _historyList = await _db.getHealthRecords(userId: activeUserId);
         _dataSource = "Local Database Cache";
 
@@ -59,7 +62,7 @@ extension HealthCalculatorLoading on HealthCalculatorController {
         }
       }
 
-      // 3. คำนวณผลลัพธ์จากข้อมูลจริงของผู้ใช้คนนั้น
+      // 3. คำนวณผลลัพธ์จากข้อมูลจริงของผู้ใช้
       if (_weight > 0 && _height > 0 && _age > 0) {
         await calculate(recordHistory: false, syncToDb: false);
       } else {
@@ -77,8 +80,7 @@ extension HealthCalculatorLoading on HealthCalculatorController {
     }
   }
 
-  // Getters
-  // Getters
+  // Getters สำหรับส่งออกข้อมูลไปยัง UI
   TbUser? get currentUser => _currentUser;
   Gender get gender => _gender;
   int get age => _age;
@@ -95,6 +97,4 @@ extension HealthCalculatorLoading on HealthCalculatorController {
   bool get isLoading => _isLoading;
   String get dataSource => _dataSource;
   List<TbHealthRecord> get historyList => List.unmodifiable(_historyList);
-
-  // Setters / Actions
 }

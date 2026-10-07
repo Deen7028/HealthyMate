@@ -2,30 +2,39 @@ import 'package:flutter/foundation.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/api_service.dart';
 
+/// เซอร์วิสหลักสำหรับจัดการสถานะการยืนยันตัวตนของผู้ใช้ทั่วทั้งแอปพลิเคชัน (Auth Service)
+/// รองรับทั้งระบบ Offline-First (SQLite) และ Online Cloud Fallback (Supabase / API)
 class AuthService extends ChangeNotifier {
+  // สร้าง Singleton Instance สำหรับใช้งานร่วมกันทั่วทั้งแอป
   static final AuthService instance = AuthService._internal();
   AuthService._internal();
 
+  // ตัวแปรเก็บสถานะการเข้าสู่ระบบ
   bool _isLoggedIn = false;
+  // ตัวแปรตรวจสอบว่าโหลดสถานะเริ่มต้นเสร็จหรือยัง
   bool _isInitialized = false;
+  // อีเมลของผู้ใช้ปัจจุบันที่กำลังล็อกอินอยู่
   String _currentUserEmail = '';
 
   bool get isLoggedIn => _isLoggedIn;
   bool get isInitialized => _isInitialized;
   String get currentUserEmail => _currentUserEmail;
 
-  // โหลดสถานะเซสชันจากฐานข้อมูลในเครื่องเพียงครั้งเดียวตอนเริ่มใช้งาน
+  /// โหลดสถานะเซสชันจากฐานข้อมูลในเครื่องเพียงครั้งเดียวตอนเริ่มเปิดแอป
   Future<void> init() async {
     if (_isInitialized) return;
     try {
+      // 1. ดึงสถานะการเข้าสู่ระบบจาก SQLite
       _isLoggedIn = await AppDatabase.instance.getLoginStatus();
       if (_isLoggedIn) {
+        // 2. ดึงอีเมลผู้ใช้ที่ล็อกอินค้างไว้
         _currentUserEmail = await AppDatabase.instance.getLoggedInUserEmail() ?? '';
       }
     } catch (e) {
       debugPrint('Error initializing auth state: $e');
       _isLoggedIn = false;
     } finally {
+      // 3. กำหนดสถานะ initialized และแจ้งเตือน Listener
       _isInitialized = true;
       notifyListeners();
     }
@@ -43,6 +52,7 @@ class AuthService extends ChangeNotifier {
     // 1. ตรวจสอบใน SQLite เครื่องก่อน (กรณีมีข้อมูลอยู่แล้ว หรือใช้งานแบบออฟไลน์)
     final isLocalUserExists = await AppDatabase.instance.isEmailExists(cleanEmail);
     if (isLocalUserExists) {
+      // ตรวจสอบรหัสผ่านกับ Password Hash ในเครื่อง
       final isPasswordCorrect = await AppDatabase.instance.authenticateUser(cleanEmail, password);
       if (isPasswordCorrect) {
         // ยิง loginRemote ใน Background เพื่อรับ Token ล่าสุดจาก Server (ถ้ามีเน็ต)
@@ -57,6 +67,7 @@ class AuthService extends ChangeNotifier {
           }
         } catch (_) {}
 
+        // ตั้งค่าเซสชันในเครื่อง
         _isLoggedIn = true;
         _currentUserEmail = cleanEmail;
         await AppDatabase.instance.setLoginStatus(true, email: cleanEmail, token: token);
@@ -79,7 +90,7 @@ class AuthService extends ChangeNotifier {
     }
 
     // 2. ถ้าใน SQLite ไม่มีผู้ใช้นี้ (เช่น ลงแอปใหม่ ย้ายเครื่อง หรือล้างข้อมูลแอป)
-    // ให้ยิงไปตรวจสอบกับ MySQL Server ผ่าน login.php
+    // ให้ยิงไปตรวจสอบกับ Remote Server ผ่าน Supabase / API
     final remoteRes = await AuthApiService.loginRemote(
       email: cleanEmail,
       password: password,
@@ -93,6 +104,7 @@ class AuthService extends ChangeNotifier {
         authenticatedPassword: password,
       );
 
+      // 4. บันทึก Session และแจ้งเตือน UI
       _isLoggedIn = true;
       _currentUserEmail = cleanEmail;
       final String? token = remoteRes['token']?.toString();
@@ -106,18 +118,21 @@ class AuthService extends ChangeNotifier {
         'message': 'เข้าสู่ระบบสำเร็จ',
       };
     } else if (status == 'not_found') {
+      // กรณีไม่พบบัญชีผู้ใช้
       return {
         'success': false,
         'status': 'not_found',
         'message': remoteRes['message']?.toString() ?? 'ไม่พบบัญชีผู้ใช้นี้ในระบบ กรุณาตรวจสอบอีเมลหรือสมัครสมาชิก',
       };
     } else if (status == 'invalid_password') {
+      // กรณีรหัสผ่านไม่ตรงกัน
       return {
         'success': false,
         'status': 'invalid_password',
         'message': remoteRes['message']?.toString() ?? 'รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง',
       };
     } else {
+      // กรณีออฟไลน์และไม่มีข้อมูลในเครื่อง
       return {
         'success': false,
         'status': 'offline_or_error',
@@ -126,20 +141,26 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  /// กำหนดสถานะเซสชันการเข้าสู่ระบบ
   Future<void> setLoginSession(String email, {String? token}) async {
-    // ทำรูปแบบอีเมลให้เป็นมาตรฐานก่อนบันทึก เพื่อให้ค้นหาบัญชีได้ตรงกัน
+    // 1. ปรับรูปแบบอีเมลให้เป็นมาตรฐาน (Lowercase & Trim)
     final cleanEmail = email.trim().toLowerCase();
     _isLoggedIn = true;
     _currentUserEmail = cleanEmail;
+    // 2. บันทึกลง SQLite
     await AppDatabase.instance.setLoginStatus(true, email: cleanEmail, token: token);
+    // 3. แจ้งเตือน UI ให้รีเฟรชหน้าจอ
     notifyListeners();
   }
 
+  /// ออกจากระบบ (Logout)
   Future<void> logout() async {
-    // ล้างสถานะทั้งในหน่วยความจำและในฐานข้อมูล แล้วแจ้งหน้าจอให้รีเฟรช
+    // 1. ล้างสถานะในหน่วยความจำ
     _isLoggedIn = false;
     _currentUserEmail = '';
+    // 2. ล้างสถานะในฐานข้อมูล Local SQLite
     await AppDatabase.instance.setLoginStatus(false);
+    // 3. แจ้งเตือน Widget ให้เปลี่ยนกลับไปหน้า Login
     notifyListeners();
   }
 }

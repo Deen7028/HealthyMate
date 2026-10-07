@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:healthymate/features/auth/forgot_password/pages/forgot_password_page.dart';
 
+// ส่วนฟิลด์กรอกข้อมูลเข้าสู่ระบบ (LoginFormFields)
+// ทำหน้าที่แสดงช่องกรอกอีเมล/ชื่อผู้ใช้, ช่องกรอกรหัสผ่าน, ปุ่มเปิด-ปิดตาดูรหัส และลิงก์ลืมรหัสผ่าน
 class LoginFormFields extends StatelessWidget {
   final TextEditingController emailController;
   final TextEditingController passwordController;
@@ -29,7 +31,7 @@ class LoginFormFields extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ข้อความกรอกอีเมลหรือชื่อผู้ใช้
+        // 1. หัวข้อและช่องกรอกอีเมลหรือชื่อผู้ใช้
         const Text(
           'อีเมลหรือชื่อผู้ใช้',
           style: TextStyle(
@@ -41,7 +43,6 @@ class LoginFormFields extends StatelessWidget {
 
         const SizedBox(height: 8),
 
-        // ช่องกรอกอีเมลหรือชื่อผู้ใช้
         TextFormField(
           controller: emailController,
           focusNode: emailFocusNode,
@@ -84,7 +85,7 @@ class LoginFormFields extends StatelessWidget {
 
         const SizedBox(height: 24),
 
-        // ข้อความรหัสผ่านและปุ่มลืมรหัสผ่าน
+        // 2. หัวข้อรหัสผ่านและปุ่มลิงก์นำทางไปยังหน้าลืมรหัสผ่าน
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -118,7 +119,7 @@ class LoginFormFields extends StatelessWidget {
 
         const SizedBox(height: 8),
 
-        // ช่องกรอกรหัสผ่าน
+        // 3. ช่องกรอกรหัสผ่านพร้อมปุ่มสลับการมองเห็น (Obscure Text Toggle)
         TextFormField(
           controller: passwordController,
           focusNode: passwordFocusNode,

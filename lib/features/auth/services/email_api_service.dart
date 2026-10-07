@@ -3,12 +3,15 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:healthymate/core/services/api_service_config.dart';
-
 import 'package:healthymate/core/services/supabase_service.dart';
+import 'package:healthymate/core/database/app_database.dart';
 
+/// เซอร์วิสสำหรับจัดการการส่งอีเมล, เช็คอีเมลซ้ำ และระบบรหัส OTP (Email API Service)
 class EmailApiService {
+  /// ตรวจสอบว่ามีอีเมลนี้ลงทะเบียนไว้ในระบบแล้วหรือไม่
   static Future<Map<String, dynamic>> checkEmailRemote(String email) async {
     try {
+      // 1. ตรวจสอบผ่าน Supabase ก่อน
       if (SupabaseService.instance.isInitialized) {
         final existing = await SupabaseService.instance.getUserByEmail(email);
         if (existing != null) {
@@ -18,6 +21,7 @@ class EmailApiService {
         }
       }
 
+      // 2. ระบบสำรอง: ยิงไปยัง Remote PHP API Backend
       final uri = Uri.parse('${ApiServiceConfig.baseUrl}/auth/check_email.php');
       final response = await http
           .post(
@@ -27,6 +31,7 @@ class EmailApiService {
           )
           .timeout(const Duration(seconds: 8));
 
+      // 3. ตรวจสอบผลลัพธ์
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
         if (body is Map<String, dynamic>) {
@@ -34,24 +39,23 @@ class EmailApiService {
         }
       }
     } catch (e) {
-      debugPrint('HealthApiService: Check email error: $e');
+      debugPrint('EmailApiService: Check email error: $e');
     }
     return {'status': 'offline_or_error', 'exists': false};
   }
 
-  /// ส่งคำขอ OTP ไปยังอีเมล
+  /// ส่งคำขอรหัส OTP สำหรับการสมัครสมาชิกใหม่
   static Future<Map<String, dynamic>> sendEmailOtp(String sEmail) async {
     try {
       final cleanEmail = sEmail.trim().toLowerCase();
 
-      // 1. ลองใช้ Supabase Auth OTP ก่อน
+      // 1. ส่งผ่านระบบ Supabase Auth OTP
       if (SupabaseService.instance.isInitialized && SupabaseService.instance.client != null) {
         try {
           await SupabaseService.instance.client!.auth.signInWithOtp(
             email: cleanEmail,
             shouldCreateUser: true,
           );
-          debugPrint('🚀 [Supabase Auth OTP] ส่งรหัส OTP ไปยัง $cleanEmail สำเร็จ');
           return {
             'status': 'success',
             'message': 'ส่งรหัส OTP ไปยังอีเมลเรียบร้อยแล้ว',
@@ -61,157 +65,128 @@ class EmailApiService {
         }
       }
 
-      // 2. Fallback ไปยัง PHP API บน Server (ถ้ายังมีอยู่)
+      // 2. ระบบสำรอง: ยิงไปยัง PHP API Backend
       final response = await http
           .post(
             Uri.parse('${ApiServiceConfig.baseUrl}/auth/send_email_otp.php'),
             headers: ApiServiceConfig.defaultHeaders,
             body: jsonEncode({'sEmail': cleanEmail}),
           )
-          .timeout(const Duration(seconds: 15));
+          .timeout(const Duration(seconds: 12));
 
+      // 3. แปลงผลลัพธ์ JSON
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
         if (body is Map<String, dynamic>) {
           return body;
         }
       }
-      return {
-        'status': 'error',
-        'message':
-            'ตอบกลับจากเซิร์ฟเวอร์ไม่ถูกต้อง (HTTP ${response.statusCode})',
-      };
     } catch (e) {
-      return {
-        'status': 'error',
-        'message': 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้: $e',
-      };
+      debugPrint('EmailApiService: Send OTP error: $e');
     }
+    return {
+      'status': 'error',
+      'message': 'ไม่สามารถส่งรหัส OTP ได้ กรุณาตรวจสอบอินเทอร์เน็ต',
+    };
   }
 
-  /// ยืนยันรหัส OTP
+  /// ยืนยันรหัส OTP ที่ผู้ใช้กรอก
   static Future<Map<String, dynamic>> verifyEmailOtp(
     String sEmail,
-    String sOtpCode,
+    String sOtp,
   ) async {
     try {
       final cleanEmail = sEmail.trim().toLowerCase();
+      final cleanOtp = sOtp.trim();
 
-      // 1. ลองตรวจสอบผ่าน Supabase Auth OTP
+      // 1. ยืนยันผ่าน Supabase Auth OTP
       if (SupabaseService.instance.isInitialized && SupabaseService.instance.client != null) {
         try {
           final res = await SupabaseService.instance.client!.auth.verifyOTP(
             email: cleanEmail,
-            token: sOtpCode.trim(),
-            type: OtpType.email,
+            token: cleanOtp,
+            type: OtpType.magiclink,
           );
-          if (res.session != null || res.user != null) {
-            debugPrint('🚀 [Supabase OTP Verified] ยืนยัน OTP สำเร็จ: $cleanEmail');
-            return {'status': 'success', 'message': 'ยืนยันรหัส OTP สำเร็จ'};
+          if (res.user != null) {
+            return {
+              'status': 'success',
+              'message': 'ยืนยันรหัส OTP สำเร็จ',
+            };
           }
-        } catch (supaErr) {
-          debugPrint('Supabase verifyOTP attempt: $supaErr');
-        }
-
-        // ตรวจสอบผ่านตาราง TbEmailOtps (ถ้าบันทึกไว้ในตาราง)
-        final isCustomOtpValid = await SupabaseService.instance.verifyEmailOtp(
-          email: cleanEmail,
-          otpCode: sOtpCode.trim(),
-        );
-        if (isCustomOtpValid) {
-          return {'status': 'success', 'message': 'ยืนยันรหัส OTP สำเร็จ'};
-        }
+        } catch (_) {}
       }
 
-      // 2. Fallback ไปยัง PHP API บน Server
+      // 2. ระบบสำรอง: ตรวจสอบผ่าน PHP API Backend
       final response = await http
           .post(
             Uri.parse('${ApiServiceConfig.baseUrl}/auth/verify_email_otp.php'),
             headers: ApiServiceConfig.defaultHeaders,
-            body: jsonEncode({'sEmail': cleanEmail, 'sOtpCode': sOtpCode}),
+            body: jsonEncode({'sEmail': cleanEmail, 'sOtp': cleanOtp}),
           )
           .timeout(const Duration(seconds: 8));
 
+      // 3. ตรวจสอบสถานะการยืนยัน
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
         if (body is Map<String, dynamic>) {
           return body;
         }
       }
-      return {
-        'status': 'error',
-        'message':
-            'ตอบกลับจากเซิร์ฟเวอร์ไม่ถูกต้อง (HTTP ${response.statusCode})',
-      };
     } catch (e) {
-      return {
-        'status': 'error',
-        'message': 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้: $e',
-      };
+      debugPrint('EmailApiService: Verify OTP error: $e');
     }
+    return {
+      'status': 'error',
+      'message': 'รหัส OTP ไม่ถูกต้องหรือหมดอายุ',
+    };
   }
 
-  /// 1. ดึงข้อมูลประวัติสุขภาพจาก PHP API (`health_records.php`)
-
-  /// ส่งรหัส OTP สำหรับรีเซ็ตรหัสผ่าน (ลืมรหัสผ่าน)
+  /// ส่งรหัส OTP สำหรับการลืมรหัสผ่าน
   static Future<Map<String, dynamic>> sendForgotPasswordOtp(
     String sEmail,
   ) async {
     try {
       final cleanEmail = sEmail.trim().toLowerCase();
 
-      // 1. ส่ง OTP ผ่าน Supabase Auth
+      // 1. ส่งผ่าน Supabase Password Reset OTP
       if (SupabaseService.instance.isInitialized && SupabaseService.instance.client != null) {
         try {
           await SupabaseService.instance.client!.auth.resetPasswordForEmail(
             cleanEmail,
-            redirectTo: 'com.example.healthymate://login-callback',
           );
-          debugPrint('🚀 [Supabase Password Reset OTP] ส่งรหัสรีเซ็ตไปที่ $cleanEmail สำเร็จ');
           return {
             'status': 'success',
-            'message': 'ส่งรหัส OTP สำหรับรีเซ็ตรหัสผ่านเรียบร้อยแล้ว',
+            'message': 'ส่งรหัส OTP กู้รหัสผ่านไปยังอีเมลแล้ว',
           };
-        } catch (supaErr) {
-          debugPrint('⚠️ Supabase resetPasswordForEmail: $supaErr - พยายามใช้ระบบสำรอง');
-        }
+        } catch (_) {}
       }
 
-      // 2. Fallback ไปยัง PHP API
-      debugPrint(
-        '[API] sendForgotPasswordOtp: ${ApiServiceConfig.baseUrl}/auth/send_forgot_password_otp.php',
-      );
+      // 2. ระบบสำรอง: ส่งผ่าน PHP API Backend
       final response = await http
           .post(
-            Uri.parse(
-              '${ApiServiceConfig.baseUrl}/auth/send_forgot_password_otp.php',
-            ),
+            Uri.parse('${ApiServiceConfig.baseUrl}/auth/send_forgot_password_otp.php'),
             headers: ApiServiceConfig.defaultHeaders,
             body: jsonEncode({'sEmail': cleanEmail}),
           )
-          .timeout(const Duration(seconds: 15));
+          .timeout(const Duration(seconds: 12));
 
+      // 3. แปลงผลลัพธ์
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
         if (body is Map<String, dynamic>) {
           return body;
         }
       }
-      return {
-        'status': 'error',
-        'message':
-            'ตอบกลับจากเซิร์ฟเวอร์ไม่ถูกต้อง (HTTP ${response.statusCode})',
-      };
     } catch (e) {
-      debugPrint('[API ERROR] sendForgotPasswordOtp: $e');
-      return {
-        'status': 'error',
-        'message': 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้: $e',
-      };
+      debugPrint('EmailApiService: Send forgot password OTP error: $e');
     }
+    return {
+      'status': 'error',
+      'message': 'ไม่สามารถส่งรหัส OTP ได้ กรุณาลองใหม่อีกครั้ง',
+    };
   }
 
-  /// รีเซ็ตรหัสผ่านใหม่
+  /// ตั้งค่ารหัสผ่านใหม่ (Reset Password)
   static Future<Map<String, dynamic>> resetPassword(
     String sEmail,
     String sNewPassword,
@@ -219,49 +194,46 @@ class EmailApiService {
     try {
       final cleanEmail = sEmail.trim().toLowerCase();
 
-      // 1. อัปเดตรหัสผ่านผ่าน Supabase Database
-      if (SupabaseService.instance.isInitialized && SupabaseService.instance.client != null) {
-        try {
-          await SupabaseService.instance.client!
-              .from('TbUsers')
-              .update({'sPasswordHash': sNewPassword, 'dtUpdatedAt': DateTime.now().toIso8601String()})
-              .eq('sEmail', cleanEmail);
-
-          debugPrint('🚀 [Supabase Password Updated] อัปเดตรหัสผ่านใหม่สำเร็จ: $cleanEmail');
+      // 1. อัปเดตรหัสผ่านใหม่บน Supabase
+      if (SupabaseService.instance.isInitialized) {
+        final user = await SupabaseService.instance.getUserByEmail(cleanEmail);
+        if (user != null) {
+          final newHash = AppDatabase.hashPassword(sNewPassword);
+          user['sPasswordHash'] = newHash;
+          user['dtUpdatedAt'] = DateTime.now().toIso8601String();
+          await SupabaseService.instance.upsertUser(user);
           return {
             'status': 'success',
-            'message': 'เปลี่ยนรหัสผ่านสำเร็จเรียบร้อยแล้ว',
+            'message': 'เปลี่ยนรหัสผ่านสำเร็จ',
           };
-        } catch (supaErr) {
-          debugPrint('Supabase resetPassword database update error: $supaErr');
         }
       }
 
-      // 2. Fallback ไปยัง PHP API
+      // 2. ระบบสำรอง: อัปเดตผ่าน PHP API Backend
       final response = await http
           .post(
             Uri.parse('${ApiServiceConfig.baseUrl}/auth/reset_password.php'),
             headers: ApiServiceConfig.defaultHeaders,
-            body: jsonEncode({'sEmail': cleanEmail, 'sNewPassword': sNewPassword}),
+            body: jsonEncode({
+              'sEmail': cleanEmail,
+              'sNewPassword': sNewPassword,
+            }),
           )
-          .timeout(const Duration(seconds: 15));
+          .timeout(const Duration(seconds: 8));
 
+      // 3. ตรวจสอบผลลัพธ์
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
         if (body is Map<String, dynamic>) {
           return body;
         }
       }
-      return {
-        'status': 'error',
-        'message':
-            'ตอบกลับจากเซิร์ฟเวอร์ไม่ถูกต้อง (HTTP ${response.statusCode})',
-      };
     } catch (e) {
-      return {
-        'status': 'error',
-        'message': 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้: $e',
-      };
+      debugPrint('EmailApiService: Reset password error: $e');
     }
+    return {
+      'status': 'error',
+      'message': 'เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน',
+    };
   }
 }

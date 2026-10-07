@@ -4,12 +4,15 @@ import 'package:http/http.dart' as http;
 import 'package:healthymate/core/services/supabase_service.dart';
 import 'package:healthymate/core/services/api_service_config.dart';
 
+/// เซอร์วิสสำหรับจัดการกิจวัตรประจำวัน (Routine API Service)
 class RoutineApiService {
+  /// ดึงรายการกิจวัตรทั้งหมดของผู้ใช้ตามวันที่ระบุ
   static Future<Map<String, dynamic>?> fetchRoutines({
     required int userId,
     String? date,
   }) async {
     try {
+      // 1. ดึงจาก Supabase Database
       if (SupabaseService.instance.isInitialized && SupabaseService.instance.client != null) {
         final routines = await SupabaseService.instance.client!
             .from('TbRoutines')
@@ -21,6 +24,7 @@ class RoutineApiService {
         };
       }
 
+      // 2. ระบบสำรอง: ดึงผ่าน PHP API
       final dateStr = date ?? ApiServiceConfig.todayDateStr();
       final uri = Uri.parse(
         '${ApiServiceConfig.baseUrl}/routines.php?nUserId=$userId&date=$dateStr',
@@ -30,6 +34,7 @@ class RoutineApiService {
           .get(uri, headers: headers)
           .timeout(const Duration(seconds: 8));
 
+      // 3. แปลงผลลัพธ์
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
         if (body['status'] == 'success') {
@@ -42,7 +47,7 @@ class RoutineApiService {
     return null;
   }
 
-  /// 9. เพิ่มกิจวัตรใหม่
+  /// เพิ่มกิจวัตรใหม่ (Insert Routine)
   static Future<int> insertRoutineRemote({
     required int userId,
     required String title,
@@ -55,6 +60,7 @@ class RoutineApiService {
     bool isNotificationActive = true,
   }) async {
     try {
+      // 1. บันทึกลง Supabase
       if (SupabaseService.instance.isInitialized && SupabaseService.instance.client != null) {
         final res = await SupabaseService.instance.client!.from('TbRoutines').insert({
           'nUserId': userId,
@@ -65,14 +71,13 @@ class RoutineApiService {
           'sLinkedWorkout': linkedWorkout,
           'nColor': color,
           'nIconData': iconData,
-          'isNotificationActive': isNotificationActive,
-        }).select('nRoutineId').maybeSingle();
+          'isNotificationActive': isNotificationActive ? 1 : 0,
+        }).select('nRoutineId').single();
 
-        if (res != null && res['nRoutineId'] != null) {
-          return (res['nRoutineId'] as num).toInt();
-        }
+        return (res['nRoutineId'] as num?)?.toInt() ?? 0;
       }
 
+      // 2. ระบบสำรอง: บันทึกผ่าน PHP API
       final uri = Uri.parse('${ApiServiceConfig.baseUrl}/routines.php');
       final headers = await ApiServiceConfig.getAuthHeaders();
       final response = await http
@@ -80,24 +85,22 @@ class RoutineApiService {
             uri,
             headers: headers,
             body: jsonEncode({
-              'action': 'insert',
-              'nUserId': userId,
               'sTitle': title,
               'sTime': time,
-              'targetValue': targetValue,
-              'unit': unit,
+              'nTargetValue': targetValue,
+              'sUnit': unit,
               'sLinkedWorkout': linkedWorkout,
-              'color': color,
-              'iconData': iconData,
+              'nColor': color,
+              'nIconData': iconData,
               'isNotificationActive': isNotificationActive ? 1 : 0,
             }),
           )
-          .timeout(const Duration(seconds: 5));
+          .timeout(const Duration(seconds: 8));
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
-        if (body['status'] == 'success') {
-          return (body['nRoutineId'] as num?)?.toInt() ?? 0;
+        if (body['status'] == 'success' && body['nRoutineId'] != null) {
+          return (body['nRoutineId'] as num).toInt();
         }
       }
     } catch (e) {
@@ -106,19 +109,20 @@ class RoutineApiService {
     return 0;
   }
 
-  /// 10. แก้ไขกิจวัตร
+  /// แก้ไขกิจวัตรเดิม (Update Routine)
   static Future<bool> updateRoutineRemote({
     required int routineId,
     required String title,
     String time = '',
-    double? targetValue,
-    String? unit,
-    String? linkedWorkout,
+    double targetValue = 1.0,
+    String unit = 'ครั้ง',
+    String linkedWorkout = '',
     int? color,
     int? iconData,
     bool isNotificationActive = true,
   }) async {
     try {
+      // 1. อัปเดตบน Supabase
       if (SupabaseService.instance.isInitialized && SupabaseService.instance.client != null) {
         await SupabaseService.instance.client!.from('TbRoutines').update({
           'sTitle': title,
@@ -128,11 +132,13 @@ class RoutineApiService {
           'sLinkedWorkout': linkedWorkout,
           'nColor': color,
           'nIconData': iconData,
-          'isNotificationActive': isNotificationActive,
+          'isNotificationActive': isNotificationActive ? 1 : 0,
+          'dtUpdatedAt': DateTime.now().toIso8601String(),
         }).eq('nRoutineId', routineId);
         return true;
       }
 
+      // 2. ระบบสำรอง: อัปเดตผ่าน PHP API
       final uri = Uri.parse('${ApiServiceConfig.baseUrl}/routines.php');
       final headers = await ApiServiceConfig.getAuthHeaders();
       final response = await http
@@ -143,19 +149,15 @@ class RoutineApiService {
               'nRoutineId': routineId,
               'sTitle': title,
               'sTime': time,
-              'targetValue': targetValue,
               'nTargetValue': targetValue,
-              'unit': unit,
               'sUnit': unit,
               'sLinkedWorkout': linkedWorkout,
-              'color': color,
               'nColor': color,
-              'iconData': iconData,
               'nIconData': iconData,
               'isNotificationActive': isNotificationActive ? 1 : 0,
             }),
           )
-          .timeout(const Duration(seconds: 5));
+          .timeout(const Duration(seconds: 8));
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
@@ -167,9 +169,10 @@ class RoutineApiService {
     return false;
   }
 
-  /// 11. ลบกิจวัตร
+  /// ลบกิจวัตรตาม routineId
   static Future<bool> deleteRoutineRemote(int routineId) async {
     try {
+      // 1. ลบจาก Supabase
       if (SupabaseService.instance.isInitialized && SupabaseService.instance.client != null) {
         await SupabaseService.instance.client!
             .from('TbRoutines')
@@ -178,15 +181,14 @@ class RoutineApiService {
         return true;
       }
 
-      final uri = Uri.parse('${ApiServiceConfig.baseUrl}/routines.php');
+      // 2. ระบบสำรอง: ลบผ่าน PHP API
+      final uri = Uri.parse(
+        '${ApiServiceConfig.baseUrl}/routines.php?nRoutineId=$routineId',
+      );
       final headers = await ApiServiceConfig.getAuthHeaders();
       final response = await http
-          .delete(
-            uri,
-            headers: headers,
-            body: jsonEncode({'nRoutineId': routineId}),
-          )
-          .timeout(const Duration(seconds: 5));
+          .delete(uri, headers: headers)
+          .timeout(const Duration(seconds: 8));
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
@@ -196,68 +198,5 @@ class RoutineApiService {
       debugPrint('[API EXCEPTION] deleteRoutineRemote failed: $e');
     }
     return false;
-  }
-
-  /// 12. สลับสถานะเช็ค/ยกเลิกเช็คกิจวัตร
-  static Future<bool?> toggleRoutineLogRemote({
-    required int routineId,
-    String? date,
-  }) async {
-    try {
-      final dateStr = date ?? ApiServiceConfig.todayDateStr();
-
-      if (SupabaseService.instance.isInitialized && SupabaseService.instance.client != null) {
-        final client = SupabaseService.instance.client!;
-        final existing = await client
-            .from('TbRoutineLogs')
-            .select()
-            .eq('nRoutineId', routineId)
-            .eq('dtLogDate', dateStr)
-            .maybeSingle();
-
-        if (existing != null) {
-          final current = existing['isCompleted'] == true;
-          final updated = !current;
-          await client
-              .from('TbRoutineLogs')
-              .update({'isCompleted': updated, 'dtUpdatedAt': DateTime.now().toIso8601String()})
-              .eq('nRoutineId', routineId)
-              .eq('dtLogDate', dateStr);
-          return updated;
-        } else {
-          await client.from('TbRoutineLogs').insert({
-            'nRoutineId': routineId,
-            'dtLogDate': dateStr,
-            'isCompleted': true,
-            'nProgressValue': 1.0,
-          });
-          return true;
-        }
-      }
-
-      final uri = Uri.parse('${ApiServiceConfig.baseUrl}/routines.php');
-      final headers = await ApiServiceConfig.getAuthHeaders();
-      final response = await http
-          .post(
-            uri,
-            headers: headers,
-            body: jsonEncode({
-              'action': 'toggle_log',
-              'nRoutineId': routineId,
-              'dtLogDate': dateStr,
-            }),
-          )
-          .timeout(const Duration(seconds: 5));
-
-      if (response.statusCode == 200) {
-        final body = jsonDecode(response.body);
-        if (body['status'] == 'success') {
-          return (body['isCompleted'] as num?)?.toInt() == 1;
-        }
-      }
-    } catch (e) {
-      debugPrint('[API EXCEPTION] toggleRoutineLogRemote failed: $e');
-    }
-    return null;
   }
 }

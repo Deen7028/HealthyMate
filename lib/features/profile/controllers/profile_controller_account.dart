@@ -1,13 +1,16 @@
 part of 'profile_controller.dart';
 
+// ส่วนการจัดการบัญชีผู้ใช้และส่งออกข้อมูล (ProfileControllerAccount)
+// ทำหน้าที่ส่งออกข้อมูลรายงาน PDF, ลบบัญชีผู้ใช้ถาวร และออกจากระบบ
 extension ProfileControllerAccount on ProfileController {
+  // ฟังก์ชัน: ส่งออกรายงานสุขภาพและกิจกรรมเป็นไฟล์ PDF
   Future<String?> exportPdf() async {
     final userId = currentUser?.nUserId;
     if (userId == null) return null;
     return await DataExportService.instance.exportDataToPdf(userId);
   }
 
-  /// ลบบัญชีผู้ใช้
+  // ฟังก์ชัน: ลบบัญชีผู้ใช้ถาวร (Delete Account)
   Future<bool> deleteAccount() async {
     final user = currentUser;
     if (user == null) return false;
@@ -15,7 +18,7 @@ extension ProfileControllerAccount on ProfileController {
     isLoading = true;
     this._notifyProfileListeners();
 
-    // Remote deletion must succeed before destroying the only local copy.
+    // 1. สั่งลบบัญชีบน Remote Server ก่อน
     final result = await ProfileApiService.deleteAccount(
       userId: user.nUserId,
       email: user.sEmail,
@@ -26,7 +29,7 @@ extension ProfileControllerAccount on ProfileController {
       return false;
     }
 
-    // 0. ลบไฟล์รูปภาพโปรไฟล์จริงในเครื่อง (ถ้ามี)
+    // 2. ลบไฟล์รูปภาพโปรไฟล์ในเครื่อง (ถ้ามี)
     final profilePath = user.sProfileImagePath;
     if (profilePath.isNotEmpty && !profilePath.startsWith('http')) {
       try {
@@ -39,10 +42,10 @@ extension ProfileControllerAccount on ProfileController {
       }
     }
 
-    // 2. ทำลายข้อมูล SQLite ในเครื่อง
+    // 3. ทำลายข้อมูล SQLite ภายในเครื่อง
     await AppDatabase.instance.deleteUserAccount(user.nUserId);
 
-    // 3. เคลียร์ Google Session & App Session
+    // 4. เคลียร์ Session บัญชี Google และ App Session
     try {
       await GoogleSignIn.instance.signOut();
     } catch (_) {}
@@ -51,7 +54,7 @@ extension ProfileControllerAccount on ProfileController {
     return true;
   }
 
-  /// ออกจากระบบ
+  // ฟังก์ชัน: ออกจากระบบ (Logout)
   Future<void> logout() async {
     try {
       await GoogleSignIn.instance.signOut();
@@ -60,6 +63,4 @@ extension ProfileControllerAccount on ProfileController {
     }
     await AuthService.instance.logout();
   }
-
-  /// เก็บ Gemini API Key ไว้ใน secure storage บนอุปกรณ์เท่านั้น
 }

@@ -1,15 +1,19 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:healthymate/core/services/supabase_service.dart';
 import 'package:healthymate/core/services/api_service_config.dart';
 
+/// เซอร์วิสสำหรับจัดการบันทึกกิจกรรมการออกกำลังกาย และประวัติโภชนาการ (Activity API Service)
 class ActivityApiService {
+  /// ดึงประวัติการออกกำลังกายของผู้ใช้
   static Future<List<Map<String, dynamic>>> fetchWorkouts({
     required int userId,
     String? since,
   }) async {
     try {
+      // 1. ดึงข้อมูลจาก Supabase Database
       if (SupabaseService.instance.isInitialized && SupabaseService.instance.client != null) {
         var query = SupabaseService.instance.client!
             .from('TbWorkouts')
@@ -22,6 +26,7 @@ class ActivityApiService {
         return List<Map<String, dynamic>>.from(res as List);
       }
 
+      // 2. ระบบสำรอง: ดึงผ่าน PHP API
       var urlStr = '${ApiServiceConfig.baseUrl}/workouts/workouts.php?nUserId=$userId';
       if (since != null && since.isNotEmpty) {
         urlStr += '&since=${Uri.encodeComponent(since)}';
@@ -32,6 +37,7 @@ class ActivityApiService {
           .get(uri, headers: headers)
           .timeout(const Duration(seconds: 8));
 
+      // 3. แปลงผลลัพธ์
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
         if (body['status'] == 'success' && body['data'] is List) {
@@ -48,9 +54,10 @@ class ActivityApiService {
     return [];
   }
 
-  /// 5. บันทึกข้อมูลการออกกำลังกาย
+  /// บันทึกข้อมูลกิจกรรมการออกกำลังกาย
   static Future<bool> saveWorkout(Map<String, dynamic> workout) async {
     try {
+      // 1. บันทึกลง Supabase
       if (SupabaseService.instance.isInitialized) {
         final payload = Map<String, dynamic>.from(workout);
         payload.remove('nWorkoutId');
@@ -58,11 +65,12 @@ class ActivityApiService {
         if (success) return true;
       }
 
+      // 2. ระบบสำรอง: บันทึกผ่าน PHP API
       final uri = Uri.parse('${ApiServiceConfig.baseUrl}/workouts/workouts.php');
       final headers = await ApiServiceConfig.getAuthHeaders();
       final response = await http
           .post(uri, headers: headers, body: jsonEncode(workout))
-          .timeout(const Duration(seconds: 5));
+          .timeout(const Duration(seconds: 8));
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
@@ -74,9 +82,10 @@ class ActivityApiService {
     return false;
   }
 
-  /// 5.1 บันทึกประวัติมื้ออาหาร
-  static Future<bool> saveNutritionLog(Map<String, dynamic> log) async {
+  /// บันทึกประวัติมื้ออาหารและโภชนาการ (AI Nutrition Log)
+  static Future<bool> saveNutritionLogRemote(Map<String, dynamic> log) async {
     try {
+      // 1. บันทึกลง Supabase
       if (SupabaseService.instance.isInitialized) {
         final payload = Map<String, dynamic>.from(log);
         payload.remove('nNutritionId');
@@ -84,25 +93,27 @@ class ActivityApiService {
         if (success) return true;
       }
 
+      // 2. ระบบสำรอง: บันทึกผ่าน PHP API
       final uri = Uri.parse('${ApiServiceConfig.baseUrl}/nutrition/nutrition_logs.php');
       final headers = await ApiServiceConfig.getAuthHeaders();
       final response = await http
           .post(uri, headers: headers, body: jsonEncode(log))
-          .timeout(const Duration(seconds: 5));
+          .timeout(const Duration(seconds: 8));
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
         return body['status'] == 'success';
       }
     } catch (e) {
-      debugPrint('[API EXCEPTION] saveNutritionLog failed: $e');
+      debugPrint('[API EXCEPTION] saveNutritionLogRemote failed: $e');
     }
     return false;
   }
 
-  /// 5.2 ลบประวัติมื้ออาหาร
+  /// ลบประวัติมื้ออาหารตาม nutritionId
   static Future<bool> deleteNutritionLogRemote(int nutritionId) async {
     try {
+      // 1. ลบจาก Supabase
       if (SupabaseService.instance.isInitialized && SupabaseService.instance.client != null) {
         await SupabaseService.instance.client!
             .from('TbNutritionLogs')
@@ -111,17 +122,14 @@ class ActivityApiService {
         return true;
       }
 
+      // 2. ระบบสำรอง: ลบผ่าน PHP API
       final uri = Uri.parse(
         '${ApiServiceConfig.baseUrl}/nutrition/nutrition_logs.php?nNutritionId=$nutritionId',
       );
       final headers = await ApiServiceConfig.getAuthHeaders();
       final response = await http
-          .delete(
-            uri,
-            headers: headers,
-            body: jsonEncode({'nNutritionId': nutritionId}),
-          )
-          .timeout(const Duration(seconds: 5));
+          .delete(uri, headers: headers)
+          .timeout(const Duration(seconds: 8));
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
@@ -133,41 +141,48 @@ class ActivityApiService {
     return false;
   }
 
-  /// 6. อัปโหลดรูปภาพขึ้น Supabase Storage Bucket
+  /// บันทึกประวัติมื้ออาหาร (Alias สำหรับ SyncService)
+  static Future<bool> saveNutritionLog(Map<String, dynamic> log) => saveNutritionLogRemote(log);
+
+  /// อัปโหลดรูปภาพไปยัง Supabase Storage หรือ PHP Backend
   static Future<String?> uploadImage(
     String localFilePath, {
     String type = 'general',
   }) async {
     try {
-      if (SupabaseService.instance.isInitialized) {
-        final folder = type == 'profile'
-            ? 'profiles'
-            : (type == 'nutrition' ? 'nutrition' : 'workouts');
-        final remoteUrl = await SupabaseService.instance.uploadImage(
-          localFilePath,
-          folder: folder,
-        );
-        if (remoteUrl != null && remoteUrl.isNotEmpty) {
-          return remoteUrl;
-        }
+      final file = File(localFilePath);
+      if (!await file.exists()) return null;
+
+      // 1. อัปโหลดผ่าน Supabase Storage (ถ้าเปิดใช้งาน)
+      if (SupabaseService.instance.isInitialized && SupabaseService.instance.client != null) {
+        final bytes = await file.readAsBytes();
+        final fileName = '${type}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        await SupabaseService.instance.client!.storage
+            .from('uploads')
+            .uploadBinary('$type/$fileName', bytes);
+        final publicUrl = SupabaseService.instance.client!.storage
+            .from('uploads')
+            .getPublicUrl('$type/$fileName');
+        return publicUrl;
       }
 
+      // 2. ระบบสำรอง: อัปโหลดผ่าน PHP API
       final uri = Uri.parse('${ApiServiceConfig.baseUrl}/media/upload_image.php');
+      final request = http.MultipartRequest('POST', uri);
       final headers = await ApiServiceConfig.getAuthHeaders();
-      final request = http.MultipartRequest('POST', uri)
-        ..headers.addAll(headers)
-        ..fields['type'] = type
-        ..files.add(await http.MultipartFile.fromPath('image', localFilePath));
-
-      final streamedResponse = await request.send().timeout(
-        const Duration(seconds: 15),
+      request.headers.addAll(headers);
+      request.fields['type'] = type;
+      request.files.add(
+        await http.MultipartFile.fromPath('image', localFilePath),
       );
+
+      final streamedResponse = await request.send().timeout(const Duration(seconds: 15));
       final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
-        if (body['status'] == 'success' && body['image_url'] != null) {
-          return body['image_url'] as String;
+        if (body['status'] == 'success' && body['url'] != null) {
+          return body['url'].toString();
         }
       }
     } catch (e) {

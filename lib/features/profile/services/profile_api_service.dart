@@ -3,13 +3,15 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:healthymate/core/services/api_service_config.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
-
 import 'package:healthymate/core/services/supabase_service.dart';
 
+/// เซอร์วิสสำหรับจัดการข้อมูลโปรไฟล์ผู้ใช้ และการลบบัญชี (Profile API Service)
 class ProfileApiService {
+  /// อัปเดตข้อมูลโปรไฟล์ผู้ใช้ขึ้นไปยัง Supabase หรือ Remote Server
   static Future<bool> updateUserProfile(dynamic userOrMap) async {
     try {
       final Map<String, dynamic> payload;
+      // 1. แปลงข้อมูลและลบฟิลด์ที่ไม่จำเป็นต้องส่งออก
       if (userOrMap is Map<String, dynamic>) {
         payload = Map<String, dynamic>.from(userOrMap)
           ..removeWhere(
@@ -25,7 +27,7 @@ class ProfileApiService {
         payload = {};
       }
 
-      // 1. ลองอัปเดตผ่าน Supabase ก่อน
+      // 2. อัปเดตผ่านระบบ Supabase ก่อน
       if (SupabaseService.instance.isInitialized) {
         final success = await SupabaseService.instance.upsertUser(payload);
         if (success) {
@@ -34,13 +36,14 @@ class ProfileApiService {
         }
       }
 
-      // 2. Fallback ไป PHP API
+      // 3. ระบบสำรอง: ยิงไปยัง Remote PHP API Backend
       final uri = Uri.parse('${ApiServiceConfig.baseUrl}/profile/user_profile.php');
       final headers = await ApiServiceConfig.getAuthHeaders();
       final response = await http
           .post(uri, headers: headers, body: jsonEncode(payload))
           .timeout(const Duration(seconds: 5));
 
+      // 4. ตรวจสอบผลลัพธ์
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
         if (body['status'] == 'success') {
@@ -56,9 +59,7 @@ class ProfileApiService {
     return false;
   }
 
-  /// 4. ดึงประวัติการออกกำลังกายจาก PHP API (`workouts.php`)
-  /// รองรับทั้ง Initial Data Hydration (ดึงทั้งหมด) และ Delta Sync (เฉพาะรายการใหม่ตั้งแต่ since)
-
+  /// ลบบัญชีผู้ใช้ถาวร (Delete Account)
   static Future<Map<String, dynamic>> deleteAccount({
     required int userId,
     required String email,
@@ -73,7 +74,7 @@ class ProfileApiService {
         return {'status': 'success', 'message': 'ลบบัญชีผู้ใช้สำเร็จ'};
       }
 
-      // 2. Fallback ไปยัง PHP API
+      // 2. ระบบสำรอง: ลบผ่าน Remote PHP API
       final headers = await ApiServiceConfig.getAuthHeaders();
       final response = await http
           .post(
@@ -83,6 +84,7 @@ class ProfileApiService {
           )
           .timeout(const Duration(seconds: 10));
 
+      // 3. ตรวจสอบผลลัพธ์
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
         if (body is Map<String, dynamic>) {
