@@ -1,7 +1,7 @@
 # File Tree: lib
 
-**Generated:** 10/5/2026, 7:35:57 PM
-**Root Path:** `/home/kamaruding/modile/flutter/healthymate/lib`
+**Generated:** 10/7/2026, 10:40:38 PM
+**Root Path:** `/healthymate/lib`
 
 ```
 ├── 📁 core
@@ -15,6 +15,7 @@
 │   │   │   ├── 📄 goal_preference_dao_pending_sync.dart
 │   │   │   ├── 📄 goal_preference_dao_sync_records.dart
 │   │   │   ├── 📄 health_record_dao.dart
+│   │   │   ├── 📄 notification_dao.dart
 │   │   │   ├── 📄 nutrition_dao.dart
 │   │   │   ├── 📄 routine_dao.dart
 │   │   │   ├── 📄 routine_dao_history.dart
@@ -29,40 +30,37 @@
 │   │   ├── 📄 app_database_lifecycle.dart
 │   │   └── 📄 app_database_schema.dart
 │   ├── 📁 services
-│   │   ├── 📄 activity_api_service.dart
+│   │   ├── 📁 device
+│   │   │   ├── 📄 audio_service.dart
+│   │   │   ├── 📄 biometric_apple_auth_service.dart
+│   │   │   ├── 📄 location_background_service.dart
+│   │   │   ├── 📄 notification_service.dart
+│   │   │   ├── 📄 notification_service_scheduling.dart
+│   │   │   └── 📄 tts_service.dart
+│   │   ├── 📁 export
+│   │   │   └── 📄 data_export_service.dart
+│   │   ├── 📁 health_kit
+│   │   │   └── 📄 health_kit_connect_service.dart
+│   │   ├── 📁 routine_state
+│   │   │   ├── 📄 routine_state_notifier.dart
+│   │   │   ├── 📄 routine_state_notifier_goal_progress.dart
+│   │   │   ├── 📄 routine_state_notifier_goals.dart
+│   │   │   ├── 📄 routine_state_notifier_loading.dart
+│   │   │   └── 📄 routine_state_notifier_routines.dart
+│   │   ├── 📁 sync
+│   │   │   ├── 📄 sync_service.dart
+│   │   │   ├── 📄 sync_service_downstream.dart
+│   │   │   ├── 📄 sync_service_lifecycle.dart
+│   │   │   ├── 📄 sync_service_sync_activity.dart
+│   │   │   ├── 📄 sync_service_sync_records.dart
+│   │   │   ├── 📄 sync_service_sync_routines.dart
+│   │   │   └── 📄 sync_service_upstream.dart
 │   │   ├── 📄 api_service.dart
 │   │   ├── 📄 api_service_config.dart
-│   │   ├── 📄 audio_service.dart
-│   │   ├── 📄 auth_api_service.dart
 │   │   ├── 📄 auth_service.dart
-│   │   ├── 📄 biometric_apple_auth_service.dart
-│   │   ├── 📄 dashboard_api_service.dart
-│   │   ├── 📄 data_export_service.dart
-│   │   ├── 📄 email_api_service.dart
-│   │   ├── 📄 goal_api_service.dart
-│   │   ├── 📄 health_kit_connect_service.dart
-│   │   ├── 📄 health_record_api_service.dart
-│   │   ├── 📄 location_background_service.dart
-│   │   ├── 📄 notification_service.dart
-│   │   ├── 📄 notification_service_scheduling.dart
-│   │   ├── 📄 onboarding_service.dart
-│   │   ├── 📄 profile_api_service.dart
-│   │   ├── 📄 routine_api_service.dart
-│   │   ├── 📄 routine_state_notifier.dart
-│   │   ├── 📄 routine_state_notifier_goal_progress.dart
-│   │   ├── 📄 routine_state_notifier_goals.dart
-│   │   ├── 📄 routine_state_notifier_loading.dart
-│   │   ├── 📄 routine_state_notifier_routines.dart
+│   │   ├── 📄 index.dart
 │   │   ├── 📄 supabase_service.dart
-│   │   ├── 📄 sync_service.dart
-│   │   ├── 📄 sync_service_downstream.dart
-│   │   ├── 📄 sync_service_lifecycle.dart
-│   │   ├── 📄 sync_service_sync_activity.dart
-│   │   ├── 📄 sync_service_sync_records.dart
-│   │   ├── 📄 sync_service_sync_routines.dart
-│   │   ├── 📄 sync_service_upstream.dart
-│   │   ├── 📄 theme_service.dart
-│   │   └── 📄 tts_service.dart
+│   │   └── 📄 theme_service.dart
 │   ├── 📁 utils
 │   │   ├── 📄 health_calculator.dart
 │   │   └── 📄 route_utils.dart
@@ -71,12 +69,52 @@
 │   ├── 📁 auth
 │   │   ├── 📁 controllers
 │   │   │   └── 📄 forgot_password_controller.dart
+│   │   ├── 📁 login
+│   │   │   ├── 📁 pages
+│   │   │   │   ├── 📄 login_page.dart
+│   │   │   │   ├── 📄 login_page_content.dart
+│   │   │   │   ├── 📄 login_page_form_actions.dart
+│   │   │   │   ├── 📄 login_page_google.dart
+│   │   │   │   └── 📄 login_page_other_auth.dart
+│   │   │   ├── 📁 widgets
+│   │   │   │   ├── 📄 index.dart
+│   │   │   │   ├── 📄 login_error_banner.dart
+│   │   │   │   ├── 📄 login_footer_link.dart
+│   │   │   │   ├── 📄 login_form_fields.dart
+│   │   │   │   ├── 📄 login_header.dart
+│   │   │   │   ├── 📄 login_submit_button.dart
+│   │   │   │   └── 📄 social_login_buttons.dart
+│   │   │   └── 📄 index.dart
 │   │   ├── 📁 pages
 │   │   │   ├── 📄 forgot_password_page.dart
 │   │   │   ├── 📄 forgot_password_page_actions.dart
 │   │   │   ├── 📄 forgot_password_page_content.dart
 │   │   │   ├── 📄 forgot_password_page_email_form.dart
 │   │   │   └── 📄 forgot_password_page_password_form.dart
+│   │   ├── 📁 register
+│   │   │   ├── 📁 controllers
+│   │   │   │   └── 📄 register_controller.dart
+│   │   │   ├── 📁 pages
+│   │   │   │   ├── 📄 register_fade_slide_entrance.dart
+│   │   │   │   ├── 📄 register_page.dart
+│   │   │   │   ├── 📄 register_page_actions.dart
+│   │   │   │   └── 📄 register_page_content.dart
+│   │   │   ├── 📁 utils
+│   │   │   │   └── 📄 password_validator.dart
+│   │   │   ├── 📁 widgets
+│   │   │   │   ├── 📄 index.dart
+│   │   │   │   ├── 📄 password_requirements_card.dart
+│   │   │   │   ├── 📄 register_consent_section.dart
+│   │   │   │   ├── 📄 register_footer_link.dart
+│   │   │   │   ├── 📄 register_form_fields.dart
+│   │   │   │   ├── 📄 register_form_fields_content.dart
+│   │   │   │   ├── 📄 register_header.dart
+│   │   │   │   ├── 📄 register_submit_button.dart
+│   │   │   │   └── 📄 terms_privacy_sheets.dart
+│   │   │   └── 📄 index.dart
+│   │   ├── 📁 services
+│   │   │   ├── 📄 auth_api_service.dart
+│   │   │   └── 📄 email_api_service.dart
 │   │   ├── 📁 widgets
 │   │   │   ├── 📄 index.dart
 │   │   │   ├── 📄 otp_verification_dialog.dart
@@ -94,6 +132,8 @@
 │   │   │   ├── 📄 dashboard_page.dart
 │   │   │   ├── 📄 dashboard_page_actions.dart
 │   │   │   └── 📄 dashboard_page_content.dart
+│   │   ├── 📁 services
+│   │   │   └── 📄 dashboard_api_service.dart
 │   │   ├── 📁 utils
 │   │   │   └── 📄 dashboard_ui_helpers.dart
 │   │   ├── 📁 widgets
@@ -190,22 +230,20 @@
 │   │   │   ├── 📄 result_card.dart
 │   │   │   └── 📄 weight_chart_painter.dart
 │   │   └── 📄 index.dart
-│   ├── 📁 login
+│   ├── 📁 notifications
+│   │   ├── 📁 controllers
+│   │   │   └── 📄 notification_controller.dart
+│   │   ├── 📁 models
+│   │   │   └── 📄 notification_item.dart
 │   │   ├── 📁 pages
-│   │   │   ├── 📄 login_page.dart
-│   │   │   ├── 📄 login_page_content.dart
-│   │   │   ├── 📄 login_page_form_actions.dart
-│   │   │   ├── 📄 login_page_google.dart
-│   │   │   └── 📄 login_page_other_auth.dart
-│   │   ├── 📁 widgets
-│   │   │   ├── 📄 index.dart
-│   │   │   ├── 📄 login_error_banner.dart
-│   │   │   ├── 📄 login_footer_link.dart
-│   │   │   ├── 📄 login_form_fields.dart
-│   │   │   ├── 📄 login_header.dart
-│   │   │   ├── 📄 login_submit_button.dart
-│   │   │   └── 📄 social_login_buttons.dart
-│   │   └── 📄 index.dart
+│   │   │   ├── 📄 notification_settings_page.dart
+│   │   │   └── 📄 notifications_page.dart
+│   │   ├── 📁 services
+│   │   │   └── 📄 app_notification_service.dart
+│   │   └── 📁 widgets
+│   │       ├── 📄 notification_empty_view.dart
+│   │       ├── 📄 notification_filter_bar.dart
+│   │       └── 📄 notification_item_card.dart
 │   ├── 📁 onboarding
 │   │   ├── 📁 models
 │   │   │   └── 📄 onboarding_goal_template.dart
@@ -213,6 +251,8 @@
 │   │   │   ├── 📄 onboarding_slides_page.dart
 │   │   │   ├── 📄 onboarding_wizard_page.dart
 │   │   │   └── 📄 profile_setup_wizard_page.dart
+│   │   ├── 📁 services
+│   │   │   └── 📄 onboarding_service.dart
 │   │   ├── 📁 widgets
 │   │   │   ├── 📄 step1_welcome_view.dart
 │   │   │   ├── 📄 step2_body_metrics_view.dart
@@ -249,6 +289,9 @@
 │   │   │   ├── 📄 routine_notification_page_dialogs.dart
 │   │   │   ├── 📄 routine_notification_page_grouping.dart
 │   │   │   └── 📄 routine_notification_page_sections.dart
+│   │   ├── 📁 services
+│   │   │   ├── 📄 goal_api_service.dart
+│   │   │   └── 📄 routine_api_service.dart
 │   │   ├── 📁 widgets
 │   │   │   ├── 📄 add_main_goal_bottom_sheet.dart
 │   │   │   ├── 📄 add_main_goal_bottom_sheet_actions.dart
@@ -301,6 +344,9 @@
 │   │   │   ├── 📄 profile_page_content.dart
 │   │   │   ├── 📄 profile_page_image_actions.dart
 │   │   │   └── 📄 profile_page_sheets.dart
+│   │   ├── 📁 services
+│   │   │   ├── 📄 health_record_api_service.dart
+│   │   │   └── 📄 profile_api_service.dart
 │   │   ├── 📁 widgets
 │   │   │   ├── 📄 account_card.dart
 │   │   │   ├── 📄 connected_devices_bottom_sheet.dart
@@ -324,27 +370,6 @@
 │   │   │   ├── 📄 settings_card_action_row.dart
 │   │   │   └── 📄 unit_picker_bottom_sheet.dart
 │   │   └── 📄 index.dart
-│   ├── 📁 register
-│   │   ├── 📁 controllers
-│   │   │   └── 📄 register_controller.dart
-│   │   ├── 📁 pages
-│   │   │   ├── 📄 register_fade_slide_entrance.dart
-│   │   │   ├── 📄 register_page.dart
-│   │   │   ├── 📄 register_page_actions.dart
-│   │   │   └── 📄 register_page_content.dart
-│   │   ├── 📁 utils
-│   │   │   └── 📄 password_validator.dart
-│   │   ├── 📁 widgets
-│   │   │   ├── 📄 index.dart
-│   │   │   ├── 📄 password_requirements_card.dart
-│   │   │   ├── 📄 register_consent_section.dart
-│   │   │   ├── 📄 register_footer_link.dart
-│   │   │   ├── 📄 register_form_fields.dart
-│   │   │   ├── 📄 register_form_fields_content.dart
-│   │   │   ├── 📄 register_header.dart
-│   │   │   ├── 📄 register_submit_button.dart
-│   │   │   └── 📄 terms_privacy_sheets.dart
-│   │   └── 📄 index.dart
 │   ├── 📁 workout
 │   │   ├── 📁 controllers
 │   │   │   ├── 📄 workout_history_controller.dart
@@ -364,6 +389,7 @@
 │   │   │   ├── 📄 workout_tracking_page_content.dart
 │   │   │   └── 📄 workout_tracking_page_location.dart
 │   │   ├── 📁 services
+│   │   │   ├── 📄 activity_api_service.dart
 │   │   │   ├── 📄 kalman_location_filter.dart
 │   │   │   ├── 📄 map_matching_service.dart
 │   │   │   └── 📄 workout_recovery_service.dart

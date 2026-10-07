@@ -1,5 +1,3 @@
-// ส่วนนี้อธิบายบทบาทของไฟล์: หน้าจอหลัก ในฟีเจอร์การเข้าสู่ระบบ (login page content)
-
 part of 'login_page.dart';
 
 extension LoginPageContent on _LoginPageState {
