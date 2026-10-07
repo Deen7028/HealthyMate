@@ -1,15 +1,25 @@
-part of 'forgot_password_page.dart';
+import 'package:flutter/material.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
 
-/// Extension สำหรับสร้าง UI ของฟอร์มกรอกอีเมล
-extension _ForgotPasswordEmailForm on _ForgotPasswordPageState {
-  /// Build UI ฟอร์มกรอกอีเมล
-  Widget _buildEmailForm() {
+class ForgotPasswordEmailForm extends StatelessWidget {
+  final TextEditingController emailController;
+  final bool isLoading;
+  final VoidCallback onSendOtp;
+
+  const ForgotPasswordEmailForm({
+    super.key,
+    required this.emailController,
+    required this.isLoading,
+    required this.onSendOtp,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       key: const ValueKey('email_form'),
       children: [
-        /// อีเมล
         TextField(
-          controller: _emailController,
+          controller: emailController,
           keyboardType: TextInputType.emailAddress,
           decoration: InputDecoration(
             labelText: 'อีเมล',
@@ -29,12 +39,11 @@ extension _ForgotPasswordEmailForm on _ForgotPasswordPageState {
           ),
         ),
         const SizedBox(height: 24),
-        /// ปุ่มส่ง OTP
         SizedBox(
           width: double.infinity,
           height: 54,
           child: ElevatedButton(
-            onPressed: _controller.isLoading ? null : _handleSendOtp,
+            onPressed: isLoading ? null : onSendOtp,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryGreen,
               shape: RoundedRectangleBorder(
@@ -48,7 +57,7 @@ extension _ForgotPasswordEmailForm on _ForgotPasswordPageState {
                 opacity: animation,
                 child: ScaleTransition(scale: animation, child: child),
               ),
-              child: _controller.isLoading
+              child: isLoading
                   ? const SizedBox(
                       key: ValueKey('loading_otp'),
                       width: 24,

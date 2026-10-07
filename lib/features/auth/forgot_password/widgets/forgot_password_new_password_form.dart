@@ -1,24 +1,56 @@
-part of 'forgot_password_page.dart';
+import 'package:flutter/material.dart';
+import 'package:healthymate/shared/theme/app_theme.dart';
+import 'package:healthymate/features/auth/register/widgets/password_requirements_card.dart';
 
-extension _ForgotPasswordPasswordForm on _ForgotPasswordPageState {
-  /// ฟังก์ชันสร้าง UI ของฟอร์มกรอกรหัสผ่าน
-  Widget _buildPasswordForm() {
+class ForgotPasswordNewPasswordForm extends StatefulWidget {
+  final GlobalKey<FormState> formKey;
+  final TextEditingController newPasswordController;
+  final TextEditingController confirmPasswordController;
+  final FocusNode passwordFocusNode;
+  final FocusNode confirmPasswordFocusNode;
+  final bool isLoading;
+  final VoidCallback onResetPassword;
+
+  const ForgotPasswordNewPasswordForm({
+    super.key,
+    required this.formKey,
+    required this.newPasswordController,
+    required this.confirmPasswordController,
+    required this.passwordFocusNode,
+    required this.confirmPasswordFocusNode,
+    required this.isLoading,
+    required this.onResetPassword,
+  });
+
+  @override
+  State<ForgotPasswordNewPasswordForm> createState() => _ForgotPasswordNewPasswordFormState();
+}
+
+class _ForgotPasswordNewPasswordFormState extends State<ForgotPasswordNewPasswordForm> {
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+
+  bool get _hasMinLength => widget.newPasswordController.text.length >= 8;
+  bool get _hasUppercase => RegExp(r'[A-Z]').hasMatch(widget.newPasswordController.text);
+  bool get _hasLowercase => RegExp(r'[a-z]').hasMatch(widget.newPasswordController.text);
+  bool get _hasDigits => RegExp(r'[0-9]').hasMatch(widget.newPasswordController.text);
+
+  @override
+  Widget build(BuildContext context) {
     return Form(
-      key: _formKey,
+      key: widget.formKey,
       autovalidateMode: AutovalidateMode.onUserInteraction,
       child: Column(
         key: const ValueKey('password_form'),
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ช่องรหัสผ่านใหม่
           TextFormField(
-            controller: _newPasswordController,
-            focusNode: _passwordFocusNode,
+            controller: widget.newPasswordController,
+            focusNode: widget.passwordFocusNode,
             obscureText: _obscurePassword,
             textInputAction: TextInputAction.next,
             onChanged: (_) => setState(() {}),
-            onFieldSubmitted: (_) =>
-                FocusScope.of(context).requestFocus(_confirmPasswordFocusNode),
+            onFieldSubmitted: (_) => FocusScope.of(context).requestFocus(widget.confirmPasswordFocusNode),
             decoration: InputDecoration(
               labelText: 'รหัสผ่านใหม่ (Password)',
               hintText: '••••••••',
@@ -28,16 +60,10 @@ extension _ForgotPasswordPasswordForm on _ForgotPasswordPageState {
               ),
               suffixIcon: IconButton(
                 icon: Icon(
-                  _obscurePassword
-                      ? Icons.visibility_off_outlined
-                      : Icons.visibility_outlined,
+                  _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                   color: AppTheme.textTertiary,
                 ),
-                onPressed: () {
-                  setState(() {
-                    _obscurePassword = !_obscurePassword;
-                  });
-                },
+                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
               ),
               filled: true,
               fillColor: Colors.white,
@@ -63,14 +89,11 @@ extension _ForgotPasswordPasswordForm on _ForgotPasswordPageState {
               return null;
             },
           ),
-
           const SizedBox(height: 8),
-
-          // กล่องเงื่อนไขความปลอดภัยเหมือนหน้า Register
           AnimatedSize(
             duration: const Duration(milliseconds: 350),
             curve: Curves.easeOutCubic,
-            child: _newPasswordController.text.isEmpty
+            child: widget.newPasswordController.text.isEmpty
                 ? const SizedBox.shrink()
                 : PasswordRequirementsCard(
                     hasMinLength: _hasMinLength,
@@ -79,16 +102,13 @@ extension _ForgotPasswordPasswordForm on _ForgotPasswordPageState {
                     hasDigits: _hasDigits,
                   ),
           ),
-
           const SizedBox(height: 18),
-
-          // ช่องยืนยันรหัสผ่านใหม่
           TextFormField(
-            controller: _confirmPasswordController,
-            focusNode: _confirmPasswordFocusNode,
+            controller: widget.confirmPasswordController,
+            focusNode: widget.confirmPasswordFocusNode,
             obscureText: _obscureConfirmPassword,
             textInputAction: TextInputAction.done,
-            onFieldSubmitted: (_) => _handleResetPassword(),
+            onFieldSubmitted: (_) => widget.onResetPassword(),
             decoration: InputDecoration(
               labelText: 'ยืนยันรหัสผ่านใหม่ (Confirm Password)',
               hintText: '••••••••',
@@ -98,16 +118,10 @@ extension _ForgotPasswordPasswordForm on _ForgotPasswordPageState {
               ),
               suffixIcon: IconButton(
                 icon: Icon(
-                  _obscureConfirmPassword
-                      ? Icons.visibility_off_outlined
-                      : Icons.visibility_outlined,
+                  _obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                   color: AppTheme.textTertiary,
                 ),
-                onPressed: () {
-                  setState(() {
-                    _obscureConfirmPassword = !_obscureConfirmPassword;
-                  });
-                },
+                onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
               ),
               filled: true,
               fillColor: Colors.white,
@@ -127,20 +141,18 @@ extension _ForgotPasswordPasswordForm on _ForgotPasswordPageState {
               if (value == null || value.isEmpty) {
                 return 'กรุณายืนยันรหัสผ่านใหม่';
               }
-              if (value != _newPasswordController.text) {
+              if (value != widget.newPasswordController.text) {
                 return 'รหัสผ่านทั้งสองช่องไม่ตรงกัน';
               }
               return null;
             },
           ),
-
           const SizedBox(height: 28),
-          /// ปุ่มยืนยันการรีเซ็ตรหัสผ่าน
           SizedBox(
             width: double.infinity,
             height: 54,
             child: ElevatedButton(
-              onPressed: _controller.isLoading ? null : _handleResetPassword,
+              onPressed: widget.isLoading ? null : widget.onResetPassword,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryGreen,
                 shape: RoundedRectangleBorder(
@@ -154,7 +166,7 @@ extension _ForgotPasswordPasswordForm on _ForgotPasswordPageState {
                   opacity: animation,
                   child: ScaleTransition(scale: animation, child: child),
                 ),
-                child: _controller.isLoading
+                child: widget.isLoading
                     ? const SizedBox(
                         key: ValueKey('loading_pass'),
                         width: 24,
