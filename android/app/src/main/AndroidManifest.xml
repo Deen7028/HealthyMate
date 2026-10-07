@@ -1,25 +1,39 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Permissions for GPS & Workout Tracking -->
+    <!-- สิทธิ์สำหรับระบบพิกัด GPS และการติดตามการออกกำลังกาย -->
+    <!-- ขอพิกัดตำแหน่งแบบละเอียด (Fine GPS) -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- ขอพิกัดตำแหน่งแบบคร่าวๆ จากเครือข่าย/Wi-Fi (Coarse Location) -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- ขอเข้าถึงพิกัดแม้แอปจะทำงานอยู่เบื้องหลัง (Background Location) -->
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <!-- รันเซอร์วิสเบื้องหน้าเพื่อไม่ให้ระบบ Android ปิดการทำงานขณะติดตามกิจกรรม -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- ระบุประเภท Foreground Service สำหรับพิกัดตำแหน่ง (Android 14+) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <!-- ขอสิทธิ์ส่งการแจ้งเตือน (จำเป็นสำหรับ Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- ป้องกัน CPU หลับขณะกำลังจับเวลาและบันทึกเส้นทางวิ่ง -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- สิทธิ์เชื่อมต่ออินเทอร์เน็ตสำหรับดาวน์โหลดแผนที่และซิงค์ข้อมูล -->
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- Permissions for Camera & Photo Gallery -->
+    <!-- สิทธิ์สำหรับกล้องถ่ายภาพและการเลือกรูปอาหาร/โปรไฟล์ -->
+    <!-- ถ่ายภาพอาหารเพื่อนำไปสแกนวิเคราะห์โภชนาการด้วย AI -->
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- เข้าถึงคลังภาพสำหรับ Android 12 ลงไป -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <!-- เข้าถึงคลังภาพสำหรับ Android 13 ขึ้นไป (Photo Picker) -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
-    <!-- Biometric Authentication Permission -->
+    <!-- สิทธิ์ยืนยันตัวตนด้วยชีวมิติ (Biometrics: สแกนนิ้วมือ/ใบหน้า) -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 
-    <!-- Permissions for Local Notifications & Alarm Scheduling -->
+    <!-- สิทธิ์สำหรับการแจ้งเตือนและการตั้งเวลาปลุกเตือนกิจวัตร -->
+    <!-- รับสัญญาณเมื่ออุปกรณ์เปิดเครื่องใหม่ เพื่อคืนค่าเวลาแจ้งเตือนที่เคยตั้งไว้ -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <!-- สิทธิ์สั่นเตือนบนอุปกรณ์ -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- สิทธิ์ตั้งเวลาเตือนกิจวัตรแบบแม่นยำตรงเวลา (Exact Alarm สำหรับ Android 12+) -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 
@@ -37,20 +51,18 @@
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
-            <!-- Specifies an Android theme to apply to this Activity as soon as
-                 the Android process has started. This theme is visible to the user
-                 while the Flutter UI initializes. After that, this theme continues
-                 to determine the Window background behind the Flutter UI. -->
+            <!-- ธีมหน้าต่างตอนเริ่มเปิดแอป (Splash Screen) -->
             <meta-data
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
+            <!-- จุดเริ่มต้นหลักในการรันแอปพลิเคชันจากหน้า Launcher -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
 
-            <!-- Deep Link Intent Filter สำหรับ Supabase Auth / Google OAuth -->
+            <!-- Deep Link Intent Filter สำหรับ Supabase Auth / Google OAuth Callback -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -65,7 +77,7 @@
             </intent-filter>
         </activity>
 
-        <!-- ⚠️ ต้อง exported=true เพื่อให้ OS ส่ง BOOT_COMPLETED มาได้ -->
+        <!-- Receiver สำหรับคืนค่าการแจ้งเตือนเมื่อเปิดเครื่องใหม่หรืออัปเดตแอป (ต้อง exported=true เพื่อให้ Android OS ส่งสัญญาณเข้ามาได้) -->
         <receiver android:exported="true" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
@@ -74,32 +86,28 @@
                 <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
-        <!-- Receiver สำหรับ trigger notification เมื่อถึงเวลา -->
+
+        <!-- Receiver สำหรับสั่งยิง Local Notification เมื่อถึงเวลาที่ตั้งไว้ -->
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"/>
-        <!-- Don't delete the meta-data below.
-             This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
+
         <!-- Flutter V2 Embedding -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
 
-        <!-- Google Maps API Key -->
+        <!-- Google Maps API Key สำหรับแสดงผลแผนที่และคำนวณเส้นทาง -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="${googleMapsApiKey}" />
 
-        <!-- Flutter Background Service -->
+        <!-- Background Service ติดตามพิกัดตำแหน่ง GPS ขณะออกกำลังกายในเบื้องหลัง -->
         <service
             android:name="id.flutter.flutter_background_service.BackgroundService"
             android:foregroundServiceType="location"
             android:exported="true" />
     </application>
 
-    <!-- Required to query activities that can process text, see:
-         https://developer.android.com/training/package-visibility and
-         https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.
-
-         In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
+    <!-- สำหรับรองรับการประมวลผลข้อความบน Android 11+ -->
     <queries>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
