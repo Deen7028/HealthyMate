@@ -3,7 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
-import 'package:healthymate/features/auth/pages/forgot_password_page.dart';
+import 'package:healthymate/features/auth/forgot_password/pages/forgot_password_page.dart';
 
 class LoginFormFields extends StatelessWidget {
   final TextEditingController emailController;
