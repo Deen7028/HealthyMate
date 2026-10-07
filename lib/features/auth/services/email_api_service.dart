@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'api_service_config.dart';
+import 'package:healthymate/core/services/api_service_config.dart';
 
 import 'package:healthymate/core/services/supabase_service.dart';
 

@@ -4,7 +4,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'api_service_config.dart';
+import 'package:healthymate/core/services/api_service_config.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
 
 import 'package:healthymate/core/services/supabase_service.dart';

@@ -10,7 +10,7 @@ import 'package:healthymate/core/services/api_service_config.dart';
 import 'package:healthymate/core/services/auth_service.dart';
 import 'package:healthymate/core/services/location_background_service.dart';
 import 'package:healthymate/core/services/notification_service.dart';
-import 'package:healthymate/core/services/onboarding_service.dart';
+import 'package:healthymate/features/onboarding/services/onboarding_service.dart';
 import 'package:healthymate/core/services/sync_service.dart';
 import 'package:healthymate/shared/theme/theme_service.dart';
 import 'package:healthymate/core/services/tts_service.dart';

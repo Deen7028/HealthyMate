@@ -2,7 +2,7 @@
 // คอมเมนท์ภาษาไทยถูกใส่ไว้เป็นส่วนๆ เพื่อช่วยไล่ flow โดยไม่เปลี่ยนพฤติกรรมเดิมของโค้ด
 
 import 'package:flutter/material.dart';
-import 'package:healthymate/core/services/onboarding_service.dart';
+import 'package:healthymate/features/onboarding/services/onboarding_service.dart';
 import 'package:healthymate/features/login/pages/login_page.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 
