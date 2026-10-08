@@ -1,4 +1,4 @@
-/// Data used to configure a predefined main goal in the selection sheet.
+// คลาสโมเดลสำหรับแม่แบบเป้าหมายหลักสำเร็จรูป
 class MainGoalTemplate {
   final String title;
   final String icon;

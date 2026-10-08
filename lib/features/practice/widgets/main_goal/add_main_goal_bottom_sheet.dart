@@ -4,7 +4,7 @@ import 'main_goal_template.dart';
 part 'add_main_goal_bottom_sheet_sections.dart';
 part 'add_main_goal_bottom_sheet_actions_ui.dart';
 part 'add_main_goal_bottom_sheet_actions.dart';
-
+// BottomSheet สำหรับเลือกตั้งเป้าหมายหลัก (จากแม่แบบสำเร็จรูป หรือจากกิจวัตรเดิม)
 class AddMainGoalBottomSheet extends StatefulWidget {
   const AddMainGoalBottomSheet({super.key});
   @override
@@ -65,7 +65,7 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
   ];
   int _selectedTemplateIndex = 0;
   late TextEditingController _targetController;
-  // Deadline selection: '1_week', '1_month', 'custom'
+  // กำหนดเวลาเสร็จสิ้นเป้าหมายหลัก: '1_week', '1_month', 'custom'
   String _deadlineType = '1_month';
   DateTime _customDeadlineDate = DateTime.now().add(const Duration(days: 30));
   @override
@@ -83,7 +83,7 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
     _targetController.dispose();
     super.dispose();
   }
-
+  // Build UI หลักของหน้าจอ
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -109,7 +109,7 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Handle bar
+            // แถบเลื่อนปรับระดับ
             Center(
               child: Container(
                 width: 40,
@@ -123,13 +123,16 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
               ),
             ),
             const SizedBox(height: 16),
+            // ส่วนหัวข้อ
             ..._buildHeader(isDark, textPrimary, textSecondary),
+            // ส่วนเลือกประเภทเป้าหมาย
             ..._buildGoalTypeSection(
               isDark,
               surfaceBg,
               borderColor,
               textPrimary,
             ),
+            // ส่วนกำหนดเป้าหมาย
             ..._buildTargetSection(
               isDark,
               surfaceBg,
@@ -137,13 +140,15 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
               textPrimary,
               textSecondary,
               selectedTemplate,
-            ),
+            ),  
+            // ส่วนกำหนดเวลาเสร็จสิ้น
             ..._buildDeadlineSection(
               isDark,
               surfaceBg,
               borderColor,
               textPrimary,
             ),
+            // ปุ่มบันทึก
             ..._buildSaveButton(isDark),
           ],
         ),
@@ -151,6 +156,7 @@ class _AddMainGoalBottomSheetState extends State<AddMainGoalBottomSheet> {
     );
   }
 
+  // ส่วนกำหนดเวลาเสร็จสิ้น
   Widget _buildDeadlineOption({
     required bool isDark,
     required Color surfaceBg,

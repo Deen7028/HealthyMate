@@ -1,6 +1,8 @@
 part of 'routine_state_notifier.dart';
 
+// ส่วนขยายสำหรับจัดการการทำกิจวัตร และปักหมุดกิจวัตรเป็นเป้าหมายหลัก (Routine Operations Extension)
 extension RoutineStateRoutines on RoutineStateNotifier {
+  // สลับสถานะการทำกิจวัตร (สำเร็จ / ยังไม่สำเร็จ) พร้อมบันทึกลง Local DB และซิงค์ขึ้น Server ทันที
   Future<bool> toggleRoutineCompletion(int routineId) async {
     final newStatus = await AppDatabase.instance.toggleRoutineLog(
       routineId: routineId,
@@ -15,7 +17,7 @@ extension RoutineStateRoutines on RoutineStateNotifier {
     final targetVal = (r['targetValue'] as num?)?.toDouble() ?? 1.0;
     final progressVal = newStatus ? targetVal : 0.0;
 
-    // ซิงค์ขึ้นเซิร์ฟเวอร์ทันที
+    // ซิงค์ความคืบหน้าขึ้นเซิร์ฟเวอร์ทันที
     GoalApiService.updateRoutineProgressRemote(
       routineId: routineId,
       date: todayStr,
@@ -23,7 +25,7 @@ extension RoutineStateRoutines on RoutineStateNotifier {
       isCompleted: newStatus,
     );
 
-    // อัปเดต Goal Real-time ถ้าตัวนี้เป็น Goal หลัก
+    // อัปเดตข้อมูลความคืบหน้าของเป้าหมายหลักแบบ Real-time หากกิจวัตรนี้ถูกปักหมุดไว้
     if (_userGoal != null) {
       final pinnedId = (_userGoal!['nRoutineId'] as num?)?.toInt() ?? 0;
       if (pinnedId == routineId) {
@@ -57,7 +59,7 @@ extension RoutineStateRoutines on RoutineStateNotifier {
     return newStatus;
   }
 
-  /// ปักหมุดเป้าหมายหลักจาก Routine
+  // ปักหมุดกิจวัตรที่มีอยู่ให้กลายเป็นเป้าหมายหลักประจำวัน (Pin Routine as Main Goal)
   Future<void> pinAsMainGoal(Map<String, dynamic> routine) async {
     final title = routine['sTitle']?.toString() ?? 'ไม่มีชื่อ';
     final routineId = (routine['nRoutineId'] as num?)?.toInt() ?? 0;
@@ -149,6 +151,4 @@ extension RoutineStateRoutines on RoutineStateNotifier {
 
     this._notifyStateListeners();
   }
-
-  /// ตั้งเป้าหมายหลักแบบกำหนดเอง (Custom Main Goal)
 }

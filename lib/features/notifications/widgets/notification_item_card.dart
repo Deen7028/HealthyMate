@@ -14,7 +14,7 @@ class NotificationItemCard extends StatelessWidget {
     required this.onTap,
     required this.onDelete,
   });
-
+  // ฟังก์ชันสำหรับแปลงเวลา
   String _formatTimeAgo(DateTime dt) {
     final diff = DateTime.now().difference(dt);
     if (diff.inMinutes < 1) {

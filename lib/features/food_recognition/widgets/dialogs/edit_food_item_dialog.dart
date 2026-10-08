@@ -74,7 +74,7 @@ class _EditFoodItemDialogState extends State<EditFoodItemDialog> {
       ),
     );
   }
-
+// ฟังก์ชันสร้างแถบข้อความ
   Widget _buildInput({
     required TextEditingController controller,
     required String hint,

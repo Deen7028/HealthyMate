@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:healthymate/core/services/supabase_service.dart';
 import 'package:healthymate/core/services/api_service_config.dart';
-
+// ฟังก์ชันสำหรับบันทึกข้อมูลเป้าหมายและการออกกำลังกาย
 class GoalApiService {
   static Future<bool> updateRoutineProgressRemote({
     required int routineId,

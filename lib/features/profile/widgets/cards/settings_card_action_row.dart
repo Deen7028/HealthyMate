@@ -1,5 +1,5 @@
 part of 'settings_card.dart';
-
+// ส่วนต่างๆ ของการ์ดตั้งค่า
 extension SettingsCardActionRow on SettingsCard {
   Widget _buildActionRow({
     required bool isDark,

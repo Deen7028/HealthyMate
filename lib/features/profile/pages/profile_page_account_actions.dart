@@ -1,6 +1,7 @@
 part of 'profile_page.dart';
 
 extension ProfilePageAccountActions on _ProfilePageState {
+  // ฟังก์ชันจัดการการส่งออกรายงาน
   Future<void> _handleExportPdf() async {
     final path = await _controller.exportPdf();
     if (path != null && mounted) {
@@ -14,6 +15,7 @@ extension ProfilePageAccountActions on _ProfilePageState {
     }
   }
 
+  // ฟังก์ชันจัดการการลบบัญชี
   Future<void> _handleDeleteAccount() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -70,6 +72,7 @@ extension ProfilePageAccountActions on _ProfilePageState {
     }
   }
 
+  // ฟังก์ชันจัดการการออกจากระบบ
   Future<void> _handleLogout() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -82,6 +85,7 @@ extension ProfilePageAccountActions on _ProfilePageState {
     }
   }
 
+  // ฟังก์ชันแสดงกล่องโต้ตอบสำหรับแสดงข้อมูลนโยบายความเป็นส่วนตัว
   void _showPolicyDialog(String title, String content) {
     final themePrimary = Theme.of(context).colorScheme.primary;
     showDialog(

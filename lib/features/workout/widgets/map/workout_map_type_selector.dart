@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/features/workout/models/workout_models.dart';
-
+// เมธอดเปิด Popup สำหรับเลือกประเภทแผนที่และตั้งค่าแสดงเส้นทางการจราจร
 class WorkoutMapTypeSelector {
   static void openMapTypeSelector({
     required BuildContext context,

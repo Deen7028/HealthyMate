@@ -1,5 +1,5 @@
 part of 'routine_card_widget.dart';
-
+// ส่วนขยายแสดงหลอดความคืบหน้าของการ์ดกิจวัตร
 extension _RoutineCardProgress on RoutineCardWidget {
   Widget _buildPercentBadge(bool isDark) {
     return Container(

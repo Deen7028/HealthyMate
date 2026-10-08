@@ -1,6 +1,7 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 
+// บริการจัดการเล่นเสียงเอฟเฟกต์ภายในแอป (Audio Feedback Service)
 class AudioService {
   static final AudioService instance = AudioService._();
   AudioService._();
@@ -8,6 +9,7 @@ class AudioService {
   final AudioPlayer _uiPlayer = AudioPlayer();
   final AudioPlayer _timerPlayer = AudioPlayer();
 
+  // เล่นเสียงเมื่อทำภารกิจหรือกิจวัตรสำเร็จ (success.mp3)
   Future<void> playSuccess() async {
     try {
       if (_uiPlayer.state == PlayerState.playing) {
@@ -19,6 +21,7 @@ class AudioService {
     }
   }
 
+  // เล่นเสียงหยดน้ำเมื่อกดบันทึกการดื่มน้ำ (water.mp3)
   Future<void> playWaterDrop() async {
     try {
       if (_uiPlayer.state == PlayerState.playing) {
@@ -30,6 +33,7 @@ class AudioService {
     }
   }
 
+  // เล่นเสียงกระดิ่งเมื่อนับเวลาถอยหลังเสร็จสิ้น (bell.mp3)
   Future<void> playTimerComplete() async {
     try {
       if (_timerPlayer.state == PlayerState.playing) {

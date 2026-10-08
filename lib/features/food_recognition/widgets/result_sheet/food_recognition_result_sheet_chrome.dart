@@ -1,5 +1,5 @@
 part of 'food_recognition_result_sheet.dart';
-
+// ส่วนแสดงหัวข้อของหน้าต่างแสดงผลการวิเคราะห์อาหาร
 extension _FoodRecognitionResultSheetChrome
     on _FoodRecognitionResultSheetState {
   List<Widget> _buildHeader(
@@ -10,7 +10,7 @@ extension _FoodRecognitionResultSheetChrome
     Color textSecondary,
     Color borderColor,
   ) => [
-    // Header
+    // ส่วนแสดงหัวข้อ
     Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
       child: Row(

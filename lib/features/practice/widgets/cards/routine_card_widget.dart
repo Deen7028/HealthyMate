@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 part 'routine_card_progress.dart';
+// การ์ดแสดงรายการกิจวัตรแต่ละรายการ
 enum RoutineButtonType { workout, stepAdd, timer, singleCheck }
 class RoutineCardWidget extends StatelessWidget {
   final Map<String, dynamic> routine;

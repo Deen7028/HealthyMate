@@ -1,23 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 
+// เพศสำหรับใช้ในสูตรคำนวณสุขภาพ
 enum Gender { male, female }
 
+// คลาสยูทิลิตี้สำหรับคำนวณค่าสุขภาพ (BMI, BMR, TDEE, สัดส่วนร่างกาย และเป้าหมายแคลอรี)
 class HealthCalculator {
-  /// 1. Calculate Body Mass Index (BMI) - Metric: weight (kg) / (height (m) ^ 2)
+  // 1. คำนวณดัชนีมวลกาย (BMI) - ระบบเมตริก: น้ำหนัก (กก.) / (ส่วนสูง (ม.) ^ 2)
   static double calculateBMI({required double weightKg, required double heightCm}) {
     if (heightCm <= 0 || weightKg <= 0) return 0.0;
     final heightM = heightCm / 100.0;
     return weightKg / (heightM * heightM);
   }
 
-  /// Calculate Body Mass Index (BMI) - Imperial: (weight (lbs) / (height (in) ^ 2)) * 703
+  // คำนวณดัชนีมวลกาย (BMI) - ระบบอิมพีเรียล: (น้ำหนัก (ปอนด์) / (ส่วนสูง (นิ้ว) ^ 2)) * 703
   static double calculateBMIImperial({required double weightLbs, required double heightInches}) {
     if (heightInches <= 0 || weightLbs <= 0) return 0.0;
     return (weightLbs / (heightInches * heightInches)) * 703.0;
   }
 
-  /// Get BMI Category name, badge, range text, and color according to WHO / Asian standard
+  // จำแนกเกณฑ์ระดับ BMI ตามมาตรฐานเอเชีย (Asian Standard) พร้อมป้ายสถานะ ช่วงค่า และสี
   static BMICategory getBMICategory(double bmi) {
     if (bmi < 18.5) {
       return const BMICategory(
@@ -62,9 +64,9 @@ class HealthCalculator {
     }
   }
 
-  /// 2. Calculate Basal Metabolic Rate (BMR) using Mifflin-St Jeor equation:
-  /// Male: (10 x weight in kg) + (6.25 x height in cm) - (5 x age in years) + 5
-  /// Female: (10 x weight in kg) + (6.25 x height in cm) - (5 x age in years) - 161
+  // 2. คำนวณอัตราการเผาผลาญพลังงานพื้นฐาน (BMR) ตามสมการ Mifflin-St Jeor:
+  // เพศชาย: (10 x น้ำหนัก กก.) + (6.25 x ส่วนสูง ซม.) - (5 x อายุ) + 5
+  // เพศหญิง: (10 x น้ำหนัก กก.) + (6.25 x ส่วนสูง ซม.) - (5 x อายุ) - 161
   static double calculateBMR({
     required Gender gender,
     required double weightKg,
@@ -76,38 +78,37 @@ class HealthCalculator {
     return gender == Gender.male ? (base + 5.0) : (base - 161.0);
   }
 
-  /// 3. Calculate Total Daily Energy Expenditure (TDEE)
-  /// TDEE = BMR * activityMultiplier
-  /// Multipliers:
-  /// 1.2    - Sedentary
-  /// 1.375  - Lightly Active (1-3 days/week)
-  /// 1.55   - Moderately Active (3-5 days/week)
-  /// 1.725  - Very Active (6-7 days/week)
-  /// 1.9    - Extremely Active (2x/day or heavy labor)
+  // 3. คำนวณพลังงานที่ใช้ทั้งหมดต่อวัน (TDEE)
+  // TDEE = BMR * ตัวคูณระดับกิจกรรม (activityMultiplier)
+  // 1.2    - นั่งทำงานอยู่กับที่ ไม่ออกกำลังกาย
+  // 1.375  - กิจกรรมเบาๆ (ออกกำลังกาย 1-3 วัน/สัปดาห์)
+  // 1.55   - กิจกรรมปานกลาง (ออกกำลังกาย 3-5 วัน/สัปดาห์)
+  // 1.725  - กิจกรรมหนัก (ออกกำลังกาย 6-7 วัน/สัปดาห์)
+  // 1.9    - กิจกรรมหนักมาก (ออกกำลังกายวันละ 2 ครั้ง หรือทำงานใช้แรงงาน)
   static double calculateTDEE({required double bmr, required double activityMultiplier}) {
     return bmr * activityMultiplier;
   }
 
-  /// 4. Other Body Ratios
-  /// Waist-to-Height Ratio (WHtR) = Waist / Height
+  // 4. คำนวณสัดส่วนร่างกายอื่นๆ
+  // อัตราส่วนรอบเอวต่อส่วนสูง (Waist-to-Height Ratio: WHtR) = รอบเอว / ส่วนสูง
   static double calculateWaistToHeightRatio({required double waistCm, required double heightCm}) {
     if (heightCm <= 0 || waistCm <= 0) return 0.0;
     return waistCm / heightCm;
   }
 
-  /// Waist-to-Hip Ratio (WHR) = Waist / Hip
+  // อัตราส่วนรอบเอวต่อสะโพก (Waist-to-Hip Ratio: WHR) = รอบเอว / สะโพก
   static double calculateWaistToHipRatio({required double waistCm, required double hipCm}) {
     if (hipCm <= 0 || waistCm <= 0) return 0.0;
     return waistCm / hipCm;
   }
 
-  /// BMI Prime = Actual BMI / Upper Cutoff (default 23.0 for Asian standard, 25.0 for WHO)
+  // คำนวณค่า BMI Prime = BMI จริง / ค่าตัดบนมาตรฐาน (ค่าเริ่มต้น 23.0 สำหรับเอเชีย, 25.0 สำหรับ WHO)
   static double calculateBMIPrime({required double bmi, double upperCutoff = 23.0}) {
     if (upperCutoff <= 0 || bmi <= 0) return 0.0;
     return bmi / upperCutoff;
   }
 
-  /// Calorie targets calculation
+  // คำนวณเป้าหมายแคลอรีต่อวัน (ลดน้ำหนัก / รักษาน้ำหนัก / เพิ่มกล้ามเนื้อ)
   static CalorieTargets calculateTargets(double tdee) {
     return CalorieTargets(
       fatLoss: (tdee - 500).round().clamp(1000, 10000),
@@ -117,12 +118,13 @@ class HealthCalculator {
   }
 }
 
+// โมเดลสำหรับเก็บข้อมูลผลลัพธ์ระดับ BMI (ชื่อระดับ, ป้ายข้อความ, ช่วงเกณฑ์, สี, และดัชนี)
 class BMICategory {
   final String label;
   final String badgeText;
   final String rangeText;
   final Color color;
-  final int index; // 0..3 for bar highlight
+  final int index; // 0..3 สำหรับไฮไลต์เกจแถบสี
 
   const BMICategory({
     required this.label,
@@ -133,6 +135,7 @@ class BMICategory {
   });
 }
 
+// โมเดลสำหรับเก็บเป้าหมายแคลอรีต่อวัน (ลดไขมัน, รักษาน้ำหนัก, เพิ่มกล้ามเนื้อ)
 class CalorieTargets {
   final int fatLoss;
   final int maintain;

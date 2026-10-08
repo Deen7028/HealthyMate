@@ -1,5 +1,5 @@
 part of 'edit_profile_dialog.dart';
-
+// ส่วนต่างๆ ของหน้าต่างแก้ไขโปรไฟล์
 extension EditProfileDialogContent on _EditProfileDialogState {
   Widget _buildEditProfileDialog(BuildContext context) {
     final primaryColor = Theme.of(context).colorScheme.primary;

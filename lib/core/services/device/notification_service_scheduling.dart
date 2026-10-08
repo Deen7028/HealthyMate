@@ -1,7 +1,8 @@
 part of 'notification_service.dart';
 
+// ส่วนขยายสำหรับตั้งเวลาแจ้งเตือนล่วงหน้าและการแจ้งเตือนซ้ำ (Notification Scheduling Extension)
 extension NotificationServiceScheduling on NotificationService {
-  /// 1. ตั้งแจ้งเตือนแบบ "ระบุเวลาประจำวัน" (Daily Routine)
+  // 1. ตั้งแจ้งเตือนแบบ "ระบุเวลาประจำวัน" (Daily Routine) ตามชั่วโมงและนาที
   Future<void> scheduleDailyRoutine({
     required int id,
     required String title,
@@ -79,7 +80,7 @@ extension NotificationServiceScheduling on NotificationService {
     }
   }
 
-  /// 2. ตั้งแจ้งเตือนแบบ "ความถี่วนรอบ" (Periodic Routine - เช่น ทุกชั่วโมง)
+  // 2. ตั้งแจ้งเตือนแบบ "ความถี่วนรอบ" (Periodic Routine - เช่น ทุกชั่วโมง)
   Future<void> schedulePeriodicRoutine({
     required int id,
     required String title,

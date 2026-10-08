@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:healthymate/shared/theme/index.dart';
 
 part 'settings_card_action_row.dart';
-
+// การ์ดสำหรับแสดงการตั้งค่า
 class SettingsCard extends StatelessWidget {
   final bool isLocationEnabled;
   final String selectedUnit;

@@ -4,7 +4,7 @@ import '../../common/routine_gps_sync_option.dart';
 
 part 'routine_step_goal_content.dart';
 part 'routine_step_goal_unit_button.dart';
-
+// ส่วนของหน้าต่างเพิ่มกิจกรรมใหม่ ขั้นตอนที่2
 class RoutineStepGoal extends StatelessWidget {
   final TextEditingController targetController;
   final TextEditingController unitController;

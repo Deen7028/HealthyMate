@@ -1,5 +1,5 @@
 part of '../routine_controller.dart';
-
+// ฟังก์ชันสำหรับโหลดข้อมูลการออกกำลังกาย
 extension RoutineControllerLoadRows on RoutineController {
   Future<void> _loadRoutinesAndLogs(AppDatabase db, int userId) async {
     routines = await db.getRoutines(userId: userId);

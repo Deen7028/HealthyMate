@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/services/theme_service.dart';
-
+//BottomSheet สำหรับแสดงอุปกรณ์ที่เชื่อมต่อ
 class ConnectedDevicesBottomSheet extends StatelessWidget {
   final List<Map<String, dynamic>> connectedDevices;
   final Future<void> Function(String providerName) onAddDevice;

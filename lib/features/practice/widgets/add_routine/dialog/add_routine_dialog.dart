@@ -11,6 +11,7 @@ part 'add_routine_dialog_actions.dart';
 part 'add_routine_dialog_content.dart';
 part 'add_routine_dialog_steps.dart';
 
+// เพิ่มกิจวัตรใหม่
 class AddRoutineDialog extends StatefulWidget {
   final Map<String, dynamic>? initialRoutine;
 
@@ -24,10 +25,8 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
   final _formKey = GlobalKey<FormState>();
   final _pageController = PageController();
 
-  int _currentStep =
-      0; // 0: Step 1 (Target), 1: Step 2 (Duration & Sync), 2: Step 3 (Notify & Style)
-
-  // Controllers & Form fields
+  int _currentStep = 0; //
+  // ตัวควบคุมสำหรับฟอร์ม
   final _titleController = TextEditingController();
   final _targetController = TextEditingController(text: '10');
   final _unitController = TextEditingController(text: 'นาที');
@@ -42,12 +41,12 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
     'ปั่นจักรยาน',
     'ลู่วิ่งในร่ม',
   ];
-
+  // ตัวแปรสำหรับเก็บข้อมูลกิจกรรม
   RoutineCategory _selectedCategory = RoutineCategory.health;
   IconData? _selectedIcon;
   Color? _selectedColor;
   bool _isNotificationEnabled = true;
-
+  // ไอคอนที่ใช้สำหรับกิจกรรม
   final List<IconData> _availableIcons = [
     Icons.water_drop_rounded,
     Icons.directions_walk_rounded,
@@ -77,9 +76,10 @@ class _AddRoutineDialogState extends State<AddRoutineDialog> {
   @override
   void initState() {
     super.initState();
+    // กำหนดค่าเริ่มต้น
     _selectedIcon = _selectedCategory.icon;
     _selectedColor = _selectedCategory.defaultColor;
-
+    // ตรวจสอบข้อมูล หัวข้อกิจกรรม
     if (widget.initialRoutine != null) {
       final r = widget.initialRoutine!;
       _titleController.text = (r['sTitle'] ?? r['title'])?.toString() ?? '';

@@ -1,6 +1,8 @@
 part of 'routine_state_notifier.dart';
 
+// ส่วนขยายสำหรับโหลดข้อมูลกิจวัตร เป้าหมาย และสถิติการออกกำลังกาย (Routine State Loading Extension)
 extension RoutineStateLoading on RoutineStateNotifier {
+  // โหลดข้อมูลทั้งหมดของผู้ใช้ (กิจวัตร, ประวัติความสำเร็จ, เป้าหมายหลัก, สถิติการออกกำลังกายวันนี้)
   Future<void> loadData({int? userId}) async {
     _isLoading = true;
     this._notifyStateListeners();
@@ -23,10 +25,10 @@ extension RoutineStateLoading on RoutineStateNotifier {
         return;
       }
 
-      // 1. ดึง Routines
+      // 1. ดึงรายการกิจวัตรทั้งหมดของผู้ใช้
       _routines = await db.getRoutines(userId: _userId);
 
-      // 2. ดึง Completion วันนี้
+      // 2. ดึงสถานะการทำสำเร็จของแต่ละกิจวัตรในวันนี้
       final Map<int, bool> completionMap = {};
       for (final r in _routines) {
         final rId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
@@ -38,10 +40,10 @@ extension RoutineStateLoading on RoutineStateNotifier {
       }
       _todayCompletionMap = completionMap;
 
-      // 3. ดึง Goal
+      // 3. ดึงข้อมูลเป้าหมายหลักของผู้ใช้
       _userGoal = await db.getUserGoal(_userId);
 
-      // 4. ดึง Workouts วันนี้
+      // 4. ดึงข้อมูลสถิติการออกกำลังกายในวันนี้
       final workouts = await db.getWorkouts(userId: _userId);
       final Map<String, Map<String, double>> todayStats = {};
       for (final w in workouts) {
@@ -61,6 +63,7 @@ extension RoutineStateLoading on RoutineStateNotifier {
       }
       _todayWorkoutStats = todayStats;
 
+      // 5. คำนวณความคืบหน้าของเป้าหมายหลักให้เป็นปัจจุบัน
       await _refreshCurrentGoal(db, workouts);
     } catch (e) {
       debugPrint('[RoutineStateNotifier] ❌ Error: $e');
@@ -69,6 +72,4 @@ extension RoutineStateLoading on RoutineStateNotifier {
       this._notifyStateListeners();
     }
   }
-
-  /// ติ๊กทำรายการ / ยกเลิกทำรายการ
 }

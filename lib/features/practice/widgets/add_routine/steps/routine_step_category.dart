@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:healthymate/features/practice/models/routine_item.dart';
-
+// Step 1: เลือกหมวดหมู่ & ชื่อกิจวัตร 🎯
 class RoutineStepCategory extends StatelessWidget {
   final RoutineCategory selectedCategory;
   final TextEditingController titleController;

@@ -1,6 +1,7 @@
 part of 'profile_page.dart';
 
 extension ProfilePageImageActions on _ProfilePageState {
+  // ฟังก์ชันจัดการการเลือกและบันทึกรูปโปรไฟล์
   Future<void> _pickAndSaveProfileImage() async {
     final themePrimary = Theme.of(context).colorScheme.primary;
 

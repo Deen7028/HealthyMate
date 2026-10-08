@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 
+// แถบเมนูนำทางด้านล่างของแอปพลิเคชัน (Custom Bottom Navigation Bar)
 part 'vitality_bottom_nav_bar_item.dart';
 
 class VitalityBottomNavBar extends StatelessWidget {

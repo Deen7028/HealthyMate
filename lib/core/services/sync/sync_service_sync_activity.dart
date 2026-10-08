@@ -1,9 +1,10 @@
 part of 'sync_service.dart';
 
+// ส่วนขยายสำหรับซิงค์ข้อมูลกิจกรรมการออกกำลังกาย บันทึกอาหาร และคำขอลบข้อมูล (Sync Workouts, Nutrition & Pending Deletions)
 extension SyncServiceSyncActivity on SyncService {
+  // 3. ซิงค์ตาราง TbWorkouts (ประวัติการออกกำลังกาย, พิกัดเส้นทาง GPS, แคลอรีที่เผาผลาญ)
   Future<int> _syncWorkouts(int currentUserId) async {
     int syncedTotal = 0;
-    // 3. ซิงค์ตาราง TbWorkouts
     final unsyncedWorkouts = await AppDatabase.instance.getUnsyncedWorkouts(
       currentUserId,
     );
@@ -25,9 +26,9 @@ extension SyncServiceSyncActivity on SyncService {
     return syncedTotal;
   }
 
+  // 4. ซิงค์ตาราง TbNutritionLogs (บันทึกมื้ออาหาร, ปริมาณสารอาหาร และอัปโหลดรูปภาพอาหาร)
   Future<int> _syncNutrition(int currentUserId) async {
     int syncedTotal = 0;
-    // 4. ซิงค์ตาราง TbNutritionLogs
     final unsyncedNutrition = await AppDatabase.instance
         .getUnsyncedNutritionLogs(currentUserId);
     for (final nutrition in unsyncedNutrition) {
@@ -69,9 +70,9 @@ extension SyncServiceSyncActivity on SyncService {
     return syncedTotal;
   }
 
+  // 5. ซิงค์คำขอลบข้อมูลที่ค้างอยู่ในคิวตอนออฟไลน์ (Retry Pending Deletions)
   Future<int> _retryPendingDeletions(int userId) async {
     int syncedTotal = 0;
-    // Retry queued deletions after reconnecting; local deletion is already complete.
     final pendingDeletions = await AppDatabase.instance.getPendingDeletions(
       userId,
     );

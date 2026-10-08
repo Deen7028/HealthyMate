@@ -1,5 +1,5 @@
 part of 'routine_countdown_timer_modal.dart';
-
+// ตรรกะการทำงานของตัวจับเวลา (เริ่ม, หยุดชั่วคราว, รีเซ็ตเวลา และเล่นเสียงเตือนเมื่อหมดเวลา)
 extension RoutineCountdownTimerActions on _RoutineCountdownTimerModalState {
   void _startTimer() {
     _timer?.cancel();

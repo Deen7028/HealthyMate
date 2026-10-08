@@ -1,6 +1,7 @@
 part of 'add_routine_dialog.dart';
-
+// ส่วนต่างๆของหน้าต่างเพิ่มกิจกรรมใหม่
 extension _AddRoutineDialogSteps on _AddRoutineDialogState {
+  // ขั้นตอนที่ 1 เลือกประเภทและชื่อกิจกรรม
   Widget _buildStep1Goal(Color btnColor) {
     return RoutineStepCategory(
       selectedCategory: _selectedCategory,
@@ -16,7 +17,7 @@ extension _AddRoutineDialogSteps on _AddRoutineDialogState {
       },
     );
   }
-
+  // ขั้นตอนที่ 2 กำหนดระยะเวลาและการเชื่อมโยงกับแอปภายนอก
   Widget _buildStep2DurationAndSync(Color btnColor) {
     final title = _titleController.text.trim();
     final autoDetected = _detectLinkedWorkout(title, _selectedCategory);
@@ -51,7 +52,7 @@ extension _AddRoutineDialogSteps on _AddRoutineDialogState {
       },
     );
   }
-
+  // ขั้นตอนที่ 3 ตั้งค่าการแจ้งเตือนและรูปแบบกิจกรรม
   Widget _buildStep3NotifyAndStyle(Color btnColor) {
     return RoutineStepStyle(
       btnColor: btnColor,

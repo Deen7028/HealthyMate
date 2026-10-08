@@ -1,9 +1,10 @@
 part of 'sync_service.dart';
 
+// ส่วนขยายสำหรับซิงค์ข้อมูลประวัติสุขภาพและข้อมูลผู้ใช้ (Sync Health Records & User Profiles)
 extension SyncServiceSyncRecords on SyncService {
+  // 1. ซิงค์ตาราง TbHealthRecords (ประวัติน้ำหนัก, BMI, BMR, TDEE)
   Future<int> _syncHealthRecords(int currentUserId) async {
     int syncedTotal = 0;
-    // 1. ซิงค์ตาราง TbHealthRecords
     final unsyncedHealthRecords = await AppDatabase.instance
         .getUnsyncedHealthRecords(currentUserId);
     for (final map in unsyncedHealthRecords) {
@@ -27,9 +28,9 @@ extension SyncServiceSyncRecords on SyncService {
     return syncedTotal;
   }
 
+  // 2. ซิงค์ตาราง TbUsers (ข้อมูลโปรไฟล์และรูปภาพโปรไฟล์ที่แก้ไขตอนออฟไลน์)
   Future<int> _syncUsers(int currentUserId) async {
     int syncedTotal = 0;
-    // 2. ซิงค์ตาราง TbUsers (โปรไฟล์หรือผู้ใช้ใหม่ที่สมัครตอนออฟไลน์)
     final unsyncedUsers = await AppDatabase.instance.getUnsyncedUsers(
       currentUserId,
     );

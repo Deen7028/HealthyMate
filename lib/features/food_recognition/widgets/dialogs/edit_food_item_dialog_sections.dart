@@ -1,12 +1,12 @@
 part of 'edit_food_item_dialog.dart';
-
+// ส่วนต่างๆ ของหน้าต่างแก้ไขรายการอาหาร
 extension _EditFoodItemDialogSections on _EditFoodItemDialogState {
   Widget _buildMacroFields(Color primaryColor) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Macros Row: Protein, Carbs, Fat
+        // สารอาหาร 3 หมู่หลัก
         _buildLabel('สารอาหาร 3 หมู่หลัก (กรัม)'),
         const SizedBox(height: 6),
         Row(

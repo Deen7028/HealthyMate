@@ -1,5 +1,5 @@
 part of 'routine_step_goal.dart';
-
+//  Step 2: กำหนดระยะเวลาและการเชื่อมโยงกับแอปภายนอก 🔗
 extension RoutineStepGoalContent on RoutineStepGoal {
   Widget _buildStepGoal(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;

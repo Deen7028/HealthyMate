@@ -7,7 +7,7 @@ part 'completed_goals_tab.dart';
 part 'completed_routines_tab.dart';
 part 'completed_goals_empty_state.dart';
 part 'completed_goals_page_content.dart';
-
+// หน้าแสดงประวัติการออกกำลังกายและเป้าหมายที่สำเร็จ
 class CompletedGoalsAndRoutinesPage extends StatefulWidget {
   final int initialTabIndex;
 

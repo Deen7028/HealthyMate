@@ -153,13 +153,13 @@ class _WorkoutHistoryPageState extends State<WorkoutHistoryPage> {
       ),
     );
   }
-
+  // ปุ่มดึงข้อมูลล่าสุดจากเซิร์ฟเวอร์ (Delta Sync)
   Widget _buildEmptyState() {
     return WorkoutHistoryEmptyCard(
       onSyncTap: () => _handlePullSync(isInitial: true),
     );
   }
-
+  // กล่องสรุปผลรวม (Summary Header: ทั้งหมด, ระยะทางรวม, เผาผลาญรวม, เวลารวม)
   Widget _buildHistoryContent(
     bool isDark,
     Color cardBg,

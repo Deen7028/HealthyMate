@@ -1,5 +1,5 @@
 part of 'routine_top_overview_banner.dart';
-
+// ส่วนย่อยสรุปสถิติการออกกำลังกายในแบนเนอร์
 extension _RoutineTopOverviewWorkoutSummary on RoutineTopOverviewBanner {
   Widget _buildWorkoutSummary(double totalDurationMin, double totalCalories) {
     return Container(

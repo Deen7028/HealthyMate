@@ -3,10 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:healthymate/core/services/device/audio_service.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 
-/// Mini Countdown Timer Dialog Widget
+// Modal หลักสำหรับนับเวลาถอยหลังการทำกิจวัตร (Countdown Timer Modal)
 part 'routine_countdown_timer_actions.dart';
 part 'routine_countdown_timer_content.dart';
-
 class RoutineCountdownTimerModal extends StatefulWidget {
   final String title;
   final int durationMinutes;
@@ -23,7 +22,7 @@ class RoutineCountdownTimerModal extends StatefulWidget {
   State<RoutineCountdownTimerModal> createState() =>
       _RoutineCountdownTimerModalState();
 }
-
+// ตรรกะการทำงานภายใน (Stateful Logic)
 class _RoutineCountdownTimerModalState
     extends State<RoutineCountdownTimerModal> {
   late int _secondsRemaining;
@@ -31,7 +30,7 @@ class _RoutineCountdownTimerModalState
   Timer? _timer;
   bool _isRunning = false;
   DateTime? _timerEndTime;
-
+// วงจรชีวิตของ widget (State Lifecycle)
   @override
   void initState() {
     super.initState();

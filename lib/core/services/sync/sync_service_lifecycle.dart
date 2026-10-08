@@ -1,8 +1,9 @@
 part of 'sync_service.dart';
 
+// ส่วนขยายสำหรับจัดการวงจรชีวิตและการตรวจจับสัญญาณเครือข่าย (Sync Lifecycle & Connectivity Detection)
 extension SyncServiceLifecycle on SyncService {
+  // เริ่มต้นระบบตรวจสอบเครือข่ายและดักฟังการเปลี่ยนแปลงสถานะอินเทอร์เน็ต
   Future<void> init() async {
-    // ตั้งค่าสถานะเครือข่ายเริ่มต้นก่อนสมัครรับ event เพื่อแสดงผลและเริ่มซิงค์ได้ถูกต้อง
     // 1. ตรวจสอบสถานะการเชื่อมต่อเริ่มต้น
     await checkConnection();
 
@@ -43,10 +44,9 @@ extension SyncServiceLifecycle on SyncService {
     await updatePendingCount();
   }
 
-  /// ตรวจสอบการเชื่อมต่อ 2 ระดับอย่างละเอียด
+  // ตรวจสอบการเชื่อมต่อ 2 ระดับอย่างละเอียด (Hardware Check + Internet Reachability Check)
   Future<bool> checkConnection() async {
     try {
-      // แยกการมีสัญญาณเครือข่ายออกจากการเข้าถึงอินเทอร์เน็ตจริง
       final connectivityResults = await _connectivity.checkConnectivity();
       final hasHardware = connectivityResults.any(
         (r) => r != ConnectivityResult.none,
@@ -60,7 +60,7 @@ extension SyncServiceLifecycle on SyncService {
         return false;
       }
 
-      // ตรวจสอบอินเทอร์เน็ตจริง
+      // ตรวจสอบการเข้าถึงอินเทอร์เน็ตจริง
       final hasInternet = await _internetChecker.hasInternetAccess;
       _isOnline = hasInternet;
       if (hasInternet) {
@@ -79,6 +79,7 @@ extension SyncServiceLifecycle on SyncService {
     }
   }
 
+  // ตรวจสอบอินเทอร์เน็ตและสั่งซิงค์ข้อมูลที่ค้างอยู่ทันทีเมื่อต่อเน็ตได้
   Future<void> _verifyAndSync() async {
     final hasInternet = await _internetChecker.hasInternetAccess;
     _isOnline = hasInternet;
@@ -91,7 +92,7 @@ extension SyncServiceLifecycle on SyncService {
     }
   }
 
-  /// อัปเดตจำนวนแถวข้อมูลที่ค้างอยู่ในเครื่องที่ยังไม่ได้ซิงค์ (isSynced = 0)
+  // คำนวณจำนวนแถวข้อมูลที่ค้างอยู่ในเครื่องที่ยังไม่ได้ซิงค์ขึ้น Server (isSynced = 0)
   Future<int> updatePendingCount() async {
     try {
       final count = await AppDatabase.instance.getPendingSyncCount();
@@ -103,6 +104,4 @@ extension SyncServiceLifecycle on SyncService {
       return 0;
     }
   }
-
-  /// กระบวนการดึงข้อมูลที่ `isSynced = 0` ขึ้น Remote Server (Upstream Data Sync)
 }

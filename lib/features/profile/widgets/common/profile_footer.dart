@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+// ส่วนท้ายของหน้าโปรไฟล์
 class ProfileFooter extends StatelessWidget {
   final VoidCallback onPrivacyPolicyTap;
   final VoidCallback onTermsTap;

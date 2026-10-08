@@ -4,14 +4,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// บริการกลางสำหรับสร้างการแจ้งเตือนในแอป (In-App Notification Events)
 class AppNotificationService {
-  static final AppNotificationService instance = AppNotificationService._internal();
+  static final AppNotificationService instance =
+      AppNotificationService._internal();
   AppNotificationService._internal();
 
   int _currentUserId = 0;
 
   void setUserId(int userId) => _currentUserId = userId;
   int get currentUserId => _currentUserId;
-
+  // ฟังก์ชันสำหรับบันทึกการออกกำลังกาย
   Future<void> onWorkoutSaved({
     required String workoutType,
     required double distanceKm,
@@ -35,7 +36,8 @@ class AppNotificationService {
         userId: _currentUserId,
         type: 'workout',
         title: 'บันทึกกิจกรรมสำเร็จ — $workoutType',
-        message: 'ยอดเยี่ยม! ใช้เวลา $durationText$distText เผาผลาญ ${caloriesBurned.toStringAsFixed(0)} kcal',
+        message:
+            'ยอดเยี่ยม! ใช้เวลา $durationText$distText เผาผลาญ ${caloriesBurned.toStringAsFixed(0)} kcal',
         actionType: 'navigate_workout',
       );
     } catch (e) {
@@ -43,6 +45,7 @@ class AppNotificationService {
     }
   }
 
+  // ฟังก์ชันสำหรับบันทึกเหรียญรางวัล
   Future<void> onBadgeUnlocked({required String badgeName}) async {
     if (_currentUserId <= 0) return;
     try {
@@ -54,7 +57,8 @@ class AppNotificationService {
         userId: _currentUserId,
         type: 'badge',
         title: 'ปลดล็อกเหรียญรางวัลใหม่!',
-        message: 'คุณได้รับเหรียญ "$badgeName" แล้ว แตะเพื่อดูความสำเร็จทั้งหมด',
+        message:
+            'คุณได้รับเหรียญ "$badgeName" แล้ว แตะเพื่อดูความสำเร็จทั้งหมด',
         actionType: 'navigate_profile',
         actionPayload: badgeName,
       );
@@ -63,6 +67,7 @@ class AppNotificationService {
     }
   }
 
+  // ฟังก์ชันสำหรับบันทึกอาหาร
   Future<void> onFoodLogged({
     required String foodName,
     required int calories,
@@ -78,7 +83,8 @@ class AppNotificationService {
         userId: _currentUserId,
         type: 'nutrition',
         title: 'บันทึกอาหารสำเร็จ',
-        message: '"$foodName" ($calories kcal) · รวมวันนี้ $totalTodayCalories kcal',
+        message:
+            '"$foodName" ($calories kcal) · รวมวันนี้ $totalTodayCalories kcal',
         actionType: 'navigate_food_log',
       );
     } catch (e) {
@@ -86,6 +92,7 @@ class AppNotificationService {
     }
   }
 
+  // ฟังก์ชันสำหรับบันทึกข้อมูลสุขภาพ
   Future<void> onHealthRecordSaved({
     required double weightKg,
     required double bmi,
@@ -97,7 +104,8 @@ class AppNotificationService {
         userId: _currentUserId,
         type: 'health',
         title: 'บันทึกข้อมูลสุขภาพใหม่',
-        message: 'น้ำหนัก ${weightKg.toStringAsFixed(1)} กก. · BMI ${bmi.toStringAsFixed(1)} ($bmiCategory)',
+        message:
+            'น้ำหนัก ${weightKg.toStringAsFixed(1)} กก. · BMI ${bmi.toStringAsFixed(1)} ($bmiCategory)',
         actionType: 'navigate_calculator',
       );
     } catch (e) {
@@ -105,6 +113,7 @@ class AppNotificationService {
     }
   }
 
+  // ฟังก์ชันสำหรับบันทึกการออกกำลังกาย
   Future<void> onRoutineCompleted({required String routineName}) async {
     if (_currentUserId <= 0) return;
     try {
@@ -116,7 +125,8 @@ class AppNotificationService {
         userId: _currentUserId,
         type: 'routine',
         title: 'ทำกิจวัตรสำเร็จ!',
-        message: '"$routineName" ทำสำเร็จแล้ว เยี่ยมมาก! ทำต่อเนื่องทุกวันเพื่อสร้างนิสัยที่ดี',
+        message:
+            '"$routineName" ทำสำเร็จแล้ว เยี่ยมมาก! ทำต่อเนื่องทุกวันเพื่อสร้างนิสัยที่ดี',
         actionType: 'navigate_practice',
       );
     } catch (e) {
@@ -124,6 +134,7 @@ class AppNotificationService {
     }
   }
 
+  // แจ้งเตือนเมื่อเผาผลาญถึงเป้าหมาย
   Future<void> onDailyCalorieGoalReached({required int calories}) async {
     if (_currentUserId <= 0) return;
     try {
@@ -131,11 +142,14 @@ class AppNotificationService {
         userId: _currentUserId,
         type: 'workout',
         title: 'เผาผลาญถึงเป้าหมายวันนี้แล้ว!',
-        message: 'คุณเผาผลาญไปแล้ว $calories kcal วันนี้ ยอดเยี่ยมมาก! พักผ่อนให้เพียงพอด้วยนะ',
+        message:
+            'คุณเผาผลาญไปแล้ว $calories kcal วันนี้ ยอดเยี่ยมมาก! พักผ่อนให้เพียงพอด้วยนะ',
         actionType: 'navigate_workout',
       );
     } catch (e) {
-      debugPrint('[AppNotificationService] onDailyCalorieGoalReached error: $e');
+      debugPrint(
+        '[AppNotificationService] onDailyCalorieGoalReached error: $e',
+      );
     }
   }
 }

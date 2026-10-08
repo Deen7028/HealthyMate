@@ -6,6 +6,7 @@ import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+// ฟังก์ชัน Entry-Point สำหรับ Background Isolate ทำงานเบื้องหลัง
 @pragma('vm:entry-point')
 void onStart(ServiceInstance service) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -58,6 +59,7 @@ void onStart(ServiceInstance service) async {
     );
   }
 
+  // ดักฟังพิกัด GPS แบบ Stream และส่งข้อมูลกลับไปยัง UI Isolate
   Geolocator.getPositionStream(locationSettings: locationSettings).listen(
     (Position position) {
       service.invoke('updateLocation', {
@@ -75,16 +77,19 @@ void onStart(ServiceInstance service) async {
   );
 }
 
+// ฟังก์ชัน Entry-Point สำหรับ iOS Background Fetch
 @pragma('vm:entry-point')
 Future<bool> onIosBackground(ServiceInstance service) async {
   WidgetsFlutterBinding.ensureInitialized();
   return true;
 }
 
+// บริการติดตามพิกัดตำแหน่ง GPS ขณะออกกำลังกายแบบเบื้องหลัง (Background Location Tracking Service)
 class LocationBackgroundService {
   LocationBackgroundService._();
   static final LocationBackgroundService instance = LocationBackgroundService._();
 
+  // กำหนดค่าเริ่มต้นของระบบ Background Service ทั้ง Android และ iOS
   Future<void> initialize() async {
     if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) {
       return;
@@ -110,7 +115,7 @@ class LocationBackgroundService {
     }
   }
 
-  /// ขอสิทธิ์ยกเว้น Battery Optimization บน Android (ป้องกันระบบฆ่าแอปขณะปิดหน้าจอ)
+  // ขอสิทธิ์ยกเว้น Battery Optimization บน Android (ป้องกันระบบฆ่าแอปขณะปิดหน้าจอ)
   Future<void> requestBatteryOptimizationExemption() async {
     if (!kIsWeb && Platform.isAndroid) {
       try {
@@ -124,6 +129,7 @@ class LocationBackgroundService {
     }
   }
 
+  // เริ่มต้นติดตามตำแหน่ง GPS ในโหมด Foreground Service
   Future<void> startTracking() async {
     if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) {
       return;
@@ -141,6 +147,7 @@ class LocationBackgroundService {
     }
   }
 
+  // อัปเดตข้อความบนแถบ Notification แจ้งเตือนขณะแอปทำงานเบื้องหลัง
   void updateNotification({required String title, required String content}) {
     if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) {
       return;
@@ -154,6 +161,7 @@ class LocationBackgroundService {
     } catch (_) {}
   }
 
+  // หยุดการทำงานของ Background Service เมื่อออกกำลังกายเสร็จสิ้น
   Future<void> stopTracking() async {
     if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) {
       return;

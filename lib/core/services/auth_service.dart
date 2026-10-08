@@ -2,8 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/api_service.dart';
 
-/// เซอร์วิสหลักสำหรับจัดการสถานะการยืนยันตัวตนของผู้ใช้ทั่วทั้งแอปพลิเคชัน (Auth Service)
-/// รองรับทั้งระบบ Offline-First (SQLite) และ Online Cloud Fallback (Supabase / API)
+// เซอร์วิสหลักสำหรับจัดการสถานะการยืนยันตัวตนของผู้ใช้ทั่วทั้งแอปพลิเคชัน (Auth Service)
+// รองรับทั้งระบบ Offline-First (SQLite) และ Online Cloud Fallback (Supabase / Backend API)
 class AuthService extends ChangeNotifier {
   // สร้าง Singleton Instance สำหรับใช้งานร่วมกันทั่วทั้งแอป
   static final AuthService instance = AuthService._internal();
@@ -20,7 +20,7 @@ class AuthService extends ChangeNotifier {
   bool get isInitialized => _isInitialized;
   String get currentUserEmail => _currentUserEmail;
 
-  /// โหลดสถานะเซสชันจากฐานข้อมูลในเครื่องเพียงครั้งเดียวตอนเริ่มเปิดแอป
+  // โหลดสถานะเซสชันจากฐานข้อมูลในเครื่องเพียงครั้งเดียวตอนเริ่มเปิดแอป
   Future<void> init() async {
     if (_isInitialized) return;
     try {
@@ -40,12 +40,12 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  /// เข้าสู่ระบบ (รองรับทั้ง Offline Local SQLite และ Online Remote Server Fallback)
-  /// คืนค่าเป็น Map:
-  /// - `success`: true/false
-  /// - `user`: TbUser ที่ล็อกอินสำเร็จ (ถ้ามี)
-  /// - `status`: 'success' | 'not_found' | 'invalid_password' | 'offline_or_error'
-  /// - `message`: ข้อความอธิบาย
+  // เข้าสู่ระบบ (รองรับทั้ง Offline Local SQLite และ Online Remote Server Fallback)
+  // คืนค่าเป็น Map:
+  // - `success`: true/false
+  // - `user`: TbUser ที่ล็อกอินสำเร็จ (ถ้ามี)
+  // - `status`: 'success' | 'not_found' | 'invalid_password' | 'offline_or_error'
+  // - `message`: ข้อความอธิบาย
   Future<Map<String, dynamic>> login(String email, String password) async {
     final cleanEmail = email.trim().toLowerCase();
 
@@ -141,7 +141,7 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  /// กำหนดสถานะเซสชันการเข้าสู่ระบบ
+  // กำหนดสถานะเซสชันการเข้าสู่ระบบ (เมื่อล็อกอินหรือยืนยัน OTP ผ่าน)
   Future<void> setLoginSession(String email, {String? token}) async {
     // 1. ปรับรูปแบบอีเมลให้เป็นมาตรฐาน (Lowercase & Trim)
     final cleanEmail = email.trim().toLowerCase();
@@ -153,7 +153,7 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// ออกจากระบบ (Logout)
+  // ออกจากระบบ (Logout) และล้างเซสชันในเครื่อง
   Future<void> logout() async {
     // 1. ล้างสถานะในหน่วยความจำ
     _isLoggedIn = false;

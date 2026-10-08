@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/services/sync/sync_service.dart';
 
-/// Widget แสดงแถบสถานะการซิงค์ข้อมูล และโหมด Offline-First
+// ป้ายแสดงสถานะการเชื่อมต่อและการซิงค์ข้อมูลกับคลาวด์ (Cloud Sync Status Badge)
 class SyncStatusBadge extends StatelessWidget {
   const SyncStatusBadge({super.key});
 

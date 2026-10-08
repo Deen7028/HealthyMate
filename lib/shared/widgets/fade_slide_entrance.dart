@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-/// Widget สำหรับทำแอนิเมชัน Fade & Slide ขึ้นแบบ Staggered เมื่อเปิดหน้าจอ
+// วิดเจ็ตครอบเพื่อสร้างแอนิเมชันเปิดตัวแบบเลื่อนและค่อยๆ ปรากฏ (Fade & Slide Entrance Animation)
+
 class FadeSlideEntrance extends StatelessWidget {
   final Widget child;
   final int delayIndex;

@@ -1,5 +1,5 @@
 part of 'routine_main_goal_card.dart';
-
+// ส่วนหัวของการ์ดเป้าหมายหลัก (Header: ไอคอน, ชื่อเป้าหมาย, ปุ่มเมนูตัวเลือก)
 extension _RoutineMainGoalCardHeader on RoutineMainGoalCard {
   Widget _buildPinnedGoalHeader() {
     return Column(

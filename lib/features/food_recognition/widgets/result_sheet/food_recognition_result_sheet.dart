@@ -15,7 +15,7 @@ part 'food_recognition_result_sheet_content.dart';
 part 'food_recognition_result_sheet_body.dart';
 part 'food_recognition_result_sheet_chrome.dart';
 part 'food_recognition_result_sheet_items.dart';
-
+// หน้าต่างแสดงผลการวิเคราะห์อาหารจากกล้อง
 class FoodRecognitionResultSheet extends StatefulWidget {
   final MealNutritionScanResult scanResult;
   final VoidCallback? onSavedSuccessfully;

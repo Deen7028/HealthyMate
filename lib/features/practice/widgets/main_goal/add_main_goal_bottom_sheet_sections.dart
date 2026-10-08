@@ -1,12 +1,12 @@
 part of 'add_main_goal_bottom_sheet.dart';
-
+// ส่วนแสดงรายการแม่แบบเป้าหมายสำเร็จรูป และตัวเลือกเป้าหมายต่างๆ ใน BottomSheet
 extension _AddMainGoalBottomSheetSections on _AddMainGoalBottomSheetState {
   List<Widget> _buildHeader(
     bool isDark,
     Color textPrimary,
     Color textSecondary,
   ) => [
-    // Header Title
+    // หัวข้อ
     Row(
       children: [
         Container(
@@ -51,7 +51,7 @@ extension _AddMainGoalBottomSheetSections on _AddMainGoalBottomSheetState {
     Color borderColor,
     Color textPrimary,
   ) => [
-    // Section 1: Goal Type Selection
+    // ส่วนที่ 1: เลือกประเภทความท้าทาย (Goal Type)
     Text(
       'ส่วนที่ 1: เลือกประเภทความท้าทาย (Goal Type)',
       style: TextStyle(

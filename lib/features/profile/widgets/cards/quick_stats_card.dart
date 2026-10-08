@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/shared/theme/index.dart';
-
+// การ์ดสำหรับแสดงสถิติย่อ
 class QuickStatsCard extends StatelessWidget {
   final int workoutCount;
   final int activeDays;

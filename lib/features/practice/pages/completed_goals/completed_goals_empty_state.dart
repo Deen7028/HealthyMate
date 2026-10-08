@@ -1,5 +1,5 @@
 part of 'completed_goals_and_routines_page.dart';
-
+// เมื่อไม่มีข้อมูลเป้าหมายหรือกิจวัตรที่สำเร็จ
 extension CompletedGoalsEmptyState on _CompletedGoalsAndRoutinesPageState {
   Widget _buildEmptyState({
     required IconData icon,

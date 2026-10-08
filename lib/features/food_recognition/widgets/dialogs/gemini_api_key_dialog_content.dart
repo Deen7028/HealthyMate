@@ -15,7 +15,7 @@ extension _GeminiApiKeyDialogContent on _GeminiApiKeyDialogState {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
+              // ส่วนหัว
               Row(
                 children: [
                   Container(
@@ -66,7 +66,7 @@ extension _GeminiApiKeyDialogContent on _GeminiApiKeyDialogState {
               const SizedBox(height: 16),
 
               const Text(
-                'นำ API Key จาก Google AI Studio มาวางที่นี่ ระบบจะใช้โมเดล Gemini 1.5 Flash ในการอ่านภาพถ่ายอาหารจริงของคุณโดยตรง',
+                'นำ API Key จาก Google AI Studio มาวางที่นี่ ระบบจะใช้โมเดล Gemini 3.5 Flash ในการอ่านภาพถ่ายอาหารจริงของคุณโดยตรง',
                 style: TextStyle(
                   fontSize: 12.5,
                   color: Color(0xFF5A6559),

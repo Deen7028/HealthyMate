@@ -1,5 +1,5 @@
 part of 'add_routine_dialog.dart';
-
+// ส่วนของหน้าต่างที่แสดงข้อมูล
 extension _AddRoutineDialogContent on _AddRoutineDialogState {
   Widget _buildDialog(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -38,7 +38,7 @@ extension _AddRoutineDialogContent on _AddRoutineDialogState {
               ),
               const SizedBox(height: 12),
 
-              // Title Header & Close
+              // หัวข้อและปุ่มปิด
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -59,7 +59,7 @@ extension _AddRoutineDialogContent on _AddRoutineDialogState {
                 ],
               ),
 
-              // Wizard Progress Bar
+              // แถบแสดงความคืบหน้า
               Row(
                 children: List.generate(3, (index) {
                   final isActive = index <= _currentStep;
@@ -83,7 +83,7 @@ extension _AddRoutineDialogContent on _AddRoutineDialogState {
               ),
               const SizedBox(height: 16),
 
-              // Page Content Wizard
+              // เนื้อหาของหน้าต่าง
               SizedBox(
                 height: 380,
                 child: PageView(
@@ -99,7 +99,7 @@ extension _AddRoutineDialogContent on _AddRoutineDialogState {
 
               const SizedBox(height: 12),
 
-              // Wizard Bottom Controls Navigation
+              // ปุ่มควบคุมด้านล่าง
               Row(
                 children: [
                   if (_currentStep > 0) ...[

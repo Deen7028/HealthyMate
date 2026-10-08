@@ -1,5 +1,5 @@
 part of 'routine_countdown_timer_modal.dart';
-
+// ส่วนประกอบ UI หน้าจอนับเวลาถอยหลัง (วงแหวนเวลา, ตัวเลขนับถอยหลัง, และปุ่มควบคุม)
 extension RoutineCountdownTimerContent on _RoutineCountdownTimerModalState {
   Widget _buildCountdownModal(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;

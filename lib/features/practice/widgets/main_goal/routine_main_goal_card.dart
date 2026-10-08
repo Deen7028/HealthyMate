@@ -4,7 +4,7 @@ import 'package:healthymate/shared/theme/app_theme.dart';
 part 'routine_main_goal_card_empty.dart';
 
 part 'routine_main_goal_card_header.dart';
-
+// การ์ดแสดงเป้าหมายหลักประจำวัน (Main Goal Card) พร้อมสถานะความคืบหน้า
 class RoutineMainGoalCard extends StatelessWidget {
   final Map<String, dynamic>? userGoal;
   final int completedCount;

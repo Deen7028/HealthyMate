@@ -36,11 +36,11 @@ class WorkoutBottomControls extends StatefulWidget {
   @override
   State<WorkoutBottomControls> createState() => _WorkoutBottomControlsState();
 }
-
+// คลาสสถานะสำหรับวิดเจ็ต (State Class)
 class _WorkoutBottomControlsState extends State<WorkoutBottomControls>
     with SingleTickerProviderStateMixin {
   late final AnimationController _pulseRippleController;
-
+// ตรวจสอบการเปลี่ยนแปลงคุณสมบัติ
   @override
   void initState() {
     super.initState();
@@ -52,7 +52,7 @@ class _WorkoutBottomControlsState extends State<WorkoutBottomControls>
       _pulseRippleController.repeat();
     }
   }
-
+  // การจัดการแอนิเมชันเมื่อคุณสมบัติเปลี่ยนไป
   @override
   void didUpdateWidget(WorkoutBottomControls oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -63,13 +63,13 @@ class _WorkoutBottomControlsState extends State<WorkoutBottomControls>
       _pulseRippleController.reset();
     }
   }
-
+  // คลีนหน่วยความจำ
   @override
   void dispose() {
     _pulseRippleController.dispose();
     super.dispose();
   }
-
+  // วาด UI หลัก (Main UI Rendering)
   @override
   Widget build(BuildContext context) {
     final double bottomPadding = MediaQuery.of(context).padding.bottom + 30.0;
@@ -112,7 +112,7 @@ class _WorkoutBottomControlsState extends State<WorkoutBottomControls>
       ),
     );
   }
-
+// สร้างปุ่มควบคุมหลักตรงกลาง (Main Center Button: Play/Pause/Resume)
   Widget _buildMainCenterButton() {
     return Column(
       mainAxisSize: MainAxisSize.min,

@@ -3,7 +3,7 @@ import 'package:healthymate/core/database/app_database.dart';
 
 part 'gemini_api_key_dialog_save.dart';
 part 'gemini_api_key_dialog_content.dart';
-
+// หน้าต่างสำหรับใส่ API Key
 class GeminiApiKeyDialog extends StatefulWidget {
   final int userId;
   final String initialKey;

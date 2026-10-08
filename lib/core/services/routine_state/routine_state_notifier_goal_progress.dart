@@ -1,17 +1,20 @@
 part of 'routine_state_notifier.dart';
 
+// ส่วนขยายสำหรับคำนวณความคืบหน้าของเป้าหมายหลักแบบ Real-time (Goal Progress Calculation Extension)
 extension RoutineStateGoalProgress on RoutineStateNotifier {
+  // คำนวณความคืบหน้าของเป้าหมายหลักให้เป็นปัจจุบันเสมอ (Real-time Goal Progress Calculation)
+  // รองรับทั้งเป้าหมายจาก Routine และเป้าหมายแบบกำหนดเอง (ลดน้ำหนัก, แคลอรี, วิ่ง, ปั่น, เดิน, สมาธิ, โยคะ)
   Future<void> _refreshCurrentGoal(
     AppDatabase db,
     List<Map<String, dynamic>> workouts,
   ) async {
-    // 5. คำนวณความคืบหน้าของเป้าหมายหลักให้เป็นปัจจุบันเสมอ (Real-time Goal Progress Calculation)
     if (_userGoal != null) {
       final pinnedRoutineId = (_userGoal!['nRoutineId'] as num?)?.toInt() ?? 0;
       final title = _userGoal!['sTitle']?.toString() ?? '';
       final lowerTitle = title.toLowerCase();
 
       if (pinnedRoutineId > 0) {
+        // กรณี: เป้าหมายผูกกับ Routine ที่มีอยู่
         final matchedRoutine = _routines.firstWhere(
           (item) =>
               ((item['nRoutineId'] as num?)?.toInt() ?? 0) == pinnedRoutineId,
@@ -47,7 +50,7 @@ extension RoutineStateGoalProgress on RoutineStateNotifier {
           );
         }
       } else if (title.isNotEmpty) {
-        // เป้าหมายแบบกำหนดเอง (Custom Goal เช่น ลดน้ำหนัก, วิ่งสะสม, ปั่นสะสม, เผาผลาญ)
+        // กรณี: เป้าหมายแบบกำหนดเอง (Custom Goal เช่น ลดน้ำหนัก, วิ่งสะสม, ปั่นสะสม, เผาผลาญ)
         final remaining = _userGoal!['sRemainingText']?.toString() ?? '';
         double targetVal = 0.0;
         final targetMatch = RegExp(
@@ -81,6 +84,7 @@ extension RoutineStateGoalProgress on RoutineStateNotifier {
 
         if (lowerTitle.contains('ลดน้ำหนัก') ||
             lowerTitle.contains('น้ำหนัก')) {
+          // คำนวณความคืบหน้าน้ำหนักที่ลดลง (กก.)
           unitText = 'กก.';
           final records = await db.getHealthRecords(userId: _userId);
           final userObj = await db.getCurrentUser();
@@ -114,6 +118,7 @@ extension RoutineStateGoalProgress on RoutineStateNotifier {
           }
         } else if (lowerTitle.contains('แคลอรี') ||
             lowerTitle.contains('เผาผลาญ')) {
+          // คำนวณแคลอรีเผาผลาญสะสม
           unitText = 'แคล';
           double totalBurned = 0.0;
           for (final w in validWorkouts) {
@@ -123,6 +128,7 @@ extension RoutineStateGoalProgress on RoutineStateNotifier {
         } else if (lowerTitle.contains('ปั่น') ||
             lowerTitle.contains('จักรยาน') ||
             lowerTitle.contains('cycling')) {
+          // คำนวณระยะทางหรือเวลาปั่นจักรยานสะสม
           unitText = (_userGoal!['unit'] ?? 'กม.').toString();
           double totalCycling = 0.0;
           for (final w in validWorkouts) {
@@ -141,6 +147,7 @@ extension RoutineStateGoalProgress on RoutineStateNotifier {
           currentVal = totalCycling;
         } else if (lowerTitle.contains('วิ่ง') ||
             lowerTitle.contains('running')) {
+          // คำนวณระยะทางหรือเวลาวิ่งสะสม
           unitText = (_userGoal!['unit'] ?? 'กม.').toString();
           double totalRunning = 0.0;
           for (final w in validWorkouts) {
@@ -157,6 +164,7 @@ extension RoutineStateGoalProgress on RoutineStateNotifier {
           currentVal = totalRunning;
         } else if (lowerTitle.contains('เดิน') ||
             lowerTitle.contains('walking')) {
+          // คำนวณระยะทางหรือเวลาเดินสะสม
           unitText = (_userGoal!['unit'] ?? 'กม.').toString();
           double totalWalking = 0.0;
           for (final w in validWorkouts) {
@@ -173,6 +181,7 @@ extension RoutineStateGoalProgress on RoutineStateNotifier {
           currentVal = totalWalking;
         } else if (lowerTitle.contains('สมาธิ') ||
             lowerTitle.contains('meditation')) {
+          // คำนวณเวลาทำสมาธิสะสม
           unitText = (_userGoal!['unit'] ?? 'นาที').toString();
           double totalMeditation = 0.0;
           for (final w in validWorkouts) {
@@ -185,6 +194,7 @@ extension RoutineStateGoalProgress on RoutineStateNotifier {
           currentVal = totalMeditation;
         } else if (lowerTitle.contains('โยคะ') ||
             lowerTitle.contains('yoga')) {
+          // คำนวณเวลาเล่นโยคะสะสม
           unitText = (_userGoal!['unit'] ?? 'นาที').toString();
           double totalYoga = 0.0;
           for (final w in validWorkouts) {

@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:healthymate/core/config/app_config.dart';
 
-/// Supabase Service จัดการการเชื่อมต่อ Database, Auth และ Storage โดยตรง
+// บริการจัดการการเชื่อมต่อฐานข้อมูล Supabase, ยืนยันตัวตน, จัดการ OTP และ Storage อัปโหลดไฟล์
 class SupabaseService {
   static final SupabaseService instance = SupabaseService._internal();
   SupabaseService._internal();
@@ -13,7 +13,7 @@ class SupabaseService {
 
   SupabaseClient? get client => _isInitialized ? Supabase.instance.client : null;
 
-  /// เริ่มต้นการเชื่อมต่อกับ Supabase
+  // เริ่มต้นการเชื่อมต่อกับ Supabase SDK
   Future<void> init() async {
     if (_isInitialized) return;
 
@@ -39,11 +39,8 @@ class SupabaseService {
     }
   }
 
-  // ==========================================
-  // AUTH & USER OPERATIONS
-  // ==========================================
-
-  /// ค้นหา User ตาม Email จาก TbUsers
+  // AUTH & USER OPERATIONS (การจัดการผู้ใช้)
+  // ค้นหาข้อมูล User ตาม Email จากตาราง TbUsers
   Future<Map<String, dynamic>?> getUserByEmail(String email) async {
     if (!_isInitialized || client == null) return null;
     try {
@@ -59,7 +56,7 @@ class SupabaseService {
     }
   }
 
-  /// บันทึกหรืออัปเดตข้อมูล User ใน TbUsers
+  // บันทึกหรืออัปเดตข้อมูล User ในตาราง TbUsers (รองรับทั้งการอัปเดตและสมัครใหม่)
   Future<bool> upsertUser(Map<String, dynamic> userData) async {
     if (!_isInitialized || client == null) return false;
     try {
@@ -108,11 +105,9 @@ class SupabaseService {
     }
   }
 
-  // ==========================================
-  // OTP OPERATIONS (TbEmailOtps)
-  // ==========================================
+  // OTP OPERATIONS (การจัดการรหัส OTP ทางอีเมล)
 
-  /// บันทึก OTP รหัสยืนยันลง TbEmailOtps
+  // บันทึกรหัส OTP ยืนยันตัวตนลงในตาราง TbEmailOtps
   Future<bool> saveEmailOtp({
     required String email,
     required String otpCode,
@@ -134,7 +129,7 @@ class SupabaseService {
     }
   }
 
-  /// ตรวจสอบและใช้งาน OTP จาก TbEmailOtps
+  // ตรวจสอบความถูกต้องและตัดการใช้งานรหัส OTP จากตาราง TbEmailOtps
   Future<bool> verifyEmailOtp({
     required String email,
     required String otpCode,
@@ -168,11 +163,10 @@ class SupabaseService {
     }
   }
 
-  // ==========================================
-  // SYNC & CRUD OPERATIONS
-  // ==========================================
 
-  /// ซิงค์บันทึกประวัติสุขภาพ (TbHealthRecords)
+  // SYNC & CRUD OPERATIONS (การซิงค์ข้อมูลตารางอื่นๆ)
+
+  // ซิงค์บันทึกประวัติสุขภาพ (ตาราง TbHealthRecords)
   Future<bool> upsertHealthRecord(Map<String, dynamic> recordData) async {
     if (!_isInitialized || client == null) return false;
     try {
@@ -184,7 +178,7 @@ class SupabaseService {
     }
   }
 
-  /// ซิงค์กิจวัตร (TbRoutines)
+  // ซิงค์ข้อมูลกิจวัตร (ตาราง TbRoutines)
   Future<bool> upsertRoutine(Map<String, dynamic> routineData) async {
     if (!_isInitialized || client == null) return false;
     try {
@@ -196,7 +190,7 @@ class SupabaseService {
     }
   }
 
-  /// ซิงค์การออกกำลังกาย (TbWorkouts)
+  // ซิงค์ประวัติการออกกำลังกาย (ตาราง TbWorkouts)
   Future<bool> upsertWorkout(Map<String, dynamic> workoutData) async {
     if (!_isInitialized || client == null) return false;
     try {
@@ -208,7 +202,7 @@ class SupabaseService {
     }
   }
 
-  /// ซิงค์โภชนาการ (TbNutritionLogs)
+  // ซิงค์บันทึกมื้ออาหาร (ตาราง TbNutritionLogs)
   Future<bool> upsertNutritionLog(Map<String, dynamic> nutritionData) async {
     if (!_isInitialized || client == null) return false;
     try {
@@ -220,7 +214,7 @@ class SupabaseService {
     }
   }
 
-  /// ซิงค์เป้าหมาย (TbGoals)
+  // ซิงค์ข้อมูลเป้าหมาย (ตาราง TbGoals)
   Future<bool> upsertGoal(Map<String, dynamic> goalData) async {
     if (!_isInitialized || client == null) return false;
     try {
@@ -232,7 +226,7 @@ class SupabaseService {
     }
   }
 
-  /// อัปโหลดรูปภาพขึ้น Supabase Storage Bucket
+  // อัปโหลดไฟล์รูปภาพขึ้น Supabase Storage Bucket
   Future<String?> uploadImage(
     String localPath, {
     String bucketName = 'healthymate-uploads',

@@ -1,5 +1,5 @@
 part of 'profile_header_card.dart';
-
+//การ์ดสำหรับแสดงเป้าหมายหลัก
 extension _ProfileHeaderCardGoal on ProfileHeaderCard {
   Widget _buildGoalCard(bool isDark, Color primaryColor, bool hasGoal) {
     return InkWell(

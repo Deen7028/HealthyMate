@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/features/practice/models/routine_item.dart';
-
+// การ์ดกิจวัตรแบบย่อ/เวอร์ชันดั้งเดิม
 class RoutineCard extends StatelessWidget {
   final RoutineItem routine;
   final ValueChanged<bool> onToggleNotification;

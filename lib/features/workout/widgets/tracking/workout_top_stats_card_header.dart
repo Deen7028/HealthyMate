@@ -1,5 +1,5 @@
 part of 'workout_top_stats_card.dart';
-
+// เมธอดสร้างส่วนหัวสำหรับแสดงสถานะ (isRunning) และประเภทกิจกรรม
 extension _WorkoutTopStatsCardHeader on WorkoutTopStatsCard {
   Widget _buildStatusAndCategoryHeader(bool isDarkModeMap) {
     return Row(

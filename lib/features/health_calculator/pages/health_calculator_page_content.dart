@@ -59,7 +59,7 @@ extension _HealthCalculatorPageContent on _HealthCalculatorPageState {
                         ],
                       ),
                     ),
-                    // History Button (TbCalculationHistory)
+                    // ประวัติการคำนวณ
                     InkWell(
                       onTap: _openHistorySheet,
                       borderRadius: BorderRadius.circular(20),

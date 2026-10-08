@@ -7,6 +7,7 @@ import 'package:timezone/timezone.dart' as tz;
 
 part 'notification_service_scheduling.dart';
 
+// บริการจัดการระบบแจ้งเตือนภายในเครื่อง (Flutter Local Notifications Core Service)
 class NotificationService {
   static final NotificationService instance = NotificationService._();
   NotificationService._();
@@ -16,6 +17,7 @@ class NotificationService {
 
   bool _isInitialized = false;
 
+  // กำหนดค่าเริ่มต้นระบบแจ้งเตือน (Channel, ไอคอนแอป และเขตเวลา Timezone ของไทย)
   Future<void> init() async {
     if (_isInitialized) return;
 
@@ -51,6 +53,7 @@ class NotificationService {
     }
   }
 
+  // ขอสิทธิ์การแจ้งเตือนจากผู้ใช้ (รองรับ Android 13+ และ iOS)
   Future<bool> requestPermission() async {
     try {
       if (Platform.isAndroid) {
@@ -71,7 +74,7 @@ class NotificationService {
     }
   }
 
-  /// 3. ยกเลิกการแจ้งเตือนตาม routineId
+  // ยกเลิกการแจ้งเตือนตาม ID ที่ระบุ
   Future<void> cancelNotification(int id) async {
     try {
       await _notificationsPlugin.cancel(id: id);
@@ -80,7 +83,7 @@ class NotificationService {
     }
   }
 
-  /// 4. ยกเลิกการแจ้งเตือนทั้งหมด
+  // ยกเลิกการแจ้งเตือนทั้งหมดในระบบ
   Future<void> cancelAllNotifications() async {
     try {
       await _notificationsPlugin.cancelAll();

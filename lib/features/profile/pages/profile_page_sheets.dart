@@ -1,6 +1,7 @@
 part of 'profile_page.dart';
-
+//
 extension ProfilePageSheets on _ProfilePageState {
+  // ฟังก์ชันสำหรับแสดงBottomSheet เปลี่ยนหน่วย
   void _showUnitPicker() {
     showModalBottomSheet(
       context: context,
@@ -19,6 +20,7 @@ extension ProfilePageSheets on _ProfilePageState {
     );
   }
 
+  // ฟังก์ชันสำหรับแสดงBottomSheet แก้ไขโปรไฟล์
   void _showEditProfileDialog() {
     final primaryColor = Theme.of(context).colorScheme.primary;
     final messenger = ScaffoldMessenger.of(context);
@@ -62,6 +64,7 @@ extension ProfilePageSheets on _ProfilePageState {
     );
   }
 
+  // ฟังก์ชันสำหรับแสดงBottomSheet เชื่อมต่ออุปกรณ์
   void _showConnectedDevicesBottomSheet() {
     showModalBottomSheet(
       context: context,
@@ -97,6 +100,7 @@ extension ProfilePageSheets on _ProfilePageState {
     );
   }
 
+  // ฟังก์ชันสำหรับแสดงBottomSheet ข้อมูลส่วนตัว
   void _showPersonalInfoBottomSheet() {
     final user = _controller.currentUser;
     showModalBottomSheet(

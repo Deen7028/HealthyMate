@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:health/health.dart';
 import 'package:healthymate/core/database/app_database.dart';
-
+// ดึงข้อมูลสุขภาพ (ขั้นตอน, อัตราการเต้นของหัวใจ, แคลอรี) จาก Health Connect (Android) และ HealthKit (iOS)
 class HealthKitConnectService {
   HealthKitConnectService._();
   static final HealthKitConnectService instance = HealthKitConnectService._();

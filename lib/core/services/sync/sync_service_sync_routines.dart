@@ -1,9 +1,10 @@
 part of 'sync_service.dart';
 
+// ส่วนขยายสำหรับซิงค์ข้อมูลกิจวัตร บันทึกความสำเร็จ เป้าหมายหลัก และการตั้งค่าหน่วยวัด (Sync Routines, Goals & Preferences)
 extension SyncServiceSyncRoutines on SyncService {
+  // 6. ซิงค์ตาราง TbRoutines, TbRoutineLogs, TbGoals และ TbUserPreferences
   Future<int> _syncRoutinesGoalsAndPreferences(int currentUserId) async {
     int syncedTotal = 0;
-    // 5. ซิงค์ตาราง TbRoutines & TbRoutineLogs
     if (currentUserId > 0) {
       final localRoutines = await AppDatabase.instance.getRoutines(
         userId: currentUserId,
@@ -114,7 +115,7 @@ extension SyncServiceSyncRoutines on SyncService {
         }
       }
 
-      // 6. ซิงค์ตาราง TbGoals
+      // ซิงค์ตาราง TbGoals (เป้าหมายหลัก)
       final localGoal = await AppDatabase.instance.getUserGoal(currentUserId);
       if (localGoal != null) {
         final success = await GoalApiService.saveMainGoalRemote(
@@ -132,7 +133,7 @@ extension SyncServiceSyncRoutines on SyncService {
         }
       }
 
-      // 7. ซิงค์ตาราง TbUserPreferences
+      // ซิงค์ตาราง TbUserPreferences (การตั้งค่าหน่วยวัด)
       final unitPref = await AppDatabase.instance.getUserUnitPreference(
         currentUserId,
       );

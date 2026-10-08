@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
-
+// ส่วนแสดงตัวเลือกการเชื่อมโยงข้อมูล GPS ออกกำลังกายอัตโนมัติในหน้าจอแก้ไขกิจวัตร
 class RoutineGpsSyncOption extends StatelessWidget {
   final bool isDark;
   final bool isAutoLinked;

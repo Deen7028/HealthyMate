@@ -1,5 +1,5 @@
 part of 'completed_goals_and_routines_page.dart';
-
+// ฟังก์ชันสำหรับโหลดข้อมูลประวัติเป้าหมายและการออกกำลังกายที่สำเร็จ
 extension CompletedGoalsHistory on _CompletedGoalsAndRoutinesPageState {
   Future<void> _loadHistoryData() async {
     setState(() => _isLoading = true);
@@ -30,7 +30,7 @@ extension CompletedGoalsHistory on _CompletedGoalsAndRoutinesPageState {
       }
     }
   }
-
+  // ฟังก์ชันสำหรับแปลงวันที่ให้เป็นรูปแบบไทย
   String _formatThaiDate(String? rawDate) {
     if (rawDate == null || rawDate.isEmpty) return 'ไม่ระบุวันที่';
     try {

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+// แสดงปุ่ม Actions สำหรับการ Save และ Share รูปภาพ
 class WorkoutShareActions extends StatelessWidget {
   final bool isTransparent;
   final bool isProcessing;

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/services/theme_service.dart';
-
+//แถบส่วนบนของหน้าโปรไฟล์
 class ProfileTopBar extends StatelessWidget {
   final ImageProvider? avatarProvider;
   final VoidCallback? onNotificationTap;

@@ -6,12 +6,12 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
-
+// ส่งออกประวัติการออกกำลังกายและน้ำหนักเป็นไฟล์ PDF
 class DataExportService {
   DataExportService._();
   static final DataExportService instance = DataExportService._();
 
-  /// ส่งออกประวัติการออกกำลังกายและน้ำหนักเป็นไฟล์ PDF (รองรับภาษาไทย 100% ด้วยฟอนต์ Sarabun)
+  // ส่งออกประวัติการออกกำลังกายและน้ำหนักเป็นไฟล์ PDF (รองรับภาษาไทย 100% ด้วยฟอนต์ Sarabun)
   Future<String?> exportDataToPdf(int userId) async {
     try {
       final workouts = await AppDatabase.instance.getWorkouts(userId: userId);

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
+// บริการเสียงพูดจำลองผู้ฝึกสอน (TTS Voice Coach Service) สำหรับรายงานผลระหว่างออกกำลังกาย
 class TtsService {
   TtsService._();
   static final TtsService instance = TtsService._();
@@ -8,6 +9,7 @@ class TtsService {
   final FlutterTts _flutterTts = FlutterTts();
   bool _isInitialized = false;
 
+  // กำหนดค่าเริ่มต้นระบบเสียงพูดภาษาไทย (ภาษา th-TH, ความเร็ว, ระดับเสียง)
   Future<void> init() async {
     if (_isInitialized) return;
     try {
@@ -21,6 +23,7 @@ class TtsService {
     }
   }
 
+  // สั่งให้อ่านออกเสียงข้อความที่ระบุ
   Future<void> speak(String text) async {
     try {
       if (!_isInitialized) {
@@ -33,6 +36,7 @@ class TtsService {
     }
   }
 
+  // ส่งเสียงพูดรายงานความคืบหน้าการออกกำลังกาย (ระยะทางกิโลเมตร, เวลา, เพซเฉลี่ย)
   Future<void> announceWorkoutProgress({
     required double distanceKm,
     required int secondsElapsed,
@@ -54,6 +58,7 @@ class TtsService {
     await speak(message);
   }
 
+  // หยุดการอ่านออกเสียงทันที
   Future<void> stop() async {
     try {
       await _flutterTts.stop();

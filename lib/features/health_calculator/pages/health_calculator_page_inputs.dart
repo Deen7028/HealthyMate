@@ -3,7 +3,7 @@ part of 'health_calculator_page.dart';
 extension _HealthCalculatorPageInputs on _HealthCalculatorPageState {
   List<Widget> _buildInputsSection() {
     return [
-      // Age Input with inline Error feedback
+      // อายุ
       HealthCalculatorInputField(
         label: 'อายุ',
         controller: _ageController,
@@ -20,7 +20,7 @@ extension _HealthCalculatorPageInputs on _HealthCalculatorPageState {
 
       const SizedBox(height: 18),
 
-      // Height Input with inline Error feedback
+      // ส่วนสูง
       HealthCalculatorInputField(
         label: 'ส่วนสูง',
         controller: _heightController,
@@ -37,7 +37,7 @@ extension _HealthCalculatorPageInputs on _HealthCalculatorPageState {
 
       const SizedBox(height: 18),
 
-      // Weight Input with inline Error feedback
+      // น้ำหนัก
       HealthCalculatorInputField(
         label: 'น้ำหนัก',
         controller: _weightController,
@@ -54,7 +54,7 @@ extension _HealthCalculatorPageInputs on _HealthCalculatorPageState {
 
       const SizedBox(height: 22),
 
-      // Activity Level Picker (ฟังเฉพาะ activityLevel)
+      // ระดับกิจกรรม
       ListenableBuilder(
         listenable: widget.state,
         builder: (context, _) => ActivityLevelPicker(
@@ -65,7 +65,7 @@ extension _HealthCalculatorPageInputs on _HealthCalculatorPageState {
 
       const SizedBox(height: 24),
 
-      // Calculate Button
+      // ปุ่มคำนวณค่า BMR, TDEE & BMI
       SizedBox(
         width: double.infinity,
         height: 52,

@@ -1,5 +1,5 @@
 part of 'add_main_goal_bottom_sheet.dart';
-
+// ตรรกะการทำงานและการบันทึกข้อมูลเป้าหมายหลักลงฐานข้อมูล
 extension _AddMainGoalBottomSheetActions on _AddMainGoalBottomSheetState {
   void _onSelectTemplate(int index) {
     setState(() {
@@ -10,7 +10,7 @@ extension _AddMainGoalBottomSheetActions on _AddMainGoalBottomSheetState {
           : t.defaultTarget.toString();
     });
   }
-
+  // คำนวณวันที่เสร็จสิ้นเป้าหมายหลัก
   DateTime _getCalculatedDeadline() {
     final now = DateTime.now();
     if (_deadlineType == '1_week') {
@@ -21,7 +21,7 @@ extension _AddMainGoalBottomSheetActions on _AddMainGoalBottomSheetState {
       return _customDeadlineDate;
     }
   }
-
+  // ฟังก์ชันเปิดปฏิทินเพื่อเลือกวันที่กำหนดเอง
   Future<void> _pickCustomDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -58,7 +58,7 @@ extension _AddMainGoalBottomSheetActions on _AddMainGoalBottomSheetState {
       });
     }
   }
-
+  // ฟังก์ชันบันทึกข้อมูลเป้าหมายหลัก
   void _submit() {
     final targetText = _targetController.text.trim();
     final targetVal = double.tryParse(targetText) ?? 0.0;
@@ -71,11 +71,11 @@ extension _AddMainGoalBottomSheetActions on _AddMainGoalBottomSheetState {
       );
       return;
     }
-
+    
     final selectedTemplate =
         _AddMainGoalBottomSheetState.templates[_selectedTemplateIndex];
     final deadlineDate = _getCalculatedDeadline();
-
+    // ส่งข้อมูลกลับไปที่หน้าจอหลัก
     Navigator.pop(context, {
       'title': selectedTemplate.title,
       'icon': selectedTemplate.icon,

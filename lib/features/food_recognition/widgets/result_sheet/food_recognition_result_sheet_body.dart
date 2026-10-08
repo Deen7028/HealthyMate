@@ -15,11 +15,11 @@ extension _FoodRecognitionResultSheetBody on _FoodRecognitionResultSheetState {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image Thumbnail & Meal Type Selector Row
+            // ส่วนหัว ของหน้าต่างแสดงผลการวิเคราะห์อาหาร
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Photo Preview
+                // รูปภาพอาหารที่วิเคราะห์แล้ว
                 ClipRRect(
                   borderRadius: BorderRadius.circular(16),
                   child: Container(
@@ -37,7 +37,7 @@ extension _FoodRecognitionResultSheetBody on _FoodRecognitionResultSheetState {
                 ),
                 const SizedBox(width: 14),
 
-                // Meal Category Selector
+                // ส่วนเลื่อนลง
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -102,7 +102,7 @@ extension _FoodRecognitionResultSheetBody on _FoodRecognitionResultSheetState {
 
             const SizedBox(height: 18),
 
-            // Macronutrients Summary Banner Card (Idea 1: TDEE Energy Balance)
+            // ส่วนแสดงผลรวมสารอาหาร
             FoodNutritionSummaryCard(
               totalCalories: _result.totalCalories,
               totalProtein: _result.totalProtein,
@@ -113,7 +113,7 @@ extension _FoodRecognitionResultSheetBody on _FoodRecognitionResultSheetState {
 
             const SizedBox(height: 16),
 
-            // 🔥 Burn-It-Off AI Advisor Card (Idea 3: Burn-It-Off Advisor)
+            // ส่วนแสดงคำแนะนำการออกกำลังกาย
             BurnItOffAdvisorCard(
               totalCalories: _result.totalCalories,
               userWeight: _userWeight,

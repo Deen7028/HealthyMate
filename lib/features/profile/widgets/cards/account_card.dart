@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/shared/theme/index.dart';
-
+// การด์สำหรับแสดงข้อมูลบัญชี
 class AccountCard extends StatelessWidget {
   final int activeDeviceCount;
   final VoidCallback onPersonalInfoTap;

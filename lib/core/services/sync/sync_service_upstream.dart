@@ -1,6 +1,8 @@
 part of 'sync_service.dart';
 
+// ส่วนขยายสำหรับกระบวนการดันข้อมูลจากเครื่องขึ้นเซิร์ฟเวอร์ (Upstream Data Synchronization)
 extension SyncServiceUpstream on SyncService {
+  // ดึงข้อมูลที่บันทึกไว้ในเครื่องตอนออฟไลน์ (isSynced = 0) ทั้งหมดขึ้น Backend Server
   Future<void> syncPendingData() async {
     if (_isSyncing) return;
 
@@ -24,11 +26,17 @@ extension SyncServiceUpstream on SyncService {
 
     int syncedTotal = 0;
     try {
+      // 1. ซิงค์ประวัติสุขภาพ (BMI, BMR, TDEE, น้ำหนัก)
       syncedTotal += await this._syncHealthRecords(currentUserId);
+      // 2. ซิงค์โปรไฟล์ผู้ใช้และรูปภาพ
       syncedTotal += await this._syncUsers(currentUserId);
+      // 3. ซิงค์ประวัติการออกกำลังกายและเส้นทาง GPS
       syncedTotal += await this._syncWorkouts(currentUserId);
+      // 4. ซิงค์บันทึกมื้ออาหารและรูปภาพอาหาร
       syncedTotal += await this._syncNutrition(currentUserId);
+      // 5. ส่งคำขอลบข้อมูลที่ค้างอยู่ในคิวตอนออฟไลน์
       syncedTotal += await this._retryPendingDeletions(currentUserId);
+      // 6. ซิงค์กิจวัตร, เป้าหมายหลัก และการตั้งค่าหน่วยวัด
       syncedTotal += await this._syncRoutinesGoalsAndPreferences(currentUserId);
 
       _lastSyncTime = DateTime.now();

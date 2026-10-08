@@ -5,7 +5,7 @@ part of '../routine_controller.dart';
 extension RoutineControllerMutations on RoutineController {
   // ฟังก์ชัน: ลบกิจวัตร (Delete Routine)
   Future<void> deleteRoutine(int routineId, String title) async {
-    // 1. ลบข้อมูลออกจากฐานข้อมูลท้องถิ่น SQLite
+    // 1. ลบข้อมูลออกจากฐานข้อมูล SQLite
     await AppDatabase.instance.deleteRoutine(routineId);
 
     // 2. ยกเลิกการแจ้งเตือนทั้งหมดของกิจวัตรนี้ (สูงสุด 10 สล็อตต่อกิจวัตร)

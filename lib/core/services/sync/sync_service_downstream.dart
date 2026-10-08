@@ -1,6 +1,8 @@
 part of 'sync_service.dart';
 
+// ส่วนขยายสำหรับดาวน์โหลดข้อมูลล่าสุดจากเซิร์ฟเวอร์ลงเครื่อง (Downstream Data Synchronization / Delta Sync)
 extension SyncServiceDownstream on SyncService {
+  // ดาวน์โหลดประวัติการออกกำลังกายจากเซิร์ฟเวอร์แบบ Delta Sync (ดึงเฉพาะข้อมูลใหม่ตั้งแต่ timestamp ล่าสุด)
   Future<int> pullDownstreamWorkouts(
     int userId, {
     bool forceInitial = false,
@@ -24,7 +26,7 @@ extension SyncServiceDownstream on SyncService {
       );
       final isLocalEmpty = localCount == 0;
 
-      // 2. ดึง Timestamp ล่าสุดของการซิงค์
+      // 2. ดึง Timestamp ล่าสุดของการซิงค์เพื่อทำ Delta Pull
       String? lastSyncTimestamp;
       if (!isLocalEmpty && !forceInitial) {
         lastSyncTimestamp = await AppDatabase.instance

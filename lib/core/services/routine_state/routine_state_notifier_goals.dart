@@ -1,6 +1,8 @@
 part of 'routine_state_notifier.dart';
 
+// ส่วนขยายสำหรับตั้งค่าและยกเลิกเป้าหมายหลัก (Main Goal Operations Extension)
 extension RoutineStateGoals on RoutineStateNotifier {
+  // ตั้งเป้าหมายหลักแบบกำหนดเอง (Custom Main Goal) พร้อมคำนวณวันสิ้นสุดและซิงค์ข้อมูล
   Future<void> setCustomMainGoal({
     required String title,
     required String icon,
@@ -49,7 +51,7 @@ extension RoutineStateGoals on RoutineStateNotifier {
     this._notifyStateListeners();
   }
 
-  /// ยกเลิกปักหมุดเป้าหมายหลัก
+  // ยกเลิกการปักหมุดเป้าหมายหลัก (ล้างข้อมูลทั้ง Local DB และ Server)
   Future<void> unpinMainGoal() async {
     _userGoal = null;
     await AppDatabase.instance.clearUserGoal(_userId);

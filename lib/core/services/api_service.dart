@@ -1,3 +1,4 @@
+// รวมการ Export เซอร์วิส API ทั้งหมดของโปรเจกต์ เพื่อให้เรียกใช้งานได้สะดวกจากจุดเดียว (Barrel File)
 export 'api_service_config.dart';
 export 'package:healthymate/features/auth/services/auth_api_service.dart';
 export 'package:healthymate/features/auth/services/email_api_service.dart';
@@ -7,3 +8,4 @@ export 'package:healthymate/features/workout/services/activity_api_service.dart'
 export 'package:healthymate/features/dashboard/services/dashboard_api_service.dart';
 export 'package:healthymate/features/practice/services/routine_api_service.dart';
 export 'package:healthymate/features/practice/services/goal_api_service.dart';
+

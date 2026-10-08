@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:healthymate/features/auth/register/pages/register_page.dart';
+import 'package:healthymate/main_app.dart';
 import '../controllers/login_controller.dart';
 import '../widgets/index.dart';
 
@@ -98,6 +99,13 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
 
     if (widget.onLoginSuccess != null) {
       widget.onLoginSuccess!();
+    } else if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    } else {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const MainAppShell()),
+        (route) => false,
+      );
     }
   }
 
@@ -116,6 +124,13 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       );
       if (widget.onLoginSuccess != null) {
         widget.onLoginSuccess!();
+      } else if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      } else {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const MainAppShell()),
+          (route) => false,
+        );
       }
     } else {
       _triggerShake();
@@ -137,6 +152,13 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       );
       if (widget.onLoginSuccess != null) {
         widget.onLoginSuccess!();
+      } else if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      } else {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const MainAppShell()),
+          (route) => false,
+        );
       }
     } else if (result['status'] != 'cancelled') {
       _triggerShake();

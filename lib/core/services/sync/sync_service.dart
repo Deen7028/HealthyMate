@@ -15,18 +15,17 @@ part 'sync_service_sync_activity.dart';
 part 'sync_service_sync_routines.dart';
 part 'sync_service_downstream.dart';
 
+// สถานะของการซิงค์ข้อมูล (พร้อมทำงาน, กำลังตรวจสอบ, กำลังซิงค์, ซิงค์เสร็จแล้ว, ออฟไลน์, เกิดข้อผิดพลาด)
 enum SyncStatus { idle, checking, syncing, synced, offline, error }
 
-/// Service สำหรับจัดการ Offline-First และ Background Synchronization
-/// - คอยดักฟังสัญญาณเครือข่าย 2 ระดับ: (1) connectivity_plus (2) internet_connection_checker_plus
-/// - เมื่อมีสัญญาณอินเทอร์เน็ตจริง จะทำการ Upstream Sync ข้อมูลแถวที่ `isSynced = 0` ขึ้น PHP API
-/// - อัปเดตสถานะใน SQLite เป็น `isSynced = 1` เมื่อ Backend ตอบกลับ 200 OK
+// บริการจัดการระบบ Offline-First และ Background Data Synchronization
+// คอยตรวจจับสัญญาณอินเทอร์เน็ต และซิงค์ข้อมูลอัตโนมัติระหว่าง SQLite กับ Remote Server
 class SyncService extends ChangeNotifier {
   static final SyncService instance = SyncService._internal();
   SyncService._internal();
 
   void _notifySyncListeners() => notifyListeners();
-
+  // ตรวจสอบสัญญาณอินเทอร์เน็ตและซิงค์ข้อมูล
   final Connectivity _connectivity = Connectivity();
   final InternetConnection _internetChecker = InternetConnection.createInstance(
     customCheckOptions: [
@@ -45,14 +44,19 @@ class SyncService extends ChangeNotifier {
   DateTime? _lastSyncTime;
   int _pendingCount = 0;
 
+  // อ่านสถานะการเชื่อมต่ออินเทอร์เน็ต (Online / Offline)
   bool get isOnline => _isOnline;
+  // อ่านสถานะว่ากำลังอยู่ในกระบวนการซิงค์ข้อมูลหรือไม่
   bool get isSyncing => _isSyncing;
+  // สถานะ Enum ปัจจุบัน
   SyncStatus get status => _status;
+  // ข้อความบรรยายสถานะภาษาไทยสำหรับแสดงบน UI
   String get statusMessage => _statusMessage;
+  // เวลาที่มีการซิงค์สำเร็จล่าสุด
   DateTime? get lastSyncTime => _lastSyncTime;
+  // จำนวนแถวข้อมูลในเครื่องที่ค้างรอซิงค์ขึ้น Server (isSynced = 0)
   int get pendingCount => _pendingCount;
 
-  /// เริ่มต้นระบบตรวจสอบเน็ตและเริ่ม Auto Sync ในเบื้องหลัง
   @override
   void dispose() {
     _connectivitySubscription?.cancel();

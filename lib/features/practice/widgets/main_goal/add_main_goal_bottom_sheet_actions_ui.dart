@@ -1,5 +1,5 @@
 part of 'add_main_goal_bottom_sheet.dart';
-
+// ส่วน UI ปุ่มกดบันทึก/ยืนยัน และช่องปรับแต่งค่าเป้าหมายใน BottomSheet
 extension _AddMainGoalBottomSheetActionsUi on _AddMainGoalBottomSheetState {
   List<Widget> _buildDeadlineSection(
     bool isDark,
@@ -7,7 +7,7 @@ extension _AddMainGoalBottomSheetActionsUi on _AddMainGoalBottomSheetState {
     Color borderColor,
     Color textPrimary,
   ) => [
-    // Section 3: Deadline Selection
+    // ส่วนที่ 3 กำหนดวันเสร็จสิ้นเป้าหมายหลัก
     Text(
       'ส่วนที่ 3: กำหนดเส้นตาย (Deadline)',
       style: TextStyle(
@@ -59,7 +59,7 @@ extension _AddMainGoalBottomSheetActionsUi on _AddMainGoalBottomSheetState {
     const SizedBox(height: 24),
   ];
   List<Widget> _buildSaveButton(bool isDark) => [
-    // Save Button
+    //  ปุ่มยืนยันการตั้งเป้าหมายหลัก
     SizedBox(
       width: double.infinity,
       height: 52,
@@ -100,7 +100,7 @@ extension _AddMainGoalBottomSheetActionsUi on _AddMainGoalBottomSheetState {
     Color textSecondary,
     MainGoalTemplate selectedTemplate,
   ) => [
-    // Section 2: Target & Unit
+    // ส่วนที่ 2 กำหนดเส้นชัย
     Text(
       'ส่วนที่ 2: กำหนดเส้นชัย (Target & Unit)',
       style: TextStyle(

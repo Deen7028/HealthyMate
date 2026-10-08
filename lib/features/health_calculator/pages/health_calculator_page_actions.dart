@@ -13,13 +13,13 @@ extension _HealthCalculatorPageActions on _HealthCalculatorPageState {
     String? ageErr;
     String? heightErr;
     String? weightErr;
-
+    // ตรวจสอบข้อมูล
     if (ageText.isEmpty) {
       ageErr = 'กรุณาระบุอายุ';
     } else if (age <= 0 || age > 130) {
       ageErr = 'อายุต้องอยู่ระหว่าง 1 - 130 ปี';
     }
-
+    // ตรวจสอบข้อมูล
     if (heightText.isEmpty) {
       heightErr = 'กรุณาระบุส่วนสูง';
     } else if (height <= 0 || height > 280) {
@@ -40,7 +40,7 @@ extension _HealthCalculatorPageActions on _HealthCalculatorPageState {
 
     return ageErr == null && heightErr == null && weightErr == null;
   }
-
+// ปุ่มคำนวณค่า BMR, TDEE & BMI
   Future<void> _onCalculate() async {
     if (!_validateInputs()) {
       return;
@@ -68,7 +68,7 @@ extension _HealthCalculatorPageActions on _HealthCalculatorPageState {
       ),
     );
   }
-
+// ปุ่มบันทึกข้อมูล
   Future<void> _onSaveToDashboard() async {
     if (!_validateInputs()) {
       return;
@@ -107,7 +107,7 @@ extension _HealthCalculatorPageActions on _HealthCalculatorPageState {
       ),
     );
   }
-
+  // เปิดหน้าประวัติการคำนวณ
   void _openHistorySheet() {
     showModalBottomSheet(
       context: context,

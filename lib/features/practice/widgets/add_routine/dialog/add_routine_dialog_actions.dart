@@ -1,5 +1,5 @@
 part of 'add_routine_dialog.dart';
-
+// 
 extension _AddRoutineDialogActions on _AddRoutineDialogState {
   void _onCategoryChanged(RoutineCategory category) {
     setState(() {
@@ -17,7 +17,7 @@ extension _AddRoutineDialogActions on _AddRoutineDialogState {
           case RoutineCategory.fitness:
             _targetController.text = '10';
             _unitController.text = 'กม.';
-            _notificationTimeController.text = '12:00 & 18:00';
+            _notificationTimeController.text = '12:00';
             break;
           case RoutineCategory.mindfulness:
             _targetController.text = '15';

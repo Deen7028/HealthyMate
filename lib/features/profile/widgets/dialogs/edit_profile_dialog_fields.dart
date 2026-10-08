@@ -1,5 +1,5 @@
 part of 'edit_profile_dialog.dart';
-
+// ส่วนต่างๆ ของหน้าต่างแก้ไขโปรไฟล์
 extension EditProfileDialogFields on _EditProfileDialogState {
   Widget _buildTextField({
     required TextEditingController controller,

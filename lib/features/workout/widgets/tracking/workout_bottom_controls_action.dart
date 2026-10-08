@@ -1,5 +1,5 @@
 part of 'workout_bottom_controls.dart';
-
+// เมธอดสร้างปุ่มสำหรับส่วนควบคุมด้านล่าง (Action Buttons:Pause/Resume, Save/Share, End)
 extension _WorkoutBottomControlsAction on _WorkoutBottomControlsState {
   Widget _buildActionButton({
     required String label,

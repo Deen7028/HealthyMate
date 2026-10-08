@@ -1,5 +1,5 @@
 part of 'profile_header_card.dart';
-
+// ส่วนต่างๆ ของการ์ดโปรไฟล์
 extension _ProfileHeaderCardSections on ProfileHeaderCard {
   Widget _buildAvatar(bool isDark, Color primaryColor) {
     return Center(

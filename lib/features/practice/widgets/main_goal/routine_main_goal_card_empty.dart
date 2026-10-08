@@ -1,5 +1,5 @@
 part of 'routine_main_goal_card.dart';
-
+// การ์ดสถานะว่างเมื่อยังไม่ได้ตั้งเป้าหมายหลัก (Empty State: ปุ่มแตะเพื่อเลือกเป้าหมาย)
 extension _RoutineMainGoalCardEmpty on RoutineMainGoalCard {
   Widget _buildEmptyGoal(bool isDark, Color textSecondary) {
     return Container(

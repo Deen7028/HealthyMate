@@ -1,5 +1,5 @@
 part of 'edit_food_item_dialog.dart';
-
+//ส่วนต่อขยายของหน้าต่างแก้ไขข้อมูลอาหาร
 extension _EditFoodItemDialogContent on _EditFoodItemDialogState {
   Widget _buildDialog(BuildContext context) {
     final primaryColor = Theme.of(context).colorScheme.primary;

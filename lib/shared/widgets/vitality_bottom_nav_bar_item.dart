@@ -1,4 +1,5 @@
 part of 'vitality_bottom_nav_bar.dart';
+// ไอเทมปุ่มเมนูแต่ละอันบนแถบนำทางด้านล่าง พร้อมแอนิเมชันตอบสนองการกด
 
 class _VitalityStandardNavItemWidget extends StatefulWidget {
   final VitalityNavItem item;

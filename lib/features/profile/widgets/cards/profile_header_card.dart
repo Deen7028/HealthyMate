@@ -3,7 +3,7 @@ import 'package:healthymate/core/services/theme_service.dart';
 
 part 'profile_header_card_sections.dart';
 part 'profile_header_card_goal.dart';
-
+// การ์ดโปรไฟล์
 class ProfileHeaderCard extends StatelessWidget {
   final ImageProvider? avatarProvider;
   final String name;
@@ -53,14 +53,14 @@ class ProfileHeaderCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Big Circular Avatar with Edit Badge & Loading Indicator
+          // รูปโปรไฟล์
           _buildAvatar(isDark, primaryColor),
           const SizedBox(height: 16),
           _buildIdentity(isDark),
 
           const SizedBox(height: 20),
 
-          // เป้าหมายหลัก (Main Goal Card - แสดงข้อมูลกระจกเงา Read-only แตะเพื่อไปหน้ากิจวัตร)
+          // เป้าหมายหลัก 
           _buildGoalCard(isDark, primaryColor, hasGoal),
         ],
       ),

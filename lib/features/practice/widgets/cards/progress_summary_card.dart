@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/features/practice/models/routine_item.dart';
-
+// การ์ดสรุปความคืบหน้าของกิจวัตรประจำวัน ส่วนหัว
 class ProgressSummaryCard extends StatelessWidget {
   final List<RoutineItem> routines;
   final VoidCallback? onResetAll;
@@ -37,6 +37,7 @@ class ProgressSummaryCard extends StatelessWidget {
           ),
         ],
       ),
+      // ส่วนของ ProgressSummaryCard
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -150,7 +151,7 @@ class ProgressSummaryCard extends StatelessWidget {
       ),
     );
   }
-
+// tile สรุปความคืบหน้า 1 ใน 3 กิจวัตร 
   Widget _buildStatTile({
     required IconData icon,
     required Color iconColor,

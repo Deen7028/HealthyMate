@@ -1,5 +1,5 @@
 part of 'food_recognition_result_sheet.dart';
-
+// ส่วนต่างๆ ของหน้าต่างแสดงผลการวิเคราะห์อาหาร
 extension _FoodRecognitionResultSheetContent
     on _FoodRecognitionResultSheetState {
   Widget _buildResultSheet(BuildContext context) {
@@ -21,7 +21,7 @@ extension _FoodRecognitionResultSheetContent
       ),
       child: Column(
         children: [
-          // Drag Handle
+          // ลากที่มุมบน
           Container(
             margin: const EdgeInsets.only(top: 12, bottom: 8),
             width: 44,
@@ -31,7 +31,7 @@ extension _FoodRecognitionResultSheetContent
               borderRadius: BorderRadius.circular(10),
             ),
           ),
-
+          // ส่วนหัว
           ..._buildHeader(
             context,
             isDark,
@@ -40,6 +40,7 @@ extension _FoodRecognitionResultSheetContent
             textSecondary,
             borderColor,
           ),
+          // ส่วนเลื่อนลง
           _buildScrollableBody(
             isDark,
             surfaceBg,
