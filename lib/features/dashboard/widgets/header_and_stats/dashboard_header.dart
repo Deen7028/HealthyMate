@@ -3,18 +3,30 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:healthymate/shared/widgets/sync_status_badge.dart';
 
-/// ส่วนหัวของหน้า Dashboard แสดงทักทายผู้ใช้ วันที่/สัปดาห์ รูปโปรไฟล์ และสถานะการเชื่อมต่อ (Sync Status)
+// ส่วนหัวของหน้าแดชบอร์ด (DashboardHeader)
+// แสดงคำทักทาย, วันที่/สัปดาห์, รูปโปรไฟล์, แบดจ์ซิงค์ และปุ่มการแจ้งเตือน
 class DashboardHeader extends StatelessWidget {
+  /// ชื่อของผู้ใช้งาน
   final String userName;
+  /// เส้นทางรูปภาพโปรไฟล์ (Local File หรือ Network URL)
   final String profilePath;
+  /// ชื่อวันภาษาไทย (เช่น 'พฤหัสบดี')
   final String thaiDayName;
+  /// ลำดับสัปดาห์ของเดือน
   final int weekOfMonth;
+  /// ข้อความทักทายตามช่วงเวลา (เช่น 'สวัสดีตอนเช้า')
   final String greetingText;
+  /// อีโมจิตามช่วงเวลา (เช่น '☀️')
   final String greetingEmoji;
+  /// Callback เมื่อกดที่รูปโปรไฟล์
   final VoidCallback? onProfileTap;
+  /// Callback เมื่อกดที่ปุ่มการแจ้งเตือน
   final VoidCallback? onNotificationTap;
+  /// จำนวนการแจ้งเตือนที่ยังไม่ได้อ่าน
   final int unreadCount;
+  /// สีเขียวหลัก
   final Color primaryGreen;
+  /// สีเขียวเข้ม
   final Color darkGreen;
 
   const DashboardHeader({
@@ -32,11 +44,14 @@ class DashboardHeader extends StatelessWidget {
     this.darkGreen = const Color(0xFF006432),
   });
 
+  /// ฟังก์ชันช่วย: ตรวจสอบและสร้าง ImageProvider จากพาธของรูปภาพ
   ImageProvider? _getImageProvider(String path) {
     if (path.isEmpty) return null;
+    // 1. กรณีเป็นรูปจาก URL บนคลาวด์/อินเทอร์เน็ต
     if (path.startsWith('http://') || path.startsWith('https://')) {
       return NetworkImage(path);
     }
+    // 2. กรณีเป็นไฟล์รูปภาพในเครื่อง (Mobile/Desktop)
     if (!kIsWeb) {
       try {
         final file = File(path);
@@ -52,6 +67,7 @@ class DashboardHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 1. จัดเตรียมข้อมูลธีมและสี
     final imageProvider = _getImageProvider(profilePath);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryTextColor = isDark ? Colors.white : Colors.black87;
@@ -62,11 +78,14 @@ class DashboardHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // แถวบน: รูปโปรไฟล์ + โลโก้/สัปดาห์ + แบดจ์ซิงค์ + แจ้งเตือน
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              // ด้านซ้าย: รูปโปรไฟล์ และ ชื่อแอป/วันที่
               Row(
                 children: [
+                  // รูปภาพโปรไฟล์ (หรือตัวอักษรแรกหากไม่มีรูป)
                   GestureDetector(
                     onTap: onProfileTap,
                     child: CircleAvatar(
@@ -88,6 +107,7 @@ class DashboardHeader extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
+                  // ชื่อแอป HealthyMate และสถานะวัน/สัปดาห์
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -116,6 +136,8 @@ class DashboardHeader extends StatelessWidget {
                   ),
                 ],
               ),
+
+              // ด้านขวา: สถานะ Sync Status Badge และปุ่มแจ้งเตือนพร้อมตัวเลขนับ (Badge)
               Row(
                 children: [
                   const SyncStatusBadge(),
@@ -128,6 +150,7 @@ class DashboardHeader extends StatelessWidget {
                         onPressed: onNotificationTap,
                         color: isDark ? Colors.white70 : Colors.black87,
                       ),
+                      // ตัวเลขนับแจ้งเตือนสีแดง (Unread Count Badge)
                       if (unreadCount > 0)
                         Positioned(
                           right: 8,
@@ -161,6 +184,10 @@ class DashboardHeader extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
+
+          // ----------------------------------------------------
+          // แถวล่าง: ข้อความทักทายผู้ใช้ (Greeting & Motivational Quote)
+          // ----------------------------------------------------
           RichText(
             text: TextSpan(
               style: TextStyle(color: primaryTextColor, fontSize: 24),
@@ -181,3 +208,4 @@ class DashboardHeader extends StatelessWidget {
     );
   }
 }
+

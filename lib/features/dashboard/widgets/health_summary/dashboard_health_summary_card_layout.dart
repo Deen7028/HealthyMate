@@ -1,7 +1,9 @@
 part of 'dashboard_health_summary_card.dart';
 
+// ส่วนจัดวางเลย์เอาต์หลัก (_DashboardHealthSummaryCardLayout)
+// รวบรวมและจัดลำดับการ์ดสุขภาพส่วนบุคคล, โภชนาการอาหาร และเป้าหมายการเผาผลาญ
 extension _DashboardHealthSummaryCardLayout on DashboardHealthSummaryCard {
-  /// build UI ทั้งหมดของ DashboardHealthSummaryCard
+  /// ฟังก์ชัน: สร้าง UI การ์ดกรอบนอก และจัดวางส่วนประกอบหลักทั้ง 3 ส่วน
   Widget _buildHealthSummaryLayout({
     required BuildContext context,
     required bool isDark,
@@ -38,6 +40,7 @@ extension _DashboardHealthSummaryCardLayout on DashboardHealthSummaryCard {
       ),
       child: Column(
         children: [
+          // 1. ส่วนข้อมูลสุขภาพส่วนบุคคล (น้ำหนัก, ส่วนสูง, BMI, BMR, TDEE)
           _buildPersonalHealthSection(
             isDark: isDark,
             textPrimary: textPrimary,
@@ -51,6 +54,8 @@ extension _DashboardHealthSummaryCardLayout on DashboardHealthSummaryCard {
             tdee: tdee,
             lastRecordText: lastRecordText,
           ),
+
+          // 2. ส่วนสมดุลแคลอรีและ AI Food Scanner
           _buildNutritionCard(
             isDark: isDark,
             subtleSurface: subtleSurface,
@@ -62,6 +67,7 @@ extension _DashboardHealthSummaryCardLayout on DashboardHealthSummaryCard {
           ),
           const SizedBox(height: 12),
 
+          // 3. ส่วนเป้าหมายการเผาผลาญจากการออกกำลังกายประจำวัน
           _buildBurnTargetCard(
             isDark: isDark,
             textPrimary: textPrimary,
@@ -74,3 +80,4 @@ extension _DashboardHealthSummaryCardLayout on DashboardHealthSummaryCard {
     );
   }
 }
+

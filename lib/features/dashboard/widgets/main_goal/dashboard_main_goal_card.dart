@@ -3,16 +3,26 @@ import 'package:healthymate/features/dashboard/utils/dashboard_ui_helpers.dart';
 import 'dashboard_main_goal_card_presentation.dart';
 part 'dashboard_main_goal_card_helpers.dart';
 
-/// การ์ดแสดงเป้าหมายหลักประจำวัน (Main Goal Card Component)
+// การ์ดแสดงเป้าหมายหลักประจำวัน (DashboardMainGoalCard)
+// คำนวณความคืบหน้าของกิจวัตร/เป้าหมายที่ปักหมุดเทียบกับสถิติการออกกำลังกาย
 class DashboardMainGoalCard extends StatelessWidget {
+  /// ข้อมูลเป้าหมายที่บันทึกไว้ของผู้ใช้
   final Map<String, dynamic>? userGoal;
+  /// รายการกิจวัตรทั้งหมด
   final List<Map<String, dynamic>> routines;
+  /// แผนที่สถานะการทำกิจวัตรสำเร็จในวันนี้
   final Map<int, bool> todayCompletionMap;
+  /// สถิติการออกกำลังกายของวันนี้แยกตามประเภท
   final Map<String, Map<String, double>> todayWorkoutStats;
+  /// วันที่และเวลาปัจจุบัน
   final DateTime now;
+  /// Callback เมื่อกดปุ่มไปหน้าฝึกฝน/กิจวัตร
   final VoidCallback? onNavigateToPractice;
+  /// สีเขียวหลัก
   final Color primaryGreen;
+  /// สีเขียวเข้ม
   final Color darkGreen;
+
   const DashboardMainGoalCard({
     super.key,
     required this.userGoal,
@@ -24,8 +34,10 @@ class DashboardMainGoalCard extends StatelessWidget {
     this.primaryGreen = const Color(0xFF0F9C58),
     this.darkGreen = const Color(0xFF006432),
   });
+
   @override
   Widget build(BuildContext context) {
+    // 1. ตรวจสอบว่ามีการปักหมุดเป้าหมายหลักหรือไม่
     final hasPinnedGoal = userGoal != null;
     final pinnedRoutineId = (userGoal?['nRoutineId'] as num?)?.toInt() ?? 0;
     Map<String, dynamic>? pinnedRoutine;
@@ -39,6 +51,7 @@ class DashboardMainGoalCard extends StatelessWidget {
         }
       }
     }
+
     final double progress;
     final String displayTitle;
     String displayDetail;

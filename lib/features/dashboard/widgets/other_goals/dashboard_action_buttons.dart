@@ -3,13 +3,20 @@ import 'package:healthymate/features/practice/widgets/index.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/routine_state/routine_state_notifier.dart';
 
-/// ชุดปุ่มลัดสำหรับเริ่มกิจกรรมออกกำลังกาย (วิ่ง เดิน จักรยาน โยคะ สมาธิ) หรือเปิดหน้าต่างตั้งเป้าหมาย
+// ชุดปุ่มลัดสำหรับเริ่มกิจกรรมและเลือกประเภทอื่น (DashboardActionButtons)
+// ประกอบด้วย: ปุ่มหลัก (ปรับข้อความ/ไอคอนตามเป้าหมายที่ปักหมุด) และปุ่ม 'เลือกประเภทอื่น'
 class DashboardActionButtons extends StatelessWidget {
+  /// ข้อมูลเป้าหมายที่ปักหมุดไว้
   final Map<String, dynamic>? userGoal;
+  /// Callback เมื่อกดเริ่มออกกำลังกาย
   final Function(String? category)? onStartWorkout;
+  /// Callback เมื่อกดนำทางไปหน้า Workout Tracking
   final Function(String? category)? onNavigateToWorkout;
+  /// Callback เมื่อกดนำทางไปหน้า Health Calculator
   final VoidCallback? onNavigateToCalculator;
+  /// Callback เมื่อกดเปิดหน้าต่างเพิ่มเป้าหมายหลัก
   final VoidCallback? onOpenAddMainGoal;
+  /// สีเขียวเข้ม
   final Color darkGreen;
 
   const DashboardActionButtons({
@@ -24,6 +31,7 @@ class DashboardActionButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 1. ตรวจสอบชื่อเป้าหมายที่ปักหมุดเพื่อกำหนดข้อความ, ไอคอน และหมวดหมู่ออกกำลังกาย
     final pinnedTitle = userGoal?['sTitle']?.toString() ?? '';
     String buttonText = 'เริ่มวิ่งมินิมาราธอน (30 นาที)';
     IconData buttonIcon = Icons.bolt;
@@ -74,6 +82,9 @@ class DashboardActionButtons extends StatelessWidget {
 
     return Column(
       children: [
+        // ----------------------------------------------------
+        // 1. ปุ่มหลัก: เริ่มกิจกรรมตามเป้าหมายที่ปักหมุดไว้ (ElevatedButton)
+        // ----------------------------------------------------
         SizedBox(
           width: double.infinity,
           height: 54,
@@ -111,6 +122,10 @@ class DashboardActionButtons extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
+
+        // ----------------------------------------------------
+        // 2. ปุ่มรอง: เลือกประเภทอื่น / ตั้งเป้าหมายหลักใหม่ (OutlinedButton)
+        // ----------------------------------------------------
         SizedBox(
           width: double.infinity,
           height: 54,
@@ -199,3 +214,4 @@ class DashboardActionButtons extends StatelessWidget {
     );
   }
 }
+

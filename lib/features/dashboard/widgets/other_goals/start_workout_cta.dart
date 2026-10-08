@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
-/// การ์ดปุ่มกด Call To Action (CTA) สำหรับเริ่มออกกำลังกายทันที
+// การ์ดปุ่มกดเริ่มออกกำลังกายทันที (StartWorkoutCTA)
+// ปุ่ม Call-To-Action ไล่ระดับเฉดสีม่วง สำหรับเริ่มบันทึกกิจกรรมใน 1 คลิก
 class StartWorkoutCTA extends StatelessWidget {
+  /// Callback เมื่อกดปุ่มเพื่อเริ่มออกกำลังกาย
   final VoidCallback onStartWorkout;
 
   const StartWorkoutCTA({
@@ -37,6 +39,7 @@ class StartWorkoutCTA extends StatelessWidget {
             padding: const EdgeInsets.all(18.0),
             child: Row(
               children: [
+                // 1. ไอคอนดัมเบลในวงกลมโปร่งแสง
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -50,6 +53,8 @@ class StartWorkoutCTA extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 16),
+
+                // 2. ข้อความเชิญชวนออกกำลังกาย (Title & Subtitles)
                 const Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -82,6 +87,8 @@ class StartWorkoutCTA extends StatelessWidget {
                     ],
                   ),
                 ),
+
+                // 3. ปุ่มกดสีขาว 'เริ่มเลย'
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
@@ -115,3 +122,4 @@ class StartWorkoutCTA extends StatelessWidget {
     );
   }
 }
+

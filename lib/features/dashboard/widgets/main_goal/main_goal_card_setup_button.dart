@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+// ปุ่มกดตั้งเป้าหมายหลัก (MainGoalCardSetupButton)
+// แสดงผลเมื่อผู้ใช้งานยังไม่ได้ปักหมุดเป้าหมายหลักใด ๆ
 class MainGoalCardSetupButton extends StatelessWidget {
+  /// Callback เมื่อกดปุ่มเพื่อเปิดหน้าสร้าง/ปักหมุดเป้าหมาย
   final VoidCallback? onPressed;
 
   const MainGoalCardSetupButton({super.key, required this.onPressed});
@@ -28,3 +31,4 @@ class MainGoalCardSetupButton extends StatelessWidget {
     ),
   );
 }
+

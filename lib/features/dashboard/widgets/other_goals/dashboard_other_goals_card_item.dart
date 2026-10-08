@@ -1,6 +1,9 @@
 part of 'dashboard_other_goals_card.dart';
 
+// ส่วนไอเทมกิจวัตรย่อยแต่ละรายการ (_DashboardOtherGoalsCardItem)
+// คำนวณความคืบหน้าจากสถิติการออกกำลังกาย หรือค่าที่เช็คลิสต์ไว้ พร้อมไอคอนและแถบสถานะ
 extension _DashboardOtherGoalsCardItem on DashboardOtherGoalsCard {
+  /// ฟังก์ชัน: สร้าง UI แต่ละแถวกิจวัตรย่อย
   Widget _buildRoutineItem(
     BuildContext context,
     int index,
@@ -9,6 +12,7 @@ extension _DashboardOtherGoalsCardItem on DashboardOtherGoalsCard {
     Color textPrimary,
     Color textSecondary,
   ) {
+    // 1. ดึงข้อมูลพื้นฐานของกิจวัตร (ID, ชื่อ, ค่าเป้าหมาย, หน่วย, สี และไอคอน)
     final rId = (routine['nRoutineId'] as num?)?.toInt() ?? 0;
     final title = routine['sTitle']?.toString() ?? 'ไม่มีชื่อ';
     final targetVal = (routine['targetValue'] as num?)?.toDouble() ?? 1.0;
@@ -35,6 +39,7 @@ extension _DashboardOtherGoalsCardItem on DashboardOtherGoalsCard {
         lowerTitle.contains('ยา') ||
         lowerTitle.contains('อ่าน');
 
+    // 2. ตรวจสอบการเชื่อมโยงกับการออกกำลังกาย (Linked Workout)
     String matchedType = routine['sLinkedWorkout']?.toString() ?? '';
     if (matchedType.isEmpty && !isNonWorkout) {
       if (lowerTitle.contains('วิ่ง')) {
@@ -54,6 +59,7 @@ extension _DashboardOtherGoalsCardItem on DashboardOtherGoalsCard {
         (matchedType.isNotEmpty ||
             workoutKeywords.any((kw) => lowerTitle.contains(kw)));
 
+    // 3. ดึงค่าสถิติการออกกำลังกายที่ทำได้ในวันนี้
     double? workoutVal;
     if (isWorkout &&
         matchedType.isNotEmpty &&
@@ -77,6 +83,7 @@ extension _DashboardOtherGoalsCardItem on DashboardOtherGoalsCard {
       }
     }
 
+    // 4. คำนวณสถานะความสำเร็จ (Is Completed)
     final isDone = todayCompletionMap[rId] ?? false;
     final accumulatedVal =
         todayProgressValues[rId] ?? (isDone ? targetVal : 0.0);
@@ -90,7 +97,7 @@ extension _DashboardOtherGoalsCardItem on DashboardOtherGoalsCard {
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
         child: Row(
           children: [
-            // 1. ไอคอน
+            // 1. ไอคอนประจำกิจวัตร (เปลี่ยนเป็นเครื่องหมายถูกเมื่อทำสำเร็จ)
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
@@ -109,7 +116,7 @@ extension _DashboardOtherGoalsCardItem on DashboardOtherGoalsCard {
             ),
             const SizedBox(width: 14),
 
-            // 2. ชื่อกิจวัตรและสถานะแบบตัวหนังสือ (คลีนๆ)
+            // 2. ชื่อกิจวัตรและข้อความสรุปความคืบหน้า
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -149,7 +156,7 @@ extension _DashboardOtherGoalsCardItem on DashboardOtherGoalsCard {
               ),
             ),
 
-            // 3. ป้ายกำกับสถานะ
+            // 3. ป้ายกำกับสถานะ (แสดง 'รอทำรายการ' เมื่อยังไม่เสร็จ)
             if (!isActuallyCompleted)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -176,3 +183,4 @@ extension _DashboardOtherGoalsCardItem on DashboardOtherGoalsCard {
     );
   }
 }
+

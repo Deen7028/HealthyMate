@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:healthymate/features/dashboard/models/dashboard_data.dart';
 
-/// การ์ดแสดงรายการเช็คลิสต์กิจวัตรประจำวัน (Daily Routine Checklist Widget)
+// การ์ดแสดงรายการเช็คลิสต์กิจวัตรประจำวัน (DailyRoutineChecklist)
+// แสดงรายการเช็คลิสต์ที่สามารถติ๊กถูกเพื่อทำเครื่องหมายว่าเสร็จสิ้นแล้ว
 class DailyRoutineChecklist extends StatelessWidget {
+  /// รายการเช็คลิสต์กิจวัตร
   final List<DailyChecklistItem> items;
+  /// Callback เมื่อกดสลับสถานะเช็คลิสต์ (ติ๊กถูก/ยกเลิก)
   final Function(String id, bool isChecked) onToggleItem;
+  /// Callback เมื่อกดดูรายการทั้งหมด
   final VoidCallback? onViewAllTap;
 
   const DailyRoutineChecklist({
@@ -16,6 +20,7 @@ class DailyRoutineChecklist extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // คำนวณจำนวนรายการที่ทำเสร็จแล้ว
     final completedCount = items.where((i) => i.isCompleted).length;
 
     return Container(
@@ -35,7 +40,9 @@ class DailyRoutineChecklist extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header Row: Title & "เสร็จสิ้น X/Y" Pill Badge
+          // ----------------------------------------------------
+          // แถวบน: ชื่อหัวข้อ 'กิจวัตรประจำวัน' และ แบดจ์นับจำนวน 'เสร็จสิ้น X/Y'
+          // ----------------------------------------------------
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -59,6 +66,7 @@ class DailyRoutineChecklist extends StatelessWidget {
                   ],
                 ),
               ),
+              // แบดจ์สรุปจำนวนรายการที่เสร็จสิ้น
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                 decoration: BoxDecoration(
@@ -78,7 +86,9 @@ class DailyRoutineChecklist extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // Checklist Items
+          // ----------------------------------------------------
+          // แถวรายการ: เช็คลิสต์แต่ละรายการ (Checklist Cards)
+          // ----------------------------------------------------
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -94,6 +104,7 @@ class DailyRoutineChecklist extends StatelessWidget {
     );
   }
 
+  /// ฟังก์ชัน: สร้าง UI กล่องเช็คลิสต์แต่ละรายการ
   Widget _buildChecklistCard(DailyChecklistItem item) {
     final isChecked = item.isCompleted;
 
@@ -115,7 +126,7 @@ class DailyRoutineChecklist extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Checkbox Box
+              // 1. กล่อง Checkbox พร้อมแอนิเมชัน
               AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 width: 24,
@@ -134,7 +145,7 @@ class DailyRoutineChecklist extends StatelessWidget {
               ),
               const SizedBox(width: 14),
 
-              // Title and Subtitle
+              // 2. ชื่อหัวข้อ และรายละเอียดกิจวัตร
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -165,3 +176,4 @@ class DailyRoutineChecklist extends StatelessWidget {
     );
   }
 }
+

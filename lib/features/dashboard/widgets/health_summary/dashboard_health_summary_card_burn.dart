@@ -1,7 +1,11 @@
 part of 'dashboard_health_summary_card.dart';
 
+// ==========================================
+// ส่วนแสดงผลการเผาผลาญจากการออกกำลังกาย (_DashboardHealthSummaryCardBurn)
+// แสดงแคลอรีที่เผาผลาญไปแล้วในวันนี้ และเป้าหมายการเผาผลาญประจำวัน (Burn Target kcal)
+// ==========================================
 extension _DashboardHealthSummaryCardBurn on DashboardHealthSummaryCard {
-  /// build widget ส่วนแสดงเป้าหมายการเผาผลาญ
+  /// ฟังก์ชัน: สร้าง UI การ์ดแสดงเป้าหมายการเผาผลาญแคลอรี
   Widget _buildBurnTargetCard({
     required bool isDark,
     required Color textPrimary,
@@ -16,8 +20,11 @@ extension _DashboardHealthSummaryCardBurn on DashboardHealthSummaryCard {
     ),
     child: Row(
       children: [
+        // 1. ไอคอนเป้าหมาย
         Icon(Icons.track_changes, color: primaryGreen),
         const SizedBox(width: 12),
+
+        // 2. ข้อความชื่อเป้าหมาย และตัวเลขแคลอรีที่เผาผลาญไปแล้ว
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -42,6 +49,8 @@ extension _DashboardHealthSummaryCardBurn on DashboardHealthSummaryCard {
             ],
           ),
         ),
+
+        // 3. ค่าเป้าหมายแคลอรีรวมประจำวัน (kcal/วัน)
         Text(
           '$burnTarget\nkcal/วัน',
           textAlign: TextAlign.center,
@@ -55,3 +64,4 @@ extension _DashboardHealthSummaryCardBurn on DashboardHealthSummaryCard {
     ),
   );
 }
+

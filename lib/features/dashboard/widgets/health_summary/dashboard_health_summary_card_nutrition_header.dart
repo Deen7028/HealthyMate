@@ -1,18 +1,20 @@
 part of 'dashboard_health_summary_card.dart';
 
+// ส่วนหัวการ์ดสมดุลแคลอรี (_DashboardHealthSummaryCardNutritionHeader)
+// แสดงชื่อหัวข้อ 'สมดุลแคลอรี่ประจำวัน', แบดจ์ 'AI Food Scanner' และปุ่ม 'ถ่ายบันทึก'
 extension _DashboardHealthSummaryCardNutritionHeader
     on DashboardHealthSummaryCard {
-  /// build widget ส่วนหัวของแคลอรี่
+  /// ฟังก์ชัน: สร้าง UI ส่วนหัวของสมดุลแคลอรีและปุ่มลัดสแกนอาหาร
   Widget _buildNutritionHeader({
     required bool isDark,
     required Color subtleSurface,
     required Color textPrimary,
   }) => Column(
     children: [
-      // Row 1: Header + Scanner Badge + Scan Button
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+          // ด้านซ้าย: ไอคอนช้อนส้อม + หัวข้อ + แบดจ์ AI Food Scanner
           Expanded(
             child: Wrap(
               crossAxisAlignment: WrapCrossAlignment.center,
@@ -38,6 +40,7 @@ extension _DashboardHealthSummaryCardNutritionHeader
                     ),
                   ],
                 ),
+                // แบดจ์ AI Food Scanner
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 6,
@@ -70,6 +73,8 @@ extension _DashboardHealthSummaryCardNutritionHeader
               ],
             ),
           ),
+
+          // ด้านขวา: ปุ่มถ่ายบันทึก (เปิดกล้อง AI Food Scanner)
           if (onOpenFoodScanner != null)
             Material(
               color: isDark ? subtleSurface : Colors.white,
@@ -117,3 +122,4 @@ extension _DashboardHealthSummaryCardNutritionHeader
     ],
   );
 }
+

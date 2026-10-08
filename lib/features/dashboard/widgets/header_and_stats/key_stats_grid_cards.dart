@@ -1,6 +1,18 @@
 part of 'key_stats_grid.dart';
 
+// ==========================================
+// ส่วนคอมโพเนนต์การ์ดสถิติย่อย (_KeyStatsGridCards)
+// ประกอบด้วยการ์ดสถิติขนาดเล็ก (Small Card) และการ์ดสถิติขนาดเต็มความกว้าง (Large Card)
+// ==========================================
 extension _KeyStatsGridCards on KeyStatsGrid {
+  /// ฟังก์ชัน: สร้าง UI การ์ดสถิติขนาดกะทัดรัด (Small Stat Card เช่น ระยะทาง, เวลา)
+  /// - [icon]: ไอคอนประจำสถิติ
+  /// - [iconColor]: สีของไอคอน
+  /// - [title]: ชื่อสถิติ (เช่น 'ระยะทาง')
+  /// - [value]: ค่าตัวเลขที่วัดได้
+  /// - [unit]: หน่วยของค่าสถิติ (เช่น 'กม.', 'นาที')
+  /// - [progressRatio]: อัตราส่วนความคืบหน้าของหลอดแถบสี (0.0 - 1.0)
+  /// - [progressColor]: สีของแถบความคืบหน้า
   Widget _buildSmallStatCard({
     required IconData icon,
     required Color iconColor,
@@ -26,6 +38,7 @@ extension _KeyStatsGridCards on KeyStatsGrid {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 1. แถวไอคอน + ชื่อสถิติ
           Row(
             children: [
               Icon(icon, size: 18, color: iconColor),
@@ -41,6 +54,8 @@ extension _KeyStatsGridCards on KeyStatsGrid {
             ],
           ),
           const SizedBox(height: 14),
+
+          // 2. แถวแสดงค่าตัวเลข + หน่วย
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
@@ -65,6 +80,8 @@ extension _KeyStatsGridCards on KeyStatsGrid {
             ],
           ),
           const SizedBox(height: 12),
+
+          // 3. แถบแสดงความคืบหน้า (Progress Bar)
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
@@ -79,6 +96,14 @@ extension _KeyStatsGridCards on KeyStatsGrid {
     );
   }
 
+  /// ฟังก์ชัน: สร้าง UI การ์ดสถิติขนาดใหญ่เต็มความกว้าง (Large Stat Card เช่น แคลอรี)
+  /// - [icon]: ไอคอนประจำสถิติ
+  /// - [iconColor]: สีของไอคอน
+  /// - [title]: ชื่อสถิติ (เช่น 'แคลอรี่')
+  /// - [value]: ค่าตัวเลขที่วัดได้
+  /// - [unit]: หน่วยของค่าสถิติ (เช่น 'กิโลแคลอรี่')
+  /// - [progressRatio]: อัตราส่วนความคืบหน้าของหลอดแถบสี (0.0 - 1.0)
+  /// - [progressColor]: สีของแถบความคืบหน้า
   Widget _buildLargeStatCard({
     required IconData icon,
     required Color iconColor,
@@ -105,6 +130,7 @@ extension _KeyStatsGridCards on KeyStatsGrid {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 1. แถวไอคอน + ชื่อสถิติ
           Row(
             children: [
               Icon(icon, size: 20, color: iconColor),
@@ -120,6 +146,8 @@ extension _KeyStatsGridCards on KeyStatsGrid {
             ],
           ),
           const SizedBox(height: 14),
+
+          // 2. แถวแสดงค่าตัวเลข + หน่วย
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
@@ -144,6 +172,8 @@ extension _KeyStatsGridCards on KeyStatsGrid {
             ],
           ),
           const SizedBox(height: 14),
+
+          // 3. แถบแสดงความคืบหน้า (Progress Bar)
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
@@ -158,3 +188,4 @@ extension _KeyStatsGridCards on KeyStatsGrid {
     );
   }
 }
+

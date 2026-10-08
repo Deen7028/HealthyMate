@@ -14,18 +14,30 @@ part 'dashboard_health_summary_card_nutrition_energy.dart';
 part 'dashboard_health_summary_card_nutrition_header.dart';
 part 'dashboard_health_summary_card_nutrition.dart';
 
-/// การ์ดสรุปข้อมูลสุขภาพส่วนบุคคล สัดส่วนร่างกาย การเผาผลาญ และแคลอรีโภชนาการประจำวัน
+// การ์ดสรุปข้อมูลสุขภาพส่วนบุคคล (DashboardHealthSummaryCard)
+// แสดงข้อมูลสัดส่วนร่างกาย (BMI, BMR, TDEE), สมดุลแคลอรีจากอาหาร (AI Food Scanner) และเป้าหมายการเผาผลาญ
 class DashboardHealthSummaryCard extends StatelessWidget {
+  /// ข้อมูลผู้ใช้งานปัจจุบัน
   final TbUser? user;
+  /// ข้อมูลบันทึกสุขภาพล่าสุด
   final TbHealthRecord? latestRecord;
+  /// วันที่และเวลาปัจจุบัน
   final DateTime now;
+  /// แคลอรีรวมที่เผาผลาญจากการออกกำลังกายในวันนี้
   final double totalCaloriesBurned;
+  /// แคลอรีรวมที่ได้รับจากอาหารในวันนี้
   final int todayNutritionCalories;
+  /// จำนวนรายการอาหารที่สแกนในวันนี้
   final int todayScannedFoodCount;
+  /// ประวัติรายการอาหารที่สแกนในวันนี้
   final List<Map<String, dynamic>> todayNutritionLogs;
+  /// Callback เมื่อกดปุ่มไปหน้าคำนวณสุขภาพ (Health Calculator)
   final VoidCallback? onNavigateToCalculator;
+  /// Callback เมื่อกดปุ่มเปิดกล้อง AI Food Scanner
   final VoidCallback? onOpenFoodScanner;
+  /// สีเขียวหลัก
   final Color primaryGreen;
+  /// สีเขียวเข้ม
   final Color darkGreen;
 
   const DashboardHealthSummaryCard({
@@ -43,12 +55,14 @@ class DashboardHealthSummaryCard extends StatelessWidget {
     this.darkGreen = const Color(0xFF006432),
   });
 
+  /// ฟังก์ชันช่วย: จัดรูปแบบตัวเลขทศนิยมให้กระชับ
   String _formatNumber(double val) => val >= 1000
       ? val.toStringAsFixed(0)
       : val.toStringAsFixed(val.truncateToDouble() == val ? 0 : 1);
 
   @override
   Widget build(BuildContext context) {
+    // 1. ดึงข้อมูลสีและพื้นหลังตามโหมด (Light/Dark Theme)
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = AppTheme.getBackgroundColor(isDark);
     final borderColor = AppTheme.getBorderColor(isDark);
@@ -58,6 +72,7 @@ class DashboardHealthSummaryCard extends StatelessWidget {
         ? const Color(0xFF27342C)
         : const Color(0xFFF7F9FB);
 
+    // 2. ดึงค่าน้ำหนัก ส่วนสูง และคำนวณ BMI
     final weight = latestRecord?.nWeight ?? user?.nWeight ?? 0.0;
     final height = latestRecord?.nHeight ?? user?.nHeight ?? 0.0;
     final bmi =
@@ -67,6 +82,7 @@ class DashboardHealthSummaryCard extends StatelessWidget {
             : 0.0);
     final bmiCategory = HealthCalculator.getBMICategory(bmi);
 
+    // 3. ดึงอายุ เพศ ระดับกิจกรรม และคำนวณ BMR / TDEE
     final age = user?.nAge ?? 0;
     final gender = user?.genderEnum ?? Gender.male;
     final activityLevel = user?.activityLevelObj ?? ActivityLevel.options[1];
@@ -89,6 +105,7 @@ class DashboardHealthSummaryCard extends StatelessWidget {
       );
     }
 
+    // 4. คำนวณข้อความระยะเวลาที่บันทึกข้อมูลล่าสุด
     String lastRecordText = 'ยังไม่มีข้อมูล';
     if (latestRecord != null) {
       final diff = now.difference(latestRecord!.dtRecordedAt);
@@ -101,15 +118,15 @@ class DashboardHealthSummaryCard extends StatelessWidget {
       }
     }
 
+    // 5. คำนวณเป้าหมายการเผาผลาญ และโควตาพลังงานอาหารประจำวัน
     final burnTarget = tdee > 0 ? (tdee * 0.2).round() : 400;
-
-    // Daily Net Energy Allowance calculation based directly on TDEE
     final double targetTdee = tdee > 0 ? tdee : 2000.0;
     final double remainingEnergyQuota = targetTdee - todayNutritionCalories;
     final double netEnergyRatio = (targetTdee > 0)
         ? (todayNutritionCalories / targetTdee).clamp(0.0, 1.0)
         : 0.0;
 
+    // 6. ส่งค่าไปยัง Layout ย่อยเพื่อประกอบ UI
     return _buildHealthSummaryLayout(
       context: context,
       isDark: isDark,
@@ -132,3 +149,4 @@ class DashboardHealthSummaryCard extends StatelessWidget {
     );
   }
 }
+

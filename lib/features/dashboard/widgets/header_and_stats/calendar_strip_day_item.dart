@@ -1,7 +1,13 @@
 part of 'calendar_strip_widget.dart';
 
+// ส่วนแสดงผลไอเทมแต่ละวันใน Calendar Strip
 extension _CalendarStripDayItem on CalendarStripWidget {
-  /// build UI ของแต่ละวันใน calendar strip
+  /// ฟังก์ชัน: สร้าง UI การ์ดแสดงผลของแต่ละวัน (Day Column Item)
+  /// - [day]: ชื่อย่อของวัน (เช่น 'จ.', 'อ.')
+  /// - [date]: วันที่ประจำเดือน (เช่น '1', '15')
+  /// - [isSelected]: วันนี้ตรงกับวันปัจจุบันหรือไม่
+  /// - [isPast]: วันนี้ผ่านมาแล้วหรือไม่
+  /// - [isDark]: โหมดธีมมืด (Dark Mode) หรือไม่
   Widget _buildDayItem(
     String day,
     String date,
@@ -11,6 +17,7 @@ extension _CalendarStripDayItem on CalendarStripWidget {
   ) {
     return Column(
       children: [
+        // 1. ป้ายชื่อย่อของวัน (Day Label)
         Text(
           day,
           style: TextStyle(
@@ -21,6 +28,8 @@ extension _CalendarStripDayItem on CalendarStripWidget {
           ),
         ),
         const SizedBox(height: 8),
+
+        // 2. กล่องแสดงตัวเลขวันที่ (Date Capsule)
         Container(
           width: 32,
           height: 40,
@@ -41,6 +50,8 @@ extension _CalendarStripDayItem on CalendarStripWidget {
           ),
         ),
         const SizedBox(height: 4),
+
+        // 3. จุดสถานะกิจกรรมใต้ตัวเลขวันที่ (Status Indicator Dot)
         Container(
           width: 4,
           height: 4,
@@ -59,3 +70,4 @@ extension _CalendarStripDayItem on CalendarStripWidget {
     );
   }
 }
+

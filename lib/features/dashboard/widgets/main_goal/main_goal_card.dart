@@ -10,10 +10,14 @@ import 'main_goal_card_presentation.dart';
 part 'main_goal_card_stat_ui.dart';
 part 'main_goal_card_calculations.dart';
 
-/// การ์ดแสดงผลเป้าหมายหลัก คำนวณความก้าวหน้า คำนวนแคลอรี/ระยะทางเป้าหมายประจำวัน
+// การ์ดเป้าหมายหลักของฉัน (MainGoalCard)
+// คำนวณความคืบหน้าเป้าหมายที่ปักหมุด, วันสิ้นสุด และรองรับการสร้างเป้าหมายใหม่
 class MainGoalCard extends StatelessWidget {
+  /// Dashboard Controller ที่เก็บข้อมูลเป้าหมายและสถิติ
   final DashboardController controller;
+  /// Callback เมื่อกดปุ่มนำทางไปหน้าฝึกฝน/กิจวัตร
   final VoidCallback? onNavigateToPractice;
+  /// Callback เมื่อกดปุ่มนำทางไปหน้าคำนวณสุขภาพ
   final VoidCallback? onNavigateToCalculator;
 
   const MainGoalCard({
@@ -23,6 +27,7 @@ class MainGoalCard extends StatelessWidget {
     this.onNavigateToCalculator,
   });
 
+  /// ฟังก์ชันช่วย: ค้นหาและคำนวณวันสิ้นสุดเป้าหมาย (Goal Deadline)
   DateTime? _getGoalDeadline(
     Map<String, dynamic>? goal,
     Map<String, dynamic>? routine,
@@ -69,10 +74,12 @@ class MainGoalCard extends StatelessWidget {
     return null;
   }
 
+  /// ฟังก์ชัน: แสดง BottomSheet สำหรับสร้างเป้าหมายหลักใหม่
   Future<void> _createGoal(BuildContext context) async {
     final result = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
+
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -107,6 +114,7 @@ class MainGoalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 1. ดึงข้อมูลเป้าหมาย กิจวัตร และสถิติจาก Controller
     final userGoal = controller.userGoal;
     final routines = controller.routines;
     final todayCompletionMap = controller.todayCompletionMap;
@@ -116,6 +124,7 @@ class MainGoalCard extends StatelessWidget {
     final hasPinnedGoal = userGoal != null;
     final pinnedRoutineId = (userGoal?['nRoutineId'] as num?)?.toInt() ?? 0;
 
+    // 2. ค้นหากิจวัตรที่ถูกปักหมุดไว้เป็นเป้าหมายหลัก
     Map<String, dynamic>? pinnedRoutine;
     if (hasPinnedGoal) {
       for (final r in routines) {
@@ -128,6 +137,7 @@ class MainGoalCard extends StatelessWidget {
       }
     }
 
+    // 3. คำนวณจำนวนวันที่เหลือจนถึงวันสิ้นสุดเป้าหมาย
     final deadline = _getGoalDeadline(userGoal, pinnedRoutine);
     final today = DateTime(now.year, now.month, now.day);
     final deadlineDay = deadline == null
@@ -153,6 +163,7 @@ class MainGoalCard extends StatelessWidget {
         ? 'สิ้นสุด ${deadlineDay.day.toString().padLeft(2, '0')}/${deadlineDay.month.toString().padLeft(2, '0')}/$thaiYear'
         : '';
 
+    // 4. คำนวณสถานะความก้าวหน้า (% Progress, สี, ไอคอน, รายละเอียด)
     final goalState = _calculateGoalState(
       userGoal: userGoal,
       pinnedRoutine: pinnedRoutine,
@@ -169,12 +180,14 @@ class MainGoalCard extends StatelessWidget {
     final goalIcon = goalState.goalIcon;
     final isCompleted = goalState.isCompleted;
 
+    // 5. ดึงค่าธีมและสี
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = AppTheme.getBackgroundColor(isDark);
     final textPrimary = AppTheme.getTextPrimaryColor(isDark);
     final textSecondary = AppTheme.getTextSecondaryColor(isDark);
     final borderColor = AppTheme.getBorderColor(isDark);
 
+    // 6. ส่งข้อมูลไปยัง Presentation Widget สำหรับเรนเดอร์ UI
     return MainGoalCardPresentation(
       hasPinnedGoal: hasPinnedGoal,
       goalColor: goalColor,
@@ -195,3 +208,4 @@ class MainGoalCard extends StatelessWidget {
     );
   }
 }
+

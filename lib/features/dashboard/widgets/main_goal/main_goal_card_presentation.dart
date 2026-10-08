@@ -3,22 +3,40 @@ import 'package:percent_indicator/percent_indicator.dart';
 import 'main_goal_card_setup_button.dart';
 import 'main_goal_card_status_footer.dart';
 
+// ส่วนแสดงผล UI ของการ์ดเป้าหมายหลัก (MainGoalCardPresentation)
+// แสดงผลไอคอนเป้าหมาย, ชื่อและรายละเอียด, วงแหวนเปอร์เซ็นต์ (CircularPercentIndicator), และส่วนสถานะด้านล่าง
 class MainGoalCardPresentation extends StatelessWidget {
+  /// มีเป้าหมายที่ปักหมุดไว้หรือไม่
   final bool hasPinnedGoal;
+  /// สีประจำเป้าหมาย
   final Color goalColor;
+  /// ไอคอนประจำเป้าหมาย
   final IconData goalIcon;
+  /// ชื่อหัวข้อเป้าหมายที่จะแสดง
   final String displayTitle;
+  /// รายละเอียดเป้าหมาย (เช่น ความคืบหน้าระยะทาง/จำนวนครั้ง)
   final String displayDetail;
+  /// สถานะทำเป้าหมายสำเร็จแล้วหรือไม่
   final bool isCompleted;
+  /// อัตราส่วนความคืบหน้า (0.0 - 1.0)
   final double progress;
+  /// ข้อความจำนวนวันที่เหลือ
   final String remainingValText;
+  /// ข้อความวันที่สิ้นสุดเป้าหมาย
   final String deadlineSubText;
+  /// ธีมมืดหรือไม่
   final bool isDark;
+  /// สีพื้นหลังการ์ด
   final Color cardBg;
+  /// สีข้อความหลัก
   final Color textPrimary;
+  /// สีข้อความรอง
   final Color textSecondary;
+  /// สีกรอบเส้นขอบ
   final Color borderColor;
+  /// Callback เมื่อกดปุ่มสร้างเป้าหมาย
   final VoidCallback onCreateGoal;
+  /// ฟังก์ชันสร้าง Widget สถิติย่อย
   final Widget Function(
     String,
     String,
@@ -72,6 +90,9 @@ class MainGoalCardPresentation extends StatelessWidget {
       ),
       child: Column(
         children: [
+          // ----------------------------------------------------
+          // แถวบน: ไอคอนเป้าหมาย + ชื่อเป้าหมาย + ไอคอนเข็มหมุด + รายละเอียด
+          // ----------------------------------------------------
           Row(
             children: [
               Container(
@@ -131,12 +152,16 @@ class MainGoalCardPresentation extends StatelessWidget {
             ],
           ),
 
+          // ----------------------------------------------------
+          // แถวกลาง: ปุ่มตั้งเป้าหมาย หรือ วงแหวนเปอร์เซ็นต์ความคืบหน้า
+          // ----------------------------------------------------
           if (!hasPinnedGoal) ...[
             const SizedBox(height: 16),
             MainGoalCardSetupButton(onPressed: onCreateGoal),
           ] else ...[
             const SizedBox(height: 16),
 
+            // วงแหวนแสดงเปอร์เซ็นต์ความก้าวหน้า Circular Percent Indicator
             CircularPercentIndicator(
               radius: 54.0,
               lineWidth: 9.0,
@@ -171,6 +196,9 @@ class MainGoalCardPresentation extends StatelessWidget {
             ),
           ],
 
+          // ----------------------------------------------------
+          // แถวล่าง: ส่วนท้ายการ์ด (สถานะความสำเร็จ + สถิติเหลือเวลา)
+          // ----------------------------------------------------
           MainGoalCardStatusFooter(
             isCompleted: isCompleted,
             hasPinnedGoal: hasPinnedGoal,
@@ -186,3 +214,4 @@ class MainGoalCardPresentation extends StatelessWidget {
     );
   }
 }
+

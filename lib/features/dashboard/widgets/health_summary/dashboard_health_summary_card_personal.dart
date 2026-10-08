@@ -1,6 +1,9 @@
 part of 'dashboard_health_summary_card.dart';
 
+// ส่วนแสดงผลข้อมูลสุขภาพส่วนบุคคล (_DashboardHealthSummaryCardPersonal)
+// ประกอบด้วย: หัวข้อ + ปุ่มอัปเดต, น้ำหนัก/ส่วนสูง, ดัชนีมวลกาย (BMI), BMR และ TDEE
 extension _DashboardHealthSummaryCardPersonal on DashboardHealthSummaryCard {
+  /// ฟังก์ชัน: สร้าง UI ส่วนข้อมูลสุขภาพส่วนบุคคล
   Widget _buildPersonalHealthSection({
     required bool isDark,
     required Color textPrimary,
@@ -15,6 +18,9 @@ extension _DashboardHealthSummaryCardPersonal on DashboardHealthSummaryCard {
     required String lastRecordText,
   }) => Column(
     children: [
+      // ----------------------------------------------------
+      // แถวที่ 1: หัวข้อข้อมูลสุขภาพ + ปุ่มกดไปหน้าคำนวณสุขภาพ (อัปเดตข้อมูล)
+      // ----------------------------------------------------
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -50,6 +56,7 @@ extension _DashboardHealthSummaryCardPersonal on DashboardHealthSummaryCard {
             ),
           ),
           const SizedBox(width: 8),
+          // ปุ่มลัด: อัปเดตข้อมูล (นำทางไปยังหน้า Health Calculator)
           Material(
             color: isDark ? const Color(0xFF1E3A5F) : Colors.blue.shade50,
             borderRadius: BorderRadius.circular(20),
@@ -86,9 +93,14 @@ extension _DashboardHealthSummaryCardPersonal on DashboardHealthSummaryCard {
         ],
       ),
       const SizedBox(height: 16),
+
+      // ----------------------------------------------------
+      // แถวที่ 2: น้ำหนัก/ส่วนสูง และ ดัชนีมวลกาย (BMI + สถานะเกณฑ์)
+      // ----------------------------------------------------
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+          // กล่องน้ำหนักและส่วนสูง
           Expanded(
             child: _buildStatItem(
               'น้ำหนัก / ส่วนสูง',
@@ -101,6 +113,7 @@ extension _DashboardHealthSummaryCardPersonal on DashboardHealthSummaryCard {
             ),
           ),
           const SizedBox(width: 8),
+          // กล่อง BMI พร้อม Badge สถานะ (เช่น สมส่วน, น้ำหนักเกิน)
           Expanded(
             child: _buildStatItemWithBadge(
               'ดัชนีมวลกาย',
@@ -115,9 +128,14 @@ extension _DashboardHealthSummaryCardPersonal on DashboardHealthSummaryCard {
         ],
       ),
       const SizedBox(height: 12),
+
+      // ----------------------------------------------------
+      // แถวที่ 3: อัตราเผาผลาญพลังงานพื้นฐาน (BMR) และ พลังงานที่ต้องการต่อวัน (TDEE)
+      // ----------------------------------------------------
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+          // กล่อง BMR
           Expanded(
             child: _buildStatItemWithWidget(
               'BMR พลังงานพื้นฐาน',
@@ -140,6 +158,7 @@ extension _DashboardHealthSummaryCardPersonal on DashboardHealthSummaryCard {
             ),
           ),
           const SizedBox(width: 8),
+          // กล่อง TDEE
           Expanded(
             child: _buildStatItemWithWidget(
               'TDEE ต้องการต่อวัน',
@@ -167,3 +186,4 @@ extension _DashboardHealthSummaryCardPersonal on DashboardHealthSummaryCard {
     ],
   );
 }
+

@@ -1,21 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'dashboard_main_goal_stats.dart';
+
+// ส่วนแสดงผล UI ของการ์ดเป้าหมายหลักในแดชบอร์ด (DashboardMainGoalCardPresentation)
+// แสดงข้อมูลไอคอน, รายละเอียดเป้าหมาย, วงแหวนเปอร์เซ็นต์ความคืบหน้า และปุ่มปักหมุด
 class DashboardMainGoalCardPresentation extends StatelessWidget {
+  /// มีเป้าหมายที่ปักหมุดไว้หรือไม่
   final bool hasPinnedGoal;
+  /// สีประจำเป้าหมาย
   final Color goalColor;
+  /// ไอคอนประจำเป้าหมาย
   final IconData goalIcon;
+  /// ชื่อเป้าหมาย
   final String displayTitle;
+  /// รายละเอียดเป้าหมาย
   final String displayDetail;
+  /// สถานะทำสำเร็จแล้วหรือไม่
   final bool isCompleted;
+  /// เป็นเป้าหมายออกกำลังกายหรือไม่
   final bool isWorkoutGoal;
+  /// อัตราส่วนความคืบหน้า (0.0 - 1.0)
   final double progress;
+  /// ข้อความจำนวนวันที่เหลือ
   final String remainingValText;
+  /// ข้อความวันที่สิ้นสุด
   final String deadlineSubText;
+  /// สีเขียวหลัก
   final Color primaryGreen;
+  /// Callback เมื่อกดปุ่มไปหน้าฝึกฝน/กิจวัตร
   final VoidCallback? onNavigateToPractice;
+  /// ฟังก์ชันสร้าง Widget สถิติย่อย
   final Widget Function(String, String, {IconData? icon, String? subValue})
   buildGoalStatItem;
+
   const DashboardMainGoalCardPresentation({
     super.key,
     required this.hasPinnedGoal,
@@ -32,6 +49,7 @@ class DashboardMainGoalCardPresentation extends StatelessWidget {
     required this.onNavigateToPractice,
     required this.buildGoalStatItem,
   });
+
 
   @override
   Widget build(BuildContext context) {

@@ -2,14 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 
 part 'calendar_strip_day_item.dart';
-
-/// แถบแสดงปฏิทินกิจวัตรประจำสัปดาห์ พร้อมสรุปสถิติจำนวนครั้ง ระยะทาง และแคลอรี
+// คลาสสำหรับแสดงแถบปฏิทินกิจวัตรประจำสัปดาห์
 class CalendarStripWidget extends StatelessWidget {
+  /// วันที่และเวลาปัจจุบัน
   final DateTime now;
+  /// ชื่อเดือนภาษาไทย (เช่น 'ตุลาคม')
   final String thaiMonthName;
+  /// จำนวนครั้งที่ออกกำลังกายสำเร็จในสัปดาห์นี้
   final int workoutCount;
+  /// ระยะทางรวม (กิโลเมตร)
   final double totalDistanceKm;
+  /// แคลอรีรวมที่เผาผลาญ (kcal)
   final double totalCaloriesBurned;
+  /// โทนสีเขียวหลัก
   final Color darkGreen;
 
   const CalendarStripWidget({
@@ -24,11 +29,13 @@ class CalendarStripWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 1. ดึงค่าธีมและสีพื้นหลังตามโหมด (Light / Dark)
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = AppTheme.getBackgroundColor(isDark);
     final borderColor = AppTheme.getBorderColor(isDark);
     final textPrimary = AppTheme.getTextPrimaryColor(isDark);
 
+    // 2. คำนวณช่วงวันจันทร์ - อาทิตย์ของสัปดาห์ปัจจุบัน
     final monday = now.subtract(Duration(days: now.weekday - 1));
     final days = List.generate(7, (i) => monday.add(Duration(days: i)));
     const dayLabels = ['จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.', 'อา.'];
@@ -42,6 +49,7 @@ class CalendarStripWidget extends StatelessWidget {
       ),
       child: Column(
         children: [
+          // แถวบน: ชื่อเดือน พ.ศ. และแบดจ์สรุปจำนวนครั้งออกกำลังกาย
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -101,7 +109,8 @@ class CalendarStripWidget extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          // Days Row
+
+          // แถวกลาง: รายการ 7 วันในสัปดาห์ (จันทร์ - อาทิตย์)
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: List.generate(7, (i) {
@@ -124,6 +133,8 @@ class CalendarStripWidget extends StatelessWidget {
           const SizedBox(height: 16),
           Divider(height: 1, color: borderColor),
           const SizedBox(height: 12),
+
+          // แถวล่าง: สรุปข้อมูลรวม (จำนวนครั้ง | ระยะทาง กม. และ แคลอรีรวม)
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -181,3 +192,4 @@ class CalendarStripWidget extends StatelessWidget {
     );
   }
 }
+

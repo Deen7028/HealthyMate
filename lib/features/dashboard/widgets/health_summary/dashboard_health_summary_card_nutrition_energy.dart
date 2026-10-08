@@ -1,8 +1,10 @@
 part of 'dashboard_health_summary_card.dart';
 
+// ส่วนกราฟและตัวเลขสถิติพลังงานที่บริโภค (_DashboardHealthSummaryCardNutritionEnergy)
+// แสดงตัวเลขแคลอรีที่กินเทียบกับ TDEE, แถบความคืบหน้า Progress Bar และโควตาพลังงานที่เหลือ
 extension _DashboardHealthSummaryCardNutritionEnergy
     on DashboardHealthSummaryCard {
-  /// build widget ส่วนแสดงพลังงานที่กินในวันนี้
+  /// ฟังก์ชัน: สร้าง UI ส่วนสถิติแคลอรีจากอาหารและแถบความคืบหน้า
   Widget _buildNutritionEnergyStats({
     required bool isDark,
     required Color textPrimary,
@@ -12,7 +14,9 @@ extension _DashboardHealthSummaryCardNutritionEnergy
     required double netEnergyRatio,
   }) => Column(
     children: [
-      // Row 2: Animated Calorie Stats
+      // ----------------------------------------------------
+      // แถวที่ 1: ตัวเลขแคลอรีอาหารที่กินไปแล้ว / TDEE + จำนวนรายการที่สแกน
+      // ----------------------------------------------------
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -63,7 +67,9 @@ extension _DashboardHealthSummaryCardNutritionEnergy
       ),
       const SizedBox(height: 8),
 
-      // Progress Bar
+      // ----------------------------------------------------
+      // แถวที่ 2: แถบหลอดสีแสดงสัดส่วนพลังงาน (Progress Bar)
+      // ----------------------------------------------------
       ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: LinearProgressIndicator(
@@ -79,7 +85,9 @@ extension _DashboardHealthSummaryCardNutritionEnergy
       ),
       const SizedBox(height: 8),
 
-      // Row 3: Remaining Quota & Burned
+      // ----------------------------------------------------
+      // แถวที่ 3: ข้อความสรุปโควตาพลังงานที่เหลือ (Remaining Quota)
+      // ----------------------------------------------------
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -98,3 +106,4 @@ extension _DashboardHealthSummaryCardNutritionEnergy
     ],
   );
 }
+

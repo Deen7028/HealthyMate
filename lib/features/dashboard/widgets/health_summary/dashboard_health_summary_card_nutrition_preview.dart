@@ -1,7 +1,10 @@
 part of 'dashboard_health_summary_card.dart';
 
+// ส่วนแสดงตัวอย่างอาหารที่บันทึก (_DashboardHealthSummaryCardNutritionPreview)
+// แสดงรายการอาหารล่าสุด 3 รายการ หรือข้อความแนะนำให้แตะสแกนอาหาร
 extension _DashboardHealthSummaryCardNutritionPreview
     on DashboardHealthSummaryCard {
+  /// ฟังก์ชัน: สร้าง UI ส่วนแสดงพรีวิวรายการอาหาร
   Widget _buildNutritionFoodPreview({
     required bool isDark,
     required Color subtleSurface,
@@ -9,6 +12,7 @@ extension _DashboardHealthSummaryCardNutritionPreview
     required Color textSecondary,
   }) => Column(
     children: [
+      // 1. กรณีมีประวัติการสแกนอาหารในวันนี้ -> แสดงเป็นชิปรายการอาหาร (Food Chips) สูงสุด 3 รายการ
       if (todayNutritionLogs.isNotEmpty) ...[
         const SizedBox(height: 10),
         Wrap(
@@ -51,6 +55,7 @@ extension _DashboardHealthSummaryCardNutritionPreview
           }).toList(),
         ),
       ] else ...[
+        // 2. กรณียังไม่มีการบันทึกอาหาร -> แสดงข้อความคำแนะนำให้แตะเพื่อสแกน
         const SizedBox(height: 6),
         Row(
           children: [
@@ -72,3 +77,4 @@ extension _DashboardHealthSummaryCardNutritionPreview
     ],
   );
 }
+

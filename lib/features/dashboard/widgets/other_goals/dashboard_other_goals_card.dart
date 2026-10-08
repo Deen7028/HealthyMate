@@ -4,16 +4,26 @@ import 'package:healthymate/features/dashboard/utils/dashboard_ui_helpers.dart';
 
 part 'dashboard_other_goals_card_item.dart';
 
-/// การ์ดแสดงรายการเป้าหมายย่อยและกิจวัตรประจำวันอื่นๆ (Routines & Goals)
+// การ์ดแสดงรายการเป้าหมายย่อยและกิจวัตรอื่นๆ (DashboardOtherGoalsCard)
+// รวบรวมกิจวัตรทั้งหมดที่ไม่ได้ถูกปักหมุดเป็นเป้าหมายหลัก พร้อมสถานะความคืบหน้า
 class DashboardOtherGoalsCard extends StatelessWidget {
+  /// ข้อมูลเป้าหมายหลักที่ปักหมุดไว้ (ใช้สำหรับกรองออก)
   final Map<String, dynamic>? userGoal;
+  /// รายการกิจวัตรทั้งหมด
   final List<Map<String, dynamic>> routines;
+  /// แผนที่สถานะการทำสำเร็จในวันนี้
   final Map<int, bool> todayCompletionMap;
+  /// ค่าความคืบหน้าที่สะสมในวันนี้
   final Map<int, double> todayProgressValues;
+  /// สถิติการออกกำลังกายของวันนี้
   final Map<String, Map<String, double>> todayWorkoutStats;
+  /// วันที่และเวลาปัจจุบัน
   final DateTime now;
+  /// สีเขียวเข้ม
   final Color darkGreen;
+  /// สีพื้นหลังอ่อน
   final Color lightBg;
+  /// Callback เมื่อกดปุ่มไปหน้าฝึกฝน/กิจวัตร (ดูทั้งหมด)
   final VoidCallback? onNavigateToPractice;
 
   const DashboardOtherGoalsCard({
@@ -29,21 +39,23 @@ class DashboardOtherGoalsCard extends StatelessWidget {
     this.onNavigateToPractice,
   });
 
+  /// ฟังก์ชันช่วย: จัดรูปแบบตัวเลขทศนิยม
   String _formatNum(double val) =>
       val == val.toInt() ? val.toInt().toString() : val.toStringAsFixed(2);
 
   @override
   Widget build(BuildContext context) {
+    // 1. ดึงข้อมูลสีและธีม
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = AppTheme.getBackgroundColor(isDark);
     final borderColor = AppTheme.getBorderColor(isDark);
     final textPrimary = AppTheme.getTextPrimaryColor(isDark);
     final textSecondary = AppTheme.getTextSecondaryColor(isDark);
 
+    // 2. กรองเอากิจวัตรอื่นๆ ที่ไม่ได้ปักหมุดเป็นเป้าหมายหลัก
     final pinnedRoutineId = (userGoal?['nRoutineId'] as num?)?.toInt() ?? 0;
     final pinnedTitle = userGoal?['sTitle']?.toString() ?? '';
 
-    // กรองเอากิจวัตรอื่นๆ ที่ไม่ได้ปักหมุด
     final otherRoutines = routines.where((r) {
       final rId = (r['nRoutineId'] as num?)?.toInt() ?? 0;
       final rTitle = r['sTitle']?.toString() ?? '';
@@ -73,6 +85,9 @@ class DashboardOtherGoalsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ----------------------------------------------------
+          // แถวบน: หัวข้อ 'เป้าหมายอื่นๆ (X)' และ ปุ่มกด 'ดูทั้งหมด >'
+          // ----------------------------------------------------
           InkWell(
             onTap: onNavigateToPractice,
             borderRadius: BorderRadius.circular(8),
@@ -110,6 +125,9 @@ class DashboardOtherGoalsCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
 
+          // ----------------------------------------------------
+          // แถวรายการ: แสดงรายการเป้าหมายย่อย หรือ ข้อความเมื่อยังไม่มีรายการ
+          // ----------------------------------------------------
           if (otherRoutines.isNotEmpty) ...[
             ListView.separated(
               shrinkWrap: true,
@@ -144,3 +162,4 @@ class DashboardOtherGoalsCard extends StatelessWidget {
     );
   }
 }
+

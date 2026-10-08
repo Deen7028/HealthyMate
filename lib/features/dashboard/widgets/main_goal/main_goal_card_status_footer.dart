@@ -1,13 +1,23 @@
 import 'package:flutter/material.dart';
 
+// ส่วนท้ายแสดงสถานะเป้าหมายหลัก (MainGoalCardStatusFooter)
+// แสดงแบดจ์เมื่อทำเป้าหมายสำเร็จแล้ว และแสดงสถิติ 'สถานะ' กับ 'เหลือเวลา'
 class MainGoalCardStatusFooter extends StatelessWidget {
+  /// สถานะทำเป้าหมายสำเร็จแล้วหรือไม่
   final bool isCompleted;
+  /// มีเป้าหมายที่ปักหมุดไว้หรือไม่
   final bool hasPinnedGoal;
+  /// ข้อความจำนวนวันที่เหลือ (เช่น 'อีก 5 วัน')
   final String remainingValText;
+  /// ข้อความวันที่สิ้นสุด (เช่น 'สิ้นสุด 25/10/2569')
   final String deadlineSubText;
+  /// สีกรอบเส้นขอบ
   final Color borderColor;
+  /// สีข้อความหลัก
   final Color textPrimary;
+  /// สีข้อความรอง
   final Color textSecondary;
+  /// ฟังก์ชันเรนเดอร์ไอเทมสถิติ
   final Widget Function(
     String,
     String,
@@ -33,6 +43,7 @@ class MainGoalCardStatusFooter extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Column(
     children: [
+      // 1. แบดจ์แสดงความยินดีเมื่อทำเป้าหมายสำเร็จประจำวัน
       if (isCompleted) ...[
         const SizedBox(height: 12),
         Container(
@@ -60,6 +71,7 @@ class MainGoalCardStatusFooter extends StatelessWidget {
         ),
       ],
 
+      // 2. แถวสถิติสรุปสถานะและเวลาที่เหลือ (แสดงเฉพาะเมื่อมีเป้าหมายปักหมุด)
       if (hasPinnedGoal) ...[
         const SizedBox(height: 16),
         Divider(height: 1, color: borderColor),
@@ -67,6 +79,7 @@ class MainGoalCardStatusFooter extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
+            // สถานะ (ทำสำเร็จแล้ว / กำลังดำเนินการ)
             buildGoalStatItem(
               'สถานะ',
               isCompleted ? 'ทำสำเร็จแล้ว' : 'กำลังดำเนินการ',
@@ -75,6 +88,7 @@ class MainGoalCardStatusFooter extends StatelessWidget {
               icon: isCompleted ? Icons.check_circle_outline : Icons.timelapse,
             ),
             Container(height: 28, width: 1, color: borderColor),
+            // เหลือเวลา (จำนวนวัน และ วันที่สิ้นสุด)
             buildGoalStatItem(
               'เหลือเวลา',
               remainingValText,
@@ -89,3 +103,4 @@ class MainGoalCardStatusFooter extends StatelessWidget {
     ],
   );
 }
+

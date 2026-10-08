@@ -1,6 +1,9 @@
 part of 'dashboard_health_summary_card.dart';
 
+// ส่วนประกอบการ์ดสมดุลแคลอรีประจำวัน (_DashboardHealthSummaryCardNutrition)
+// รวม Header, กราฟสถิติแคลอรีที่บริโภค และส่วนพรีวิวรายการอาหาร
 extension _DashboardHealthSummaryCardNutrition on DashboardHealthSummaryCard {
+  /// ฟังก์ชัน: สร้าง UI การ์ดสมดุลแคลอรีประจำวัน (แตะเพื่อเปิด AI Food Scanner)
   Widget _buildNutritionCard({
     required bool isDark,
     required Color subtleSurface,
@@ -40,11 +43,14 @@ extension _DashboardHealthSummaryCardNutrition on DashboardHealthSummaryCard {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // 1. ส่วนหัวการ์ด: ชื่อสมดุลแคลอรี่ + แบดจ์ AI Scanner + ปุ่มถ่ายบันทึก
               _buildNutritionHeader(
                 isDark: isDark,
                 subtleSurface: subtleSurface,
                 textPrimary: textPrimary,
               ),
+
+              // 2. ส่วนสถิติแคลอรี: ตัวเลขกินไปแล้ว/TDEE + หลอด Progress Bar + โควตาที่เหลือ
               _buildNutritionEnergyStats(
                 isDark: isDark,
                 textPrimary: textPrimary,
@@ -53,6 +59,8 @@ extension _DashboardHealthSummaryCardNutrition on DashboardHealthSummaryCard {
                 remainingEnergyQuota: remainingEnergyQuota,
                 netEnergyRatio: netEnergyRatio,
               ),
+
+              // 3. ส่วนพรีวิวอาหารที่สแกนล่าสุด (Food Chips Preview)
               _buildNutritionFoodPreview(
                 isDark: isDark,
                 subtleSurface: subtleSurface,
@@ -66,3 +74,4 @@ extension _DashboardHealthSummaryCardNutrition on DashboardHealthSummaryCard {
     );
   }
 }
+

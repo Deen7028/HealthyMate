@@ -1,6 +1,9 @@
 part of 'dashboard_health_summary_card.dart';
 
+// ส่วนคอมโพเนนต์ไอเทมสถิติพื้นฐาน (_DashboardHealthSummaryCardStatUi)
+// Widget ช่วยสร้างกล่องข้อมูลสถิติ (Stat Item, Stat with Widget, Stat with Badge)
 extension _DashboardHealthSummaryCardStatUi on DashboardHealthSummaryCard {
+  /// ฟังก์ชัน: สร้างกล่องสถิติที่ใช้ Custom Widget แสดงผลค่าตัวเลข (เช่น TweenAnimationBuilder)
   Widget _buildStatItemWithWidget(
     String title,
     Widget valueWidget,
@@ -17,6 +20,7 @@ extension _DashboardHealthSummaryCardStatUi on DashboardHealthSummaryCard {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // แถวไอคอนและชื่อสถิติ
           Row(
             children: [
               if (icon != null) ...[
@@ -39,6 +43,7 @@ extension _DashboardHealthSummaryCardStatUi on DashboardHealthSummaryCard {
     );
   }
 
+  /// ฟังก์ชัน: สร้างกล่องสถิติทั่วไป (Text Title + Text Value)
   Widget _buildStatItem(
     String title,
     String value,
@@ -56,6 +61,7 @@ extension _DashboardHealthSummaryCardStatUi on DashboardHealthSummaryCard {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // แถวไอคอนและชื่อสถิติ
           Row(
             children: [
               if (icon != null) ...[
@@ -72,6 +78,7 @@ extension _DashboardHealthSummaryCardStatUi on DashboardHealthSummaryCard {
             ],
           ),
           const SizedBox(height: 4),
+          // ข้อความค่าสถิติ
           Text(
             value,
             style: TextStyle(
@@ -85,6 +92,7 @@ extension _DashboardHealthSummaryCardStatUi on DashboardHealthSummaryCard {
     );
   }
 
+  /// ฟังก์ชัน: สร้างกล่องสถิติพร้อมป้ายสถานะ Badge (เช่น BMI พร้อม Badge เกณฑ์สุขภาพ)
   Widget _buildStatItemWithBadge(
     String title,
     String value,
@@ -103,12 +111,14 @@ extension _DashboardHealthSummaryCardStatUi on DashboardHealthSummaryCard {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ชื่อสถิติ
           Text(
             title,
             style: TextStyle(fontSize: 11, color: secondaryColor),
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 4),
+          // ค่าสถิติและ Badge สถานะ
           Wrap(
             crossAxisAlignment: WrapCrossAlignment.center,
             spacing: 6,
@@ -144,3 +154,4 @@ extension _DashboardHealthSummaryCardStatUi on DashboardHealthSummaryCard {
     );
   }
 }
+
