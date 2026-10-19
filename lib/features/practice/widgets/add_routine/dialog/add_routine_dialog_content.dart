@@ -52,30 +52,52 @@ extension _AddRoutineDialogContent on _AddRoutineDialogState {
                       color: textPrimary,
                     ),
                   ),
-                  IconButton(
-                    icon: Icon(Icons.close_rounded, color: textSecondary),
-                    onPressed: () => Navigator.of(context).pop(),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (widget.initialRoutine != null)
+                        TextButton.icon(
+                          onPressed: _submit,
+                          icon: const Icon(Icons.check_rounded, size: 16),
+                          label: const Text('บันทึก'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: btnColor,
+                            textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      IconButton(
+                        icon: Icon(Icons.close_rounded, color: textSecondary),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
                   ),
                 ],
               ),
 
-              // แถบแสดงความคืบหน้า
+              // แถบแสดงความคืบหน้า (แตะเพื่อเปลี่ยนขั้นตอนได้ทันที)
               Row(
                 children: List.generate(3, (index) {
                   final isActive = index <= _currentStep;
                   return Expanded(
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                      height: 4,
-                      margin: EdgeInsets.only(right: index == 2 ? 0 : 6),
-                      decoration: BoxDecoration(
-                        color: isActive
-                            ? btnColor
-                            : (isDark
-                                  ? const Color(0xFF2E3D34)
-                                  : Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(2),
+                    child: GestureDetector(
+                      onTap: () => _goToStep(index),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        color: Colors.transparent,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                          height: 5,
+                          margin: EdgeInsets.only(right: index == 2 ? 0 : 6),
+                          decoration: BoxDecoration(
+                            color: isActive
+                                ? btnColor
+                                : (isDark
+                                      ? const Color(0xFF2E3D34)
+                                      : Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(2.5),
+                          ),
+                        ),
                       ),
                     ),
                   );
@@ -118,10 +140,29 @@ extension _AddRoutineDialogContent on _AddRoutineDialogState {
                         child: const Text('ย้อนกลับ'),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
+                  ],
+                  if (widget.initialRoutine != null && _currentStep < 2) ...[
+                    Expanded(
+                      flex: 1,
+                      child: OutlinedButton.icon(
+                        onPressed: _submit,
+                        icon: const Icon(Icons.check_circle_outline_rounded, size: 16),
+                        label: const Text('บันทึก'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: btnColor,
+                          side: BorderSide(color: btnColor),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
                   ],
                   Expanded(
-                    flex: 2,
+                    flex: widget.initialRoutine != null && _currentStep < 2 ? 1 : 2,
                     child: ElevatedButton.icon(
                       onPressed: _nextStep,
                       icon: Icon(

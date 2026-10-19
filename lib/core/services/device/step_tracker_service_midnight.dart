@@ -13,6 +13,7 @@ extension StepTrackerMidnight on StepTrackerService {
     _timerMidnight = Timer(diff, () async {
       debugPrint('🌙 [StepTracker] Midnight reached: Triggering daily step summary...');
       await checkAndProcessMidnightSummary();
+      await resetForNewDay();
       // ตั้งเวลาสำหรับเที่ยงคืนวันถัดไป
       scheduleMidnightTimer();
     });

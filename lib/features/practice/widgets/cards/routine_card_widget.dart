@@ -16,6 +16,7 @@ class RoutineCardWidget extends StatelessWidget {
   final Widget actionButton;
   final Widget threeDotsMenu;
   final Color cardColor;
+  final VoidCallback? onEdit;
   const RoutineCardWidget({
     super.key,
     required this.routine,
@@ -30,10 +31,12 @@ class RoutineCardWidget extends StatelessWidget {
     required this.actionButton,
     required this.threeDotsMenu,
     this.cardColor = const Color(0xFF2E5327),
+    this.onEdit,
   });
   String _formatValue(double val) =>
       val == val.toInt() ? val.toInt().toString() : val.toStringAsFixed(2);
-  String _formatProgress(double val) => val.toStringAsFixed(2);
+  String _formatProgress(double val) =>
+      val == val.toInt() ? val.toInt().toString() : val.toStringAsFixed(2);
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -48,23 +51,28 @@ class RoutineCardWidget extends StatelessWidget {
         routine['isNotificationActive'] == true ||
         routine['isNotificationActive'] == null);
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cardBg,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onEdit,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: borderColor, width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: borderColor, width: 1.2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -132,6 +140,8 @@ class RoutineCardWidget extends StatelessWidget {
           _buildProgressSection(isDark, textSecondary),
         ],
       ),
+    ),
+    ),
     );
   }
 }

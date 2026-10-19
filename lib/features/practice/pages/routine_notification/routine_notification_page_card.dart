@@ -71,10 +71,22 @@ extension _RoutineNotificationCard on _MyRoutinesPageState {
         matchedType.isNotEmpty &&
         _controller.todayWorkoutStats.containsKey(matchedType)) {
       final stats = _controller.todayWorkoutStats[matchedType]!;
-      if (unitText.contains('กม') ||
+      if (unitText.contains('ก้าว') || unitText.contains('step')) {
+        workoutCurrentVal = stats['steps'];
+      } else if (unitText.contains('กม') ||
           unitText.contains('กิโล') ||
           unitText.contains('km')) {
         workoutCurrentVal = stats['distance'];
+        if ((workoutCurrentVal == null || workoutCurrentVal == 0.0) &&
+            (stats['steps'] ?? 0.0) > 0) {
+          final double nHeight = _controller.user?.nHeight?.toDouble() ?? 170.0;
+          final String sGender = _controller.user?.sGender ?? 'male';
+          workoutCurrentVal = StepTrackerService.instance.calculateDistanceKm(
+            (stats['steps'] ?? 0.0).toInt(),
+            nHeight,
+            sGender,
+          );
+        }
       } else if (unitText.contains('ชม') ||
           unitText.contains('ชั่วโมง') ||
           unitText.contains('hour') ||
@@ -138,6 +150,7 @@ extension _RoutineNotificationCard on _MyRoutinesPageState {
       progressRatio: progressRatio,
       cardColor: cardColor,
       actionButton: actionButton,
+      onEdit: () => this._editRoutine(routine),
       threeDotsMenu: this._buildThreeDotsMenu(
         onEdit: () => this._editRoutine(routine),
         onDelete: () => this._deleteRoutine(routineId, title),

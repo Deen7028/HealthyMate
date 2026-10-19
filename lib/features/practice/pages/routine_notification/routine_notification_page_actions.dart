@@ -71,7 +71,10 @@ extension _RoutineNotificationActions on _MyRoutinesPageState {
   }
 
   Future<void> _editRoutine(Map<String, dynamic> routine) async {
-    final routineId = (routine['nRoutineId'] as num?)?.toInt() ?? 0;
+    final routineId = (routine['nRoutineId'] ??
+            routine['routineId'] ??
+            routine['id'] as num?)
+        ?.toInt() ?? 0;
 
     final RoutineItem? updatedRoutine = await showModalBottomSheet<RoutineItem>(
       context: context,

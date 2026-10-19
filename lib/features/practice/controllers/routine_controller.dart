@@ -5,6 +5,7 @@ import 'package:healthymate/core/services/api_service.dart';
 import 'package:healthymate/core/services/device/audio_service.dart';
 import 'package:healthymate/core/services/device/notification_service.dart';
 import 'package:healthymate/core/services/routine_state/routine_state_notifier.dart';
+import 'package:healthymate/core/services/device/step_tracker_service.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
 import 'package:healthymate/features/practice/models/routine_item.dart';
 

@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:health/health.dart';
+import 'package:pedometer/pedometer.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
@@ -10,6 +13,7 @@ import 'package:healthymate/core/services/sync/sync_service.dart';
 
 part 'step_tracker_service_calculation.dart';
 part 'step_tracker_service_midnight.dart';
+part 'step_tracker_service_sensor.dart';
 
 /// เซอร์วิสหลักจัดการการนับก้าว 24/7 การแจ้งเตือนเกาะติดหน้าจอ และสรุปผลตอนเที่ยงคืน (Step Tracker Service)
 class StepTrackerService extends ChangeNotifier {
@@ -28,6 +32,15 @@ class StepTrackerService extends ChangeNotifier {
   bool _isTrackingEnabled = true;
   bool _isInitialized = false;
 
+  // ยอดก้าวแยกตามแหล่งข้อมูล (นำค่าที่มากกว่ามาแสดง)
+  int _nHealthSteps = 0;
+  int _nSensorSteps = 0;
+  int _nTick = 0;
+  TbUser? _objUserCache;
+  StreamSubscription<StepCount>? _subStepCount;
+  StreamSubscription<Object?>? _subStepDetect;
+  DateTime? _dtLastStepTime;
+
   int get nTodaySteps => _nTodaySteps;
   double get nTodayDistanceKm => _nTodayDistanceKm;
   double get nTodayCalories => _nTodayCalories;
@@ -43,8 +56,14 @@ class StepTrackerService extends ChangeNotifier {
     if (_isInitialized) return;
 
     try {
+      try {
+        await _health.configure();
+      } catch (e) {
+        debugPrint('Health configure error: $e');
+      }
+
       final SharedPreferences prefs = await SharedPreferences.getInstance();
-      _isTrackingEnabled = prefs.getBool(_kTrackingEnabled) ?? false;
+      _isTrackingEnabled = prefs.getBool(_kTrackingEnabled) ?? true;
       _nTargetSteps = prefs.getInt(_kTargetSteps) ?? 8000;
 
       _isInitialized = true;
@@ -55,15 +74,22 @@ class StepTrackerService extends ChangeNotifier {
       // 2. ตั้งเวลานับถอยหลังสำหรับบันทึกผลเที่ยงคืน
       scheduleMidnightTimer();
 
-      // 3. ดึงยอดก้าวสดๆ วันนี้ (เฉพาะกรณีที่เปิดใช้งานและได้รับสิทธิ์แล้ว ไม่เด้ง Dialog บล็อกหน้าจอ)
+      // 3. เริ่มฟังเซ็นเซอร์นับก้าวแบบ Real-time และดึงยอดจาก Health Connect
       if (_isTrackingEnabled) {
+        await startSensorStream();
         await refreshTodaySteps();
       }
 
-      // 4. ตั้งเวลารีเฟรชอัตโนมัติทุก 15 นาที
+      // 4. รีเฟรชหน้าจอ/แจ้งเตือนทุก 5 วินาที (Query Health Connect ทุก 30 วินาทีเพื่อประหยัดแบตเตอรี่)
       _timerPeriodic?.cancel();
-      _timerPeriodic = Timer.periodic(const Duration(minutes: 15), (_) {
-        refreshTodaySteps();
+      _timerPeriodic = Timer.periodic(const Duration(seconds: 5), (_) {
+        if (!_isTrackingEnabled) return;
+        _nTick++;
+        if (_nTick % 6 == 0) {
+          refreshTodaySteps();
+        } else {
+          applyMergedSteps();
+        }
       });
     } catch (e) {
       debugPrint('Error initializing StepTrackerService: $e');
@@ -86,8 +112,13 @@ class StepTrackerService extends ChangeNotifier {
       } catch (e) {
         debugPrint('Error requesting health authorization: $e');
       }
+      await startSensorStream();
       await refreshTodaySteps();
     } else {
+      await _subStepCount?.cancel();
+      _subStepCount = null;
+      await _subStepDetect?.cancel();
+      _subStepDetect = null;
       await NotificationService.instance.cancelStepTrackerNotification();
     }
     notifyListeners();
@@ -111,71 +142,114 @@ class StepTrackerService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ดึงข้อมูลจำนวนก้าวของวันนี้ พร้อมหักลบกิจกรรมทับซ้อนและอัปเดต Notification
+  // ดึงยอดก้าวจาก Health Connect (ไม่เด้งขอสิทธิ์ซ้ำ) แล้วรวมกับยอดจากเซ็นเซอร์
   Future<void> refreshTodaySteps() async {
     try {
-      final TbUser? objUser = await AppDatabase.instance.getCurrentUser();
+      _objUserCache = await AppDatabase.instance.getCurrentUser();
       final DateTime dtNow = DateTime.now();
-      final DateTime dtMidnight = DateTime(dtNow.year, dtNow.month, dtNow.day, 0, 0, 0);
-
+      final DateTime dtMidnight = DateTime(dtNow.year, dtNow.month, dtNow.day);
       final List<HealthDataType> lstTypes = [HealthDataType.STEPS];
-      
+
       bool isAuth = false;
       try {
-        final bool? hasAuth = await _health.hasPermissions(lstTypes);
-        isAuth = hasAuth == true;
-      } catch (e) {
-        debugPrint('Health hasPermissions check error: $e');
+        isAuth = (await _health.hasPermissions(lstTypes)) == true;
+      } catch (objErr) {
+        debugPrint('Health hasPermissions error: $objErr');
       }
 
-      int nCalculatedSteps = 0;
-
       if (isAuth) {
+        int nHealth = 0;
         try {
-          final List<HealthDataPoint> lstPoints = await _health.getHealthDataFromTypes(
+          final List<HealthDataPoint> lstPoints =
+              await _health.getHealthDataFromTypes(
             types: lstTypes,
             startTime: dtMidnight,
             endTime: dtNow,
           );
-
-          List<Map<String, dynamic>> lstTodayWorkouts = [];
-          if (objUser != null && objUser.nUserId > 0) {
-            lstTodayWorkouts = await AppDatabase.instance.getWorkoutsByDate(
-              userId: objUser.nUserId,
-              date: dtNow,
+          if (lstPoints.isNotEmpty) {
+            final TbUser? objUser = _objUserCache;
+            final List<Map<String, dynamic>> lstTodayWorkouts =
+                (objUser != null && objUser.nUserId > 0)
+                    ? await AppDatabase.instance.getWorkoutsByDate(
+                        userId: objUser.nUserId,
+                        date: dtNow,
+                      )
+                    : [];
+            nHealth = filterOverlappingSteps(
+              lstPoints: lstPoints,
+              lstWorkouts: lstTodayWorkouts,
             );
           }
-
-          nCalculatedSteps = filterOverlappingSteps(
-            lstPoints: lstPoints,
-            lstWorkouts: lstTodayWorkouts,
-          );
-        } catch (e) {
-          debugPrint('Health fetch error: $e');
+          if (nHealth <= 0) {
+            nHealth = await _health.getTotalStepsInInterval(dtMidnight, dtNow) ?? 0;
+          }
+        } catch (objErr) {
+          debugPrint('Health fetch error: $objErr');
+        }
+        _nHealthSteps = nHealth;
+        if (nHealth > _nTodaySteps) {
+          _nSensorSteps = nHealth;
+          _applyStepValues(nHealth, isForce: true);
+          return;
         }
       }
 
-      _nTodaySteps = nCalculatedSteps;
-      final double nUserHeight = objUser?.nHeight ?? 170.0;
-      final String sUserGender = objUser?.sGender ?? 'male';
-      final double nUserWeight = objUser?.nWeight ?? 65.0;
+      await applyMergedSteps(isForce: false);
+    } catch (objErr) {
+      debugPrint('Error in refreshTodaySteps: $objErr');
+    }
+  }
 
-      _nTodayDistanceKm = calculateDistanceKm(_nTodaySteps, nUserHeight, sUserGender);
-      _nTodayCalories = calculateCaloriesBurned(_nTodaySteps, nUserWeight);
+  // รวมยอดก้าวและอัปเดต UI/แจ้งเตือนเมื่อค่าเปลี่ยน
+  Future<void> applyMergedSteps({bool isForce = false}) async {
+    final int nMerged =
+        _nHealthSteps > _nSensorSteps ? _nHealthSteps : _nSensorSteps;
+    _applyStepValues(nMerged, isForce: isForce);
+  }
 
-      notifyListeners();
+  // ปรับปรุงค่านับก้าว ระยะทาง แคลอรี และแจ้งเตือนหน้าจอทันที
+  void _applyStepValues(int nSteps, {bool isForce = false}) {
+    if (!isForce && nSteps == _nTodaySteps && _isInitialized) return;
 
-      // อัปเดตแถบแจ้งเตือน Ongoing Foreground Notification หากเปิดใช้งาน
-      if (_isTrackingEnabled) {
-        await NotificationService.instance.updateStepTrackerNotification(
-          nSteps: _nTodaySteps,
-          nTargetSteps: _nTargetSteps,
-          nDistanceKm: _nTodayDistanceKm,
-          nCaloriesBurned: _nTodayCalories,
-        );
+    _nTodaySteps = nSteps;
+    final TbUser? objUser = _objUserCache;
+    _nTodayDistanceKm = calculateDistanceKm(
+      nSteps,
+      objUser?.nHeight ?? 170.0,
+      objUser?.sGender ?? 'male',
+    );
+    _nTodayCalories = calculateCaloriesBurned(nSteps, objUser?.nWeight ?? 65.0);
+    notifyListeners();
+
+    if (_isTrackingEnabled) {
+      unawaited(NotificationService.instance.updateStepTrackerNotification(
+        nSteps: _nTodaySteps,
+        nTargetSteps: _nTargetSteps,
+        nDistanceKm: _nTodayDistanceKm,
+        nCaloriesBurned: _nTodayCalories,
+      ));
+    }
+  }
+
+  // รีเซ็ตค่านับก้าวทั้งหมดเป็น 0 เสมอเมื่อเริ่มวันใหม่
+  Future<void> resetForNewDay() async {
+    _nHealthSteps = 0;
+    _nSensorSteps = 0;
+    _applyStepValues(0, isForce: true);
+
+    try {
+      final SharedPreferences objPrefs = await SharedPreferences.getInstance();
+      final DateTime dtNow = DateTime.now();
+      final String sToday =
+          '${dtNow.year}-${dtNow.month.toString().padLeft(2, '0')}-${dtNow.day.toString().padLeft(2, '0')}';
+      await objPrefs.setString('pedo_base_date', sToday);
+      final int? nLastRaw = objPrefs.getInt('pedo_last_raw');
+      if (nLastRaw != null) {
+        await objPrefs.setInt('pedo_base_count', nLastRaw);
       }
-    } catch (e) {
-      debugPrint('Error in refreshTodaySteps: $e');
+      await objPrefs.setInt('pedo_last_today', 0);
+    } catch (objErr) {
+      debugPrint('resetForNewDay storage error: $objErr');
     }
   }
 
@@ -183,6 +257,8 @@ class StepTrackerService extends ChangeNotifier {
   void dispose() {
     _timerMidnight?.cancel();
     _timerPeriodic?.cancel();
+    _subStepCount?.cancel();
+    _subStepDetect?.cancel();
     super.dispose();
   }
 }

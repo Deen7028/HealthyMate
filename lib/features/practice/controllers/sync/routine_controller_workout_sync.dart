@@ -64,10 +64,21 @@ extension RoutineControllerWorkoutSync on RoutineController {
           todayWorkoutStats.containsKey(matchedType)) {
         final stats = todayWorkoutStats[matchedType]!;
         double workoutVal = 0.0;
-        if (unit.contains('กม') ||
+        if (unit.contains('ก้าว') || unit.contains('step')) {
+          workoutVal = stats['steps'] ?? 0.0;
+        } else if (unit.contains('กม') ||
             unit.contains('กิโล') ||
             unit.contains('km')) {
           workoutVal = stats['distance'] ?? 0.0;
+          if (workoutVal <= 0.0 && (stats['steps'] ?? 0.0) > 0) {
+            final double nHeight = user?.nHeight?.toDouble() ?? 170.0;
+            final String sGender = user?.sGender ?? 'male';
+            workoutVal = StepTrackerService.instance.calculateDistanceKm(
+              (stats['steps'] ?? 0.0).toInt(),
+              nHeight,
+              sGender,
+            );
+          }
         } else if (unit.contains('ชม') ||
             unit.contains('ชั่วโมง') ||
             unit.contains('hour') ||

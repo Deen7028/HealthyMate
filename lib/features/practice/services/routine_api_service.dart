@@ -71,7 +71,7 @@ class RoutineApiService {
           'sLinkedWorkout': linkedWorkout,
           'nColor': color,
           'nIconData': iconData,
-          'isNotificationActive': isNotificationActive ? 1 : 0,
+          'isNotificationActive': isNotificationActive,
         }).select('nRoutineId').single();
 
         return (res['nRoutineId'] as num?)?.toInt() ?? 0;
@@ -132,8 +132,7 @@ class RoutineApiService {
           'sLinkedWorkout': linkedWorkout,
           'nColor': color,
           'nIconData': iconData,
-          'isNotificationActive': isNotificationActive ? 1 : 0,
-          'dtUpdatedAt': DateTime.now().toIso8601String(),
+          'isNotificationActive': isNotificationActive,
         }).eq('nRoutineId', routineId);
         return true;
       }

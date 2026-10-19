@@ -86,22 +86,20 @@ class NotificationService {
       final nValidTarget = nTargetSteps > 0 ? nTargetSteps : 8000;
       final nPercent = ((nSteps / nValidTarget) * 100).toInt().clamp(0, 100);
       final sKcalText = nCaloriesBurned.toStringAsFixed(1);
+      final sDistText = nDistanceKm.toStringAsFixed(2);
 
-      // จัดรูปแบบตัวหนังสือแบบ 2 คอลัมน์ (ก้าวเดิน | แคลอรี) ตรงตามตัวอย่าง UI
-      final sBigText =
-          '<b><big>👣  $nSteps ก้าว</big></b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b><big>🔥  $sKcalText Kcal</big></b><br><small><font color="#94A3B8">เป้าหมาย $nValidTarget ก้าว ($nPercent%)  •  📍 ${nDistanceKm.toStringAsFixed(2)} กม.</font></small>';
+      // จัดรูปแบบตัวหนังสือแบบ 2 คอลัมน์ (ก้าวเดิน | แคลอรี) สวยงามตามต้นฉบับ
+      final sTitle = '👣  $nSteps ก้าว        │        🔥  $sKcalText Kcal';
+      final sBody = 'เป้าหมาย $nValidTarget ก้าว ($nPercent%)   •   📍 $sDistText กม.';
 
       final bigTextStyleInfo = BigTextStyleInformation(
-        sBigText,
-        htmlFormatBigText: true,
-        contentTitle: '<b>HealthyMate</b>',
-        htmlFormatContentTitle: true,
-        summaryText: 'ติดตามก้าวเดิน 24/7',
-        htmlFormatSummaryText: true,
+        sBody,
+        contentTitle: sTitle,
+        summaryText: '$nPercent%',
       );
 
       final androidDetails = AndroidNotificationDetails(
-        'step_tracker_channel_v3',
+        'step_tracker_channel_v4',
         'การติดตามก้าวเดิน 24/7',
         channelDescription: 'แถบแสดงจำนวนก้าวและแคลอรีสะสมประจำวัน',
         importance: Importance.low,
@@ -111,20 +109,13 @@ class NotificationService {
         showProgress: true,
         maxProgress: nValidTarget,
         progress: nSteps.clamp(0, nValidTarget),
-        color: const Color(0xFF10B981),
+        color: const Color(0xFF00BFA5),
         styleInformation: bigTextStyleInfo,
-        subText: 'ก้าวเดิน & แคลอรี',
-        actions: const [
-          AndroidNotificationAction(
-            'open_app',
-            '➔  เปิดแอป',
-            showsUserInterface: true,
-          ),
-        ],
+        subText: '$nPercent%',
         onlyAlertOnce: true,
         enableVibration: false,
         playSound: false,
-        showWhen: true,
+        showWhen: false,
       );
 
       const iosDetails = DarwinNotificationDetails(
@@ -137,10 +128,6 @@ class NotificationService {
         android: androidDetails,
         iOS: iosDetails,
       );
-
-      final sTitle = '👣 $nSteps ก้าว     |     🔥 $sKcalText Kcal';
-      final sBody =
-          'เป้าหมาย $nValidTarget ก้าว ($nPercent%)  •  📍 ${nDistanceKm.toStringAsFixed(2)} กม.';
 
       await _notificationsPlugin.show(
         id: 9999,

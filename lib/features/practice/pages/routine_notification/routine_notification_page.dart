@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:healthymate/core/services/routine_state/routine_state_notifier.dart';
+import 'package:healthymate/core/services/device/step_tracker_service.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:healthymate/features/dashboard/utils/dashboard_ui_helpers.dart';
 import 'package:healthymate/features/practice/models/routine_item.dart';
@@ -42,6 +43,10 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     super.initState();
     _controller = RoutineController()..loadData();
     RoutineStateNotifier.instance.addListener(_onStateChanged);
+    StepTrackerService.instance.addListener(_onStateChanged);
+    if (StepTrackerService.instance.isTrackingEnabled) {
+      unawaited(StepTrackerService.instance.refreshTodaySteps());
+    }
   }
 
   void _onStateChanged() {
@@ -55,12 +60,16 @@ class _MyRoutinesPageState extends State<MyRoutinesPage> {
     super.didUpdateWidget(oldWidget);
     if (widget.isActive && !oldWidget.isActive) {
       _controller.loadData();
+      if (StepTrackerService.instance.isTrackingEnabled) {
+        unawaited(StepTrackerService.instance.refreshTodaySteps());
+      }
     }
   }
 
   @override
   void dispose() {
     RoutineStateNotifier.instance.removeListener(_onStateChanged);
+    StepTrackerService.instance.removeListener(_onStateChanged);
     _controller.dispose();
     super.dispose();
   }

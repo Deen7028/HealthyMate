@@ -17,6 +17,13 @@
     <!-- สิทธิ์เชื่อมต่ออินเทอร์เน็ตสำหรับดาวน์โหลดแผนที่และซิงค์ข้อมูล -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- สิทธิ์นับก้าวและการตรวจจับความเคลื่อนไหว (Physical Activity & Health Connect) -->
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <uses-permission android:name="android.permission.health.READ_STEPS" />
+    <uses-permission android:name="android.permission.health.WRITE_STEPS" />
+    <uses-permission android:name="android.permission.health.READ_DISTANCE" />
+    <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED" />
+
     <!-- สิทธิ์สำหรับกล้องถ่ายภาพและการเลือกรูปอาหาร/โปรไฟล์ -->
     <!-- ถ่ายภาพอาหารเพื่อนำไปสแกนวิเคราะห์โภชนาการด้วย AI -->
     <uses-permission android:name="android.permission.CAMERA" />
@@ -75,7 +82,23 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="io.supabase.healthymate" />
             </intent-filter>
+
+            <!-- Intention to show Permissions screen for Health Connect API -->
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
         </activity>
+
+        <activity-alias
+            android:name="ViewPermissionUsageActivity"
+            android:exported="true"
+            android:targetActivity=".MainActivity"
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+        </activity-alias>
 
         <!-- Receiver สำหรับคืนค่าการแจ้งเตือนเมื่อเปิดเครื่องใหม่หรืออัปเดตแอป (ต้อง exported=true เพื่อให้ Android OS ส่งสัญญาณเข้ามาได้) -->
         <receiver android:exported="true" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
@@ -107,11 +130,15 @@
             android:exported="true" />
     </application>
 
-    <!-- สำหรับรองรับการประมวลผลข้อความบน Android 11+ -->
+    <!-- สำหรับรองรับการประมวลผลข้อความและ Health Connect บน Android 11+ -->
     <queries>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <package android:name="com.google.android.apps.healthdata" />
+        <intent>
+            <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
         </intent>
     </queries>
 </manifest>

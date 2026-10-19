@@ -66,5 +66,6 @@ extension RoutineControllerMutations on RoutineController {
 
     // 4. โหลดข้อมูลใหม่ทั้งหมดเพื่ออัปเดตสถานะ UI
     await this.loadData();
+    await RoutineStateNotifier.instance.loadData();
   }
 }

@@ -141,8 +141,49 @@ extension _AddRoutineDialogActions on _AddRoutineDialogState {
     return null;
   }
 
+  void _goToStep(int step) {
+    if (step == _currentStep || step < 0 || step > 2) return;
+    if (_titleController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('กรุณากรอกชื่อกิจวัตร'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    setState(() {
+      _currentStep = step;
+    });
+    _pageController.animateToPage(
+      _currentStep,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
   void _submit() {
-    if (_formKey.currentState!.validate()) {
+    if (_titleController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('กรุณากรอกชื่อกิจวัตร'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    final targetVal = double.tryParse(_targetController.text.trim()) ?? 1.0;
+    if (targetVal <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('เป้าหมายต้องเป็นตัวเลขที่มากกว่า 0'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    if (_formKey.currentState == null || _formKey.currentState!.validate()) {
       final finalIcon = _selectedIcon ?? Icons.lens;
       final finalColor = _selectedColor ?? Colors.grey.shade400;
       final title = _titleController.text.trim();
@@ -150,15 +191,20 @@ extension _AddRoutineDialogActions on _AddRoutineDialogState {
 
       final newItem = RoutineItem(
         id: widget.initialRoutine != null
-            ? (widget.initialRoutine!['nRoutineId']?.toString() ??
-                  DateTime.now().millisecondsSinceEpoch.toString())
+            ? ((widget.initialRoutine!['nRoutineId'] ??
+                      widget.initialRoutine!['routineId'] ??
+                      widget.initialRoutine!['id'])
+                  ?.toString() ??
+              DateTime.now().millisecondsSinceEpoch.toString())
             : DateTime.now().millisecondsSinceEpoch.toString(),
         title: title,
         category: _selectedCategory,
         iconData: finalIcon,
         color: finalColor,
-        targetValue: double.tryParse(_targetController.text.trim()) ?? 1,
-        unit: _unitController.text.trim(),
+        targetValue: targetVal,
+        unit: _unitController.text.trim().isNotEmpty
+            ? _unitController.text.trim()
+            : 'ครั้ง',
         isNotificationEnabled: _isNotificationEnabled,
         notificationTime: _notificationTimeController.text.trim(),
         repeatDays: ['จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.', 'อา.'],

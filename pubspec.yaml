@@ -44,6 +44,7 @@ dependencies:
   audioplayers: ^6.8.1
   supabase_flutter: ^2.5.0
   shared_preferences: ^2.5.5
+  pedometer: ^4.2.0
 
 dev_dependencies:
   flutter_test:
