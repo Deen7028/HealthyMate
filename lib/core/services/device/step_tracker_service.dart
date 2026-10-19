@@ -44,7 +44,7 @@ class StepTrackerService extends ChangeNotifier {
 
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
-      _isTrackingEnabled = prefs.getBool(_kTrackingEnabled) ?? true;
+      _isTrackingEnabled = prefs.getBool(_kTrackingEnabled) ?? false;
       _nTargetSteps = prefs.getInt(_kTargetSteps) ?? 8000;
 
       _isInitialized = true;
@@ -55,8 +55,10 @@ class StepTrackerService extends ChangeNotifier {
       // 2. ตั้งเวลานับถอยหลังสำหรับบันทึกผลเที่ยงคืน
       scheduleMidnightTimer();
 
-      // 3. ดึงยอดก้าวสดๆ วันนี้ และอัปเดตแจ้งเตือน
-      await refreshTodaySteps();
+      // 3. ดึงยอดก้าวสดๆ วันนี้ (เฉพาะกรณีที่เปิดใช้งานและได้รับสิทธิ์แล้ว ไม่เด้ง Dialog บล็อกหน้าจอ)
+      if (_isTrackingEnabled) {
+        await refreshTodaySteps();
+      }
 
       // 4. ตั้งเวลารีเฟรชอัตโนมัติทุก 15 นาที
       _timerPeriodic?.cancel();
@@ -75,6 +77,15 @@ class StepTrackerService extends ChangeNotifier {
     await prefs.setBool(_kTrackingEnabled, isEnabled);
 
     if (isEnabled) {
+      final List<HealthDataType> lstTypes = [HealthDataType.STEPS];
+      try {
+        final bool? hasAuth = await _health.hasPermissions(lstTypes);
+        if (hasAuth != true) {
+          await _health.requestAuthorization(lstTypes);
+        }
+      } catch (e) {
+        debugPrint('Error requesting health authorization: $e');
+      }
       await refreshTodaySteps();
     } else {
       await NotificationService.instance.cancelStepTrackerNotification();
@@ -108,29 +119,40 @@ class StepTrackerService extends ChangeNotifier {
       final DateTime dtMidnight = DateTime(dtNow.year, dtNow.month, dtNow.day, 0, 0, 0);
 
       final List<HealthDataType> lstTypes = [HealthDataType.STEPS];
-      final bool isAuth = await _health.requestAuthorization(lstTypes);
+      
+      bool isAuth = false;
+      try {
+        final bool? hasAuth = await _health.hasPermissions(lstTypes);
+        isAuth = hasAuth == true;
+      } catch (e) {
+        debugPrint('Health hasPermissions check error: $e');
+      }
 
       int nCalculatedSteps = 0;
 
       if (isAuth) {
-        final List<HealthDataPoint> lstPoints = await _health.getHealthDataFromTypes(
-          types: lstTypes,
-          startTime: dtMidnight,
-          endTime: dtNow,
-        );
-
-        List<Map<String, dynamic>> lstTodayWorkouts = [];
-        if (objUser != null && objUser.nUserId > 0) {
-          lstTodayWorkouts = await AppDatabase.instance.getWorkoutsByDate(
-            userId: objUser.nUserId,
-            date: dtNow,
+        try {
+          final List<HealthDataPoint> lstPoints = await _health.getHealthDataFromTypes(
+            types: lstTypes,
+            startTime: dtMidnight,
+            endTime: dtNow,
           );
-        }
 
-        nCalculatedSteps = filterOverlappingSteps(
-          lstPoints: lstPoints,
-          lstWorkouts: lstTodayWorkouts,
-        );
+          List<Map<String, dynamic>> lstTodayWorkouts = [];
+          if (objUser != null && objUser.nUserId > 0) {
+            lstTodayWorkouts = await AppDatabase.instance.getWorkoutsByDate(
+              userId: objUser.nUserId,
+              date: dtNow,
+            );
+          }
+
+          nCalculatedSteps = filterOverlappingSteps(
+            lstPoints: lstPoints,
+            lstWorkouts: lstTodayWorkouts,
+          );
+        } catch (e) {
+          debugPrint('Health fetch error: $e');
+        }
       }
 
       _nTodaySteps = nCalculatedSteps;

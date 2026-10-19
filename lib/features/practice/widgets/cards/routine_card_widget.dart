@@ -41,6 +41,13 @@ class RoutineCardWidget extends StatelessWidget {
     final borderColor = AppTheme.getBorderColor(isDark);
     final textPrimary = AppTheme.getTextPrimaryColor(isDark);
     final textSecondary = AppTheme.getTextSecondaryColor(isDark);
+    final String sRawTime =
+        (routine['sTime'] ?? routine['time'])?.toString() ?? '';
+    final String sFormattedTime = _formatNotificationTime(sRawTime);
+    final bool isNotificationActive = (routine['isNotificationActive'] == 1 ||
+        routine['isNotificationActive'] == true ||
+        routine['isNotificationActive'] == null);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -89,83 +96,12 @@ class RoutineCardWidget extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
-                    if (isWorkoutRoutine) ...[
-                      Wrap(
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        spacing: 6,
-                        runSpacing: 4,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isDark
-                                  ? const Color(0xFF352B1E)
-                                  : Colors.orange.shade50,
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: isDark
-                                    ? const Color(0xFF5C4018)
-                                    : Colors.orange.shade200,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.bolt_rounded,
-                                  size: 12,
-                                  color: isDark
-                                      ? const Color(0xFFFFB74D)
-                                      : Colors.orange.shade800,
-                                ),
-                                const SizedBox(width: 2),
-                                Text(
-                                  'Auto-GPS Sync',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: isDark
-                                        ? const Color(0xFFFFB74D)
-                                        : Colors.orange.shade900,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Text(
-                            'เป้าหมาย: ${_formatValue(targetVal)} $unitText',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: textSecondary,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          _buildPercentBadge(isDark),
-                        ],
-                      ),
-                    ] else ...[
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              'เป้าหมายประจำวัน: ${_formatValue(targetVal)} $unitText',
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                color: textSecondary,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          _buildPercentBadge(isDark),
-                        ],
-                      ),
-                    ],
+                    _buildRoutineMetaWrap(
+                      sFormattedTime: sFormattedTime,
+                      isNotificationActive: isNotificationActive,
+                      isDark: isDark,
+                      textSecondary: textSecondary,
+                    ),
                   ],
                 ),
               ),

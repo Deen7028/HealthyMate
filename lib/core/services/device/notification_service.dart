@@ -85,9 +85,23 @@ class NotificationService {
       await init();
       final nValidTarget = nTargetSteps > 0 ? nTargetSteps : 8000;
       final nPercent = ((nSteps / nValidTarget) * 100).toInt().clamp(0, 100);
+      final sKcalText = nCaloriesBurned.toStringAsFixed(1);
+
+      // จัดรูปแบบตัวหนังสือแบบ 2 คอลัมน์ (ก้าวเดิน | แคลอรี) ตรงตามตัวอย่าง UI
+      final sBigText =
+          '<b><big>👣  $nSteps ก้าว</big></b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b><big>🔥  $sKcalText Kcal</big></b><br><small><font color="#94A3B8">เป้าหมาย $nValidTarget ก้าว ($nPercent%)  •  📍 ${nDistanceKm.toStringAsFixed(2)} กม.</font></small>';
+
+      final bigTextStyleInfo = BigTextStyleInformation(
+        sBigText,
+        htmlFormatBigText: true,
+        contentTitle: '<b>HealthyMate</b>',
+        htmlFormatContentTitle: true,
+        summaryText: 'ติดตามก้าวเดิน 24/7',
+        htmlFormatSummaryText: true,
+      );
 
       final androidDetails = AndroidNotificationDetails(
-        'step_tracker_channel_v1',
+        'step_tracker_channel_v3',
         'การติดตามก้าวเดิน 24/7',
         channelDescription: 'แถบแสดงจำนวนก้าวและแคลอรีสะสมประจำวัน',
         importance: Importance.low,
@@ -97,9 +111,20 @@ class NotificationService {
         showProgress: true,
         maxProgress: nValidTarget,
         progress: nSteps.clamp(0, nValidTarget),
+        color: const Color(0xFF10B981),
+        styleInformation: bigTextStyleInfo,
+        subText: 'ก้าวเดิน & แคลอรี',
+        actions: const [
+          AndroidNotificationAction(
+            'open_app',
+            '➔  เปิดแอป',
+            showsUserInterface: true,
+          ),
+        ],
         onlyAlertOnce: true,
         enableVibration: false,
         playSound: false,
+        showWhen: true,
       );
 
       const iosDetails = DarwinNotificationDetails(
@@ -113,10 +138,9 @@ class NotificationService {
         iOS: iosDetails,
       );
 
-      final sTitle =
-          'ก้าวเดินวันนี้: $nSteps / $nValidTarget ก้าว ($nPercent%)';
+      final sTitle = '👣 $nSteps ก้าว     |     🔥 $sKcalText Kcal';
       final sBody =
-          '🔥 ${nCaloriesBurned.toStringAsFixed(0)} kcal  •  📍 ${nDistanceKm.toStringAsFixed(2)} กม.';
+          'เป้าหมาย $nValidTarget ก้าว ($nPercent%)  •  📍 ${nDistanceKm.toStringAsFixed(2)} กม.';
 
       await _notificationsPlugin.show(
         id: 9999,

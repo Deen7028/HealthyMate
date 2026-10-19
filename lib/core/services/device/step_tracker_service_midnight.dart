@@ -45,7 +45,11 @@ extension StepTrackerMidnight on StepTrackerService {
       final DateTime dtEnd = DateTime(dtYesterday.year, dtYesterday.month, dtYesterday.day, 23, 59, 59);
 
       final List<HealthDataType> lstTypes = [HealthDataType.STEPS];
-      final bool isAuth = await _health.requestAuthorization(lstTypes);
+      bool isAuth = false;
+      try {
+        final bool? hasAuth = await _health.hasPermissions(lstTypes);
+        isAuth = hasAuth == true;
+      } catch (_) {}
       if (!isAuth) return;
 
       final List<HealthDataPoint> lstPoints = await _health.getHealthDataFromTypes(

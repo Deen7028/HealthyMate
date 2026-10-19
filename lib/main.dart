@@ -32,11 +32,10 @@ void main() async {
   await ThemeService.instance.init();
   await SyncService.instance.init();
   await NotificationService.instance.init();
-  try {
-    await StepTrackerService.instance.init();
-  } catch (e) {
+  // รัน StepTrackerService ในเบื้องหลังแบบ non-blocking ไม่ให้ขัดขวางการเรนเดอร์หน้าจอแรก
+  StepTrackerService.instance.init().catchError((e) {
     debugPrint('StepTrackerService init error: $e');
-  }
+  });
   try {
     await LocationBackgroundService.instance.initialize();
   } catch (e) {
