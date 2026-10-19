@@ -74,6 +74,66 @@ class NotificationService {
     }
   }
 
+  // แสดงหรืออัปเดตแถบแจ้งเตือนนับก้าว 24/7 แบบเกาะติดหน้าจอ (Ongoing Step Tracker Notification)
+  Future<void> updateStepTrackerNotification({
+    required int nSteps,
+    required int nTargetSteps,
+    required double nDistanceKm,
+    required double nCaloriesBurned,
+  }) async {
+    try {
+      await init();
+      final nValidTarget = nTargetSteps > 0 ? nTargetSteps : 8000;
+      final nPercent = ((nSteps / nValidTarget) * 100).toInt().clamp(0, 100);
+
+      final androidDetails = AndroidNotificationDetails(
+        'step_tracker_channel_v1',
+        'การติดตามก้าวเดิน 24/7',
+        channelDescription: 'แถบแสดงจำนวนก้าวและแคลอรีสะสมประจำวัน',
+        importance: Importance.low,
+        priority: Priority.low,
+        ongoing: true,
+        autoCancel: false,
+        showProgress: true,
+        maxProgress: nValidTarget,
+        progress: nSteps.clamp(0, nValidTarget),
+        onlyAlertOnce: true,
+        enableVibration: false,
+        playSound: false,
+      );
+
+      const iosDetails = DarwinNotificationDetails(
+        presentSound: false,
+        presentBadge: false,
+        presentAlert: false,
+      );
+
+      final notificationDetails = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
+
+      final sTitle =
+          'ก้าวเดินวันนี้: $nSteps / $nValidTarget ก้าว ($nPercent%)';
+      final sBody =
+          '🔥 ${nCaloriesBurned.toStringAsFixed(0)} kcal  •  📍 ${nDistanceKm.toStringAsFixed(2)} กม.';
+
+      await _notificationsPlugin.show(
+        id: 9999,
+        title: sTitle,
+        body: sBody,
+        notificationDetails: notificationDetails,
+      );
+    } catch (e) {
+      debugPrint('Error updating step tracker notification: $e');
+    }
+  }
+
+  // ยกเลิกแถบแจ้งเตือนนับก้าว 24/7
+  Future<void> cancelStepTrackerNotification() async {
+    await cancelNotification(9999);
+  }
+
   // ยกเลิกการแจ้งเตือนตาม ID ที่ระบุ
   Future<void> cancelNotification(int id) async {
     try {

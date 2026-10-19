@@ -124,6 +124,8 @@ extension RoutineStateGoalProgress on RoutineStateNotifier {
           for (final w in validWorkouts) {
             totalBurned += (w['nCaloriesBurned'] as num?)?.toDouble() ?? 0.0;
           }
+          // บวกรวมแคลอรีสะสมสดๆ ของวันนี้แบบ Real-time
+          totalBurned += StepTrackerService.instance.nTodayCalories;
           currentVal = totalBurned;
         } else if (lowerTitle.contains('ปั่น') ||
             lowerTitle.contains('จักรยาน') ||
@@ -163,20 +165,33 @@ extension RoutineStateGoalProgress on RoutineStateNotifier {
           }
           currentVal = totalRunning;
         } else if (lowerTitle.contains('เดิน') ||
-            lowerTitle.contains('walking')) {
+            lowerTitle.contains('walking') ||
+            lowerTitle.contains('ก้าว') ||
+            lowerTitle.contains('step')) {
           // คำนวณระยะทางหรือเวลาเดินสะสม
           unitText = (_userGoal!['unit'] ?? 'กม.').toString();
           double totalWalking = 0.0;
           for (final w in validWorkouts) {
             final type = (w['sType']?.toString() ?? '').toLowerCase();
-            if (type.contains('เดิน') || type.contains('walking')) {
-              if (unitText.contains('นาที') || unitText.contains('min')) {
+            if (type.contains('เดิน') ||
+                type.contains('walking') ||
+                type.contains('ก้าว')) {
+              if (unitText.contains('ก้าว') || unitText.contains('step')) {
+                totalWalking += (w['nSteps'] as num?)?.toDouble() ?? 0.0;
+              } else if (unitText.contains('นาที') ||
+                  unitText.contains('min')) {
                 totalWalking +=
                     ((w['nDuration'] as num?)?.toDouble() ?? 0.0) / 60.0;
               } else {
                 totalWalking += (w['nDistance'] as num?)?.toDouble() ?? 0.0;
               }
             }
+          }
+          // บวกรวมก้าวหรือระยะทางสดๆ ของวันนี้แบบ Real-time
+          if (unitText.contains('ก้าว') || unitText.contains('step')) {
+            totalWalking += StepTrackerService.instance.nTodaySteps.toDouble();
+          } else if (!unitText.contains('นาที') && !unitText.contains('min')) {
+            totalWalking += StepTrackerService.instance.nTodayDistanceKm;
           }
           currentVal = totalWalking;
         } else if (lowerTitle.contains('สมาธิ') ||

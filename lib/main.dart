@@ -7,6 +7,7 @@ import 'package:healthymate/core/services/api_service_config.dart';
 import 'package:healthymate/core/services/auth_service.dart';
 import 'package:healthymate/core/services/device/location_background_service.dart';
 import 'package:healthymate/core/services/device/notification_service.dart';
+import 'package:healthymate/core/services/device/step_tracker_service.dart';
 import 'package:healthymate/features/onboarding/services/onboarding_service.dart';
 import 'package:healthymate/core/services/sync/sync_service.dart';
 import 'package:healthymate/shared/theme/theme_service.dart';
@@ -31,6 +32,11 @@ void main() async {
   await ThemeService.instance.init();
   await SyncService.instance.init();
   await NotificationService.instance.init();
+  try {
+    await StepTrackerService.instance.init();
+  } catch (e) {
+    debugPrint('StepTrackerService init error: $e');
+  }
   try {
     await LocationBackgroundService.instance.initialize();
   } catch (e) {

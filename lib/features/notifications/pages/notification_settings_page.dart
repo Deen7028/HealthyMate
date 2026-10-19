@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:healthymate/core/services/device/step_tracker_service.dart';
+import 'package:healthymate/features/notifications/widgets/step_target_picker_dialog.dart';
 import 'package:healthymate/shared/theme/app_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -13,6 +15,8 @@ class NotificationSettingsPage extends StatefulWidget {
 
 class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
   bool _workoutReminder = true;
+  bool _isStepTrackingEnabled = true;
+  int _nTargetSteps = 8000;
   bool _routineReminder = true;
   bool _badgeReminder = true;
   bool _weeklyReportReminder = true;
@@ -34,6 +38,8 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _workoutReminder = prefs.getBool(_kWorkout) ?? true;
+      _isStepTrackingEnabled = StepTrackerService.instance.isTrackingEnabled;
+      _nTargetSteps = StepTrackerService.instance.nTargetSteps;
       _routineReminder = prefs.getBool(_kRoutine) ?? true;
       _badgeReminder = prefs.getBool(_kBadge) ?? true;
       _weeklyReportReminder = prefs.getBool(_kWeekly) ?? true;
@@ -101,6 +107,94 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
             textPrimary: textPrimary,
             textSecondary: textSecondary,
           ),
+          const SizedBox(height: 10),
+          _buildSettingTile(
+            title: 'ติดตามก้าวเดิน 24/7 (เกาะติดหน้าจอ)',
+            subtitle: 'แสดงแถบแจ้งเตือนนับก้าว แคลอรี และความคืบหน้าตลอดวัน',
+            icon: Icons.directions_walk_rounded,
+            iconColor: const Color(0xFF10B981),
+            value: _isStepTrackingEnabled,
+            onChanged: (val) {
+              setState(() => _isStepTrackingEnabled = val);
+              StepTrackerService.instance.setTrackingEnabled(val);
+            },
+            cardBg: cardBg,
+            borderColor: borderColor,
+            textPrimary: textPrimary,
+            textSecondary: textSecondary,
+          ),
+          if (_isStepTrackingEnabled) ...[
+            const SizedBox(height: 10),
+            InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => StepTargetPickerDialog(
+                    nCurrentTarget: _nTargetSteps,
+                    onTargetSelected: (newTarget) {
+                      setState(() => _nTargetSteps = newTarget);
+                      StepTrackerService.instance.setTargetSteps(newTarget);
+                    },
+                  ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: cardBg,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: borderColor),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.track_changes_rounded,
+                        color: Color(0xFF10B981),
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'เป้าหมายก้าวประจำวัน',
+                            style: TextStyle(
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w700,
+                              color: textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'ปัจจุบัน: $_nTargetSteps ก้าว/วัน (แตะเพื่อเปลี่ยน)',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 14,
+                      color: textSecondary,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
 
           // โภชนาการและบันทึกอาหารเอาออกตามคำขอ

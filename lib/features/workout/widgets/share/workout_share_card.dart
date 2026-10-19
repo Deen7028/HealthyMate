@@ -86,8 +86,31 @@ class WorkoutShareCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 14),
+              if (duration > 0) ...[
+                Text(
+                  'เพซ',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    shadows: textShadows,
+                  ),
+                ),
+                Text(
+                  '${_calculatePace()} /กม.',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
+                    shadows: textShadows,
+                  ),
+                ),
+                const SizedBox(height: 14),
+              ],
+            ],
+            if (duration > 0) ...[
               Text(
-                'เพซ',
+                'เวลา',
                 style: TextStyle(
                   color: Colors.white70,
                   fontSize: 13,
@@ -96,35 +119,16 @@ class WorkoutShareCard extends StatelessWidget {
                 ),
               ),
               Text(
-                '${_calculatePace()} /กม.',
+                _formatDuration(duration),
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 26,
+                  fontSize: 32,
                   fontWeight: FontWeight.w900,
                   shadows: textShadows,
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 24),
             ],
-            Text(
-              'เวลา',
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                shadows: textShadows,
-              ),
-            ),
-            Text(
-              _formatDuration(duration),
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 32,
-                fontWeight: FontWeight.w900,
-                shadows: textShadows,
-              ),
-            ),
-            const SizedBox(height: 24),
             if (routePoints.length >= 2)
               CustomPaint(
                 size: const Size(140, 90),

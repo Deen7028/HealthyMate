@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/api_service.dart';
+import 'package:healthymate/core/services/device/step_tracker_service.dart';
 
 // ตัวจัดการ State ส่วนกลางสำหรับกิจวัตรประจำวัน (Routines) และเป้าหมายหลัก (Main Goal)
 // ซิงค์ข้อมูล Real-time ข้ามหน้าระหว่าง DashboardPage และ MyRoutinesPage ทันที

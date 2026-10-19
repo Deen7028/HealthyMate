@@ -12,7 +12,7 @@ extension AppDatabaseLifecycle on AppDatabase {
 
     return await openDatabase(
       path,
-      version: 14,
+      version: 15,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -146,6 +146,12 @@ extension AppDatabaseLifecycle on AppDatabase {
       AppDatabase.tableWorkouts,
       'sRoutePoints',
       'TEXT DEFAULT ""',
+    );
+    await _safeAddColumn(
+      db,
+      AppDatabase.tableWorkouts,
+      'nSteps',
+      'INTEGER DEFAULT 0',
     );
 
     await _safeAddColumn(db, 'TbGoals', 'dtCreatedAt', 'TEXT');

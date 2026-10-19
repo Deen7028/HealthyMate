@@ -167,6 +167,7 @@ extension AppDatabaseSchema on AppDatabase {
         nDistance REAL DEFAULT 0.00,
         nDuration INTEGER DEFAULT 0,
         nCaloriesBurned REAL DEFAULT 0.00,
+        nSteps INTEGER DEFAULT 0,
         sRoutePoints TEXT DEFAULT "",
         isSynced INTEGER DEFAULT 0,
         dtWorkoutDate TEXT DEFAULT CURRENT_TIMESTAMP,

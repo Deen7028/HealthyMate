@@ -10,9 +10,11 @@ extension AppDatabaseWorkoutDao on AppDatabase {
     required double distanceKm,
     required int durationSeconds,
     required double caloriesBurned,
+    int steps = 0,
     String routePoints = '',
+    DateTime? workoutDate,
   }) async {
-    final nowStr = DateTime.now().toIso8601String();
+    final nowStr = (workoutDate ?? DateTime.now()).toIso8601String();
     if (kIsWeb) {
       return DateTime.now().millisecondsSinceEpoch % 100000;
     }
@@ -26,6 +28,7 @@ extension AppDatabaseWorkoutDao on AppDatabase {
       'nDistance': distanceKm,
       'nDuration': durationSeconds,
       'nCaloriesBurned': caloriesBurned,
+      'nSteps': steps,
       'sRoutePoints': routePoints,
       'isSynced': 0,
       'dtWorkoutDate': nowStr,
@@ -139,6 +142,11 @@ extension AppDatabaseWorkoutDao on AppDatabase {
           }
         }
 
+        final rawSteps = item['nSteps'];
+        final steps = rawSteps != null
+            ? int.tryParse(rawSteps.toString()) ?? 0
+            : 0;
+
         // 2. ประกอบข้อมูลและบันทึกลงตาราง
         final mapToInsert = <String, dynamic>{
           if (existingLocalId != null)
@@ -150,6 +158,7 @@ extension AppDatabaseWorkoutDao on AppDatabase {
           'nDistance': distance,
           'nDuration': duration,
           'nCaloriesBurned': calories,
+          'nSteps': steps,
           'sRoutePoints': routePoints,
           'isSynced': 1,
           'dtWorkoutDate': workoutDate,
@@ -236,5 +245,43 @@ extension AppDatabaseWorkoutDao on AppDatabase {
     } catch (_) {
       return [];
     }
+  }
+
+  // ฟังก์ชัน: ดึงประวัติกิจกรรมของวันที่กำหนด (สำหรับตรวจสอบการนับก้าวซ้ำและสรุปผลประจำวัน)
+  Future<List<Map<String, dynamic>>> getWorkoutsByDate({
+    required int userId,
+    required DateTime date,
+  }) async {
+    if (kIsWeb) return [];
+    final db = await database;
+    if (db == null) return [];
+    final sDayPrefix =
+        '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    return await db.query(
+      AppDatabase.tableWorkouts,
+      where: 'nUserId = ? AND dtWorkoutDate LIKE ?',
+      whereArgs: [userId, '$sDayPrefix%'],
+      orderBy: 'dtWorkoutDate ASC',
+    );
+  }
+
+  // ฟังก์ชัน: ตรวจสอบว่ามีรายการเดินสะสมประจำวันของวันที่กำหนดหรือยัง
+  Future<bool> hasDailyStepWorkout({
+    required int userId,
+    required DateTime date,
+  }) async {
+    if (kIsWeb) return false;
+    final db = await database;
+    if (db == null) return false;
+    final sDayPrefix =
+        '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    final lst = await db.query(
+      AppDatabase.tableWorkouts,
+      columns: ['nWorkoutId'],
+      where: 'nUserId = ? AND sType = ? AND dtWorkoutDate LIKE ?',
+      whereArgs: [userId, 'เดินสะสมประจำวัน', '$sDayPrefix%'],
+      limit: 1,
+    );
+    return lst.isNotEmpty;
   }
 }

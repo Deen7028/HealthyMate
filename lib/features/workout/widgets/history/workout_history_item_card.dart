@@ -58,8 +58,9 @@ class WorkoutHistoryItemCard extends StatelessWidget {
     final dateStr = workoutItem['dtWorkoutDate']?.toString();
     final rawRoutePoints = workoutItem['sRoutePoints']?.toString();
     final List<LatLng> routePoints = RouteUtils.parseRoutePoints(rawRoutePoints);
+    final steps = (workoutItem['nSteps'] as num?)?.toInt() ?? 0;
     final isMovingCategory = WorkoutCategory.fromIdOrTitle(type).isMoving;
-    final shouldShowRouteCard = isMovingCategory;
+    final shouldShowRouteCard = isMovingCategory && routePoints.isNotEmpty;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -135,7 +136,9 @@ class WorkoutHistoryItemCard extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      Icons.timer_outlined,
+                      duration > 0
+                          ? Icons.timer_outlined
+                          : Icons.directions_walk_rounded,
                       size: 14,
                       color: isDark
                           ? AppTheme.primaryLightGreen
@@ -143,7 +146,9 @@ class WorkoutHistoryItemCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      _formatDuration(duration),
+                      duration > 0
+                          ? _formatDuration(duration)
+                          : (steps > 0 ? '$steps ก้าว' : 'เดินสะสม'),
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
