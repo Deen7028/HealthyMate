@@ -76,4 +76,46 @@ extension SyncServiceDownstream on SyncService {
 
     return pulledCount;
   }
+
+  // ดาวน์โหลดข้อมูลโปรไฟล์และเป้าหมายล่าสุดจากเซิร์ฟเวอร์ลงเครื่อง (Downstream Profile & Goal Sync)
+  Future<void> pullDownstreamProfileAndGoals(int userId) async {
+    try {
+      final activeUser = await AppDatabase.instance.getUser(userId: userId);
+      final email = activeUser?.sEmail ?? '';
+      if (email.isEmpty) return;
+
+      if (SupabaseService.instance.isInitialized &&
+          SupabaseService.instance.client != null) {
+        final client = SupabaseService.instance.client!;
+        // 1. ดึงข้อมูล User จาก Supabase
+        final remoteUserMap = await client
+            .from('TbUsers')
+            .select()
+            .eq('sEmail', email)
+            .maybeSingle();
+        if (remoteUserMap != null) {
+          await AppDatabase.instance.upsertUserFromServer(remoteUserMap);
+        }
+
+        // 2. ดึงเป้าหมายหลัก
+        final remoteGoal = await client
+            .from('TbGoals')
+            .select()
+            .eq('nUserId', userId)
+            .maybeSingle();
+        if (remoteGoal != null) {
+          await AppDatabase.instance.saveUserGoal(
+            userId: userId,
+            nRoutineId: (remoteGoal['nRoutineId'] as num?)?.toInt() ?? 0,
+            title: remoteGoal['sTitle']?.toString() ?? '',
+            progress: (remoteGoal['nProgress'] as num?)?.toDouble() ?? 0.0,
+            remainingText: remoteGoal['sRemainingText']?.toString() ?? '',
+            dtCreatedAt: remoteGoal['dtCreatedAt']?.toString(),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('SyncService: Error pull downstream profile and goals: $e');
+    }
+  }
 }

@@ -26,6 +26,8 @@ extension SyncServiceUpstream on SyncService {
 
     int syncedTotal = 0;
     try {
+      // 0. ซิงค์โปรไฟล์และเป้าหมายจาก Server ลงมา (Downstream Hydration)
+      await this.pullDownstreamProfileAndGoals(currentUserId);
       // 1. ซิงค์ประวัติสุขภาพ (BMI, BMR, TDEE, น้ำหนัก)
       syncedTotal += await this._syncHealthRecords(currentUserId);
       // 2. ซิงค์โปรไฟล์ผู้ใช้และรูปภาพ

@@ -135,6 +135,55 @@ extension AppDatabaseRegistrationDao on AppDatabase {
         if (existingLocalHash != null && existingLocalHash.isNotEmpty) {
           mapToInsert['sPasswordHash'] = existingLocalHash;
         }
+
+        final int oldLocalId =
+            (existing.first['nUserId'] as num?)?.toInt() ?? 0;
+        if (oldLocalId > 0 && oldLocalId != user.nUserId) {
+          // หาก Server User ID ไม่ตรงกับ Local ID เดิม ให้ย้ายข้อมูลที่ผูกไว้ทั้งหมดไปยัง Server User ID ทันที
+          await db.rawUpdate(
+            'UPDATE ${AppDatabase.tableWorkouts} SET nUserId = ? WHERE nUserId = ?',
+            [user.nUserId, oldLocalId],
+          );
+          await db.rawUpdate(
+            'UPDATE ${AppDatabase.tableRoutines} SET nUserId = ? WHERE nUserId = ?',
+            [user.nUserId, oldLocalId],
+          );
+          await db.rawUpdate(
+            'UPDATE TbGoals SET nUserId = ? WHERE nUserId = ?',
+            [user.nUserId, oldLocalId],
+          );
+          await db.rawUpdate(
+            'UPDATE ${AppDatabase.tableNutritionLogs} SET nUserId = ? WHERE nUserId = ?',
+            [user.nUserId, oldLocalId],
+          );
+          await db.rawUpdate(
+            'UPDATE ${AppDatabase.tableHealthRecords} SET nUserId = ? WHERE nUserId = ?',
+            [user.nUserId, oldLocalId],
+          );
+          await db.rawUpdate(
+            'UPDATE TbUserPreferences SET nUserId = ? WHERE nUserId = ?',
+            [user.nUserId, oldLocalId],
+          );
+          await db.rawUpdate(
+            'UPDATE ${AppDatabase.tableNotifications} SET nUserId = ? WHERE nUserId = ?',
+            [user.nUserId, oldLocalId],
+          );
+          await db.rawUpdate(
+            'UPDATE ${AppDatabase.tableUserBadges} SET nUserId = ? WHERE nUserId = ?',
+            [user.nUserId, oldLocalId],
+          );
+          await db.rawUpdate(
+            'UPDATE ${AppDatabase.tableHealthIntegrations} SET nUserId = ? WHERE nUserId = ?',
+            [user.nUserId, oldLocalId],
+          );
+
+          // ลบแถวผู้ใช้ ID เก่าออก ป้องกันการชนกันของ Unique Email
+          await db.delete(
+            AppDatabase.tableUsers,
+            where: 'nUserId = ?',
+            whereArgs: [oldLocalId],
+          );
+        }
       }
 
       await db.insert(

@@ -78,6 +78,7 @@ class StepTrackerService extends ChangeNotifier {
       if (_isTrackingEnabled) {
         await startSensorStream();
         await refreshTodaySteps();
+        _applyStepValues(_nTodaySteps, isForce: true);
       }
 
       // 4. รีเฟรชหน้าจอ/แจ้งเตือนทุก 5 วินาที (Query Health Connect ทุก 30 วินาทีเพื่อประหยัดแบตเตอรี่)
@@ -114,6 +115,7 @@ class StepTrackerService extends ChangeNotifier {
       }
       await startSensorStream();
       await refreshTodaySteps();
+      _applyStepValues(_nTodaySteps, isForce: true);
     } else {
       await _subStepCount?.cancel();
       _subStepCount = null;

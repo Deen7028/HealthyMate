@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/api_service.dart';
+import 'package:healthymate/core/services/supabase_service.dart';
 import 'package:healthymate/features/health_calculator/models/health_record_model.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
 

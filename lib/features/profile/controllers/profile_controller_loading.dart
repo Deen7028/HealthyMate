@@ -39,6 +39,20 @@ extension ProfileControllerLoading on ProfileController {
         user = await AppDatabase.instance.getUserByEmail(email);
       }
 
+      // 1.1 ดึงข้อมูลโปรไฟล์ล่าสุดจาก Supabase Cloud (ถ้าออนไลน์) เพื่อให้ข้อมูลซิงค์ตรงกับ Server เสมอ
+      if (email.isNotEmpty) {
+        try {
+          final remoteUser = await ProfileApiService.fetchUserProfile(email);
+          if (remoteUser != null) {
+            user = await AppDatabase.instance.upsertUserFromServer(
+              remoteUser.toMap(),
+            );
+          }
+        } catch (e) {
+          debugPrint('ProfileController: Remote user fetch error: $e');
+        }
+      }
+
       // หากไม่พบบัญชีผู้ใช้ในระบบ ให้ส่งกลับ false
       if (user == null) {
         debugPrint('ProfileController: No valid authenticated user found.');
@@ -60,11 +74,37 @@ extension ProfileControllerLoading on ProfileController {
       ]);
 
       workoutCount = results[0] as int;
-      final goalData = results[1] as Map<String, dynamic>?;
+      Map<String, dynamic>? goalData = results[1] as Map<String, dynamic>?;
       connectedDevices = results[2] as List<Map<String, dynamic>>;
       selectedUnit = results[3] as String;
       isLocationEnabled = results[4] as bool;
       geminiApiKey = results[5] as String;
+
+      // 2.1 หากในเครื่องยังไม่มีเป้าหมาย ให้ลองดึงจาก Supabase Cloud (Downstream Goal Sync)
+      if (goalData == null &&
+          SupabaseService.instance.isInitialized &&
+          SupabaseService.instance.client != null) {
+        try {
+          final remoteGoal = await SupabaseService.instance.client!
+              .from('TbGoals')
+              .select()
+              .eq('nUserId', currentUserId)
+              .maybeSingle();
+          if (remoteGoal != null) {
+            await AppDatabase.instance.saveUserGoal(
+              userId: currentUserId,
+              nRoutineId: (remoteGoal['nRoutineId'] as num?)?.toInt() ?? 0,
+              title: remoteGoal['sTitle']?.toString() ?? '',
+              progress: (remoteGoal['nProgress'] as num?)?.toDouble() ?? 0.0,
+              remainingText: remoteGoal['sRemainingText']?.toString() ?? '',
+              dtCreatedAt: remoteGoal['dtCreatedAt']?.toString(),
+            );
+            goalData = remoteGoal;
+          }
+        } catch (e) {
+          debugPrint('ProfileController: Remote goal fetch error: $e');
+        }
+      }
 
       // 3. คำนวณ Active Days
       activeDays = calculateActiveDays(user.dtCreatedAt, DateTime.now());

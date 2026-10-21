@@ -76,11 +76,23 @@ class SupabaseService {
       }
 
       final payload = Map<String, dynamic>.from(userData);
+
+      // แปลง isDarkMode ให้เป็น boolean หากส่งมาเป็น int (SQLite ใช้ 1/0 แต่ Postgres ใช้ bool)
+      if (payload.containsKey('isDarkMode') && payload['isDarkMode'] is int) {
+        payload['isDarkMode'] = payload['isDarkMode'] == 1;
+      }
+
       // ถ้าไม่มี passwordHash และเป็นการอัปเดต ให้ลบ key ออกเพื่อไม่ให้ติด null constraint
       if (existing != null) {
-        if (!payload.containsKey('sPasswordHash') || payload['sPasswordHash'] == null || payload['sPasswordHash'].toString().isEmpty) {
+        if (!payload.containsKey('sPasswordHash') ||
+            payload['sPasswordHash'] == null ||
+            payload['sPasswordHash'].toString().isEmpty) {
           payload.remove('sPasswordHash');
         }
+        // ลบ nUserId ออกเพื่อป้องกัน Primary Key / Foreign Key Conflict บน Postgres (HTTP 409)
+        payload.remove('nUserId');
+        payload.remove('dtCreatedAt');
+
         if (email != null && email.isNotEmpty) {
           await client!.from('TbUsers').update(payload).eq('sEmail', email);
         } else if (userId != null) {
@@ -92,6 +104,9 @@ class SupabaseService {
       // กรณีสร้างใหม่ ถ้าไม่มี sPasswordHash ให้ใส่ค่า default ว่างไว้ (เช่น Login ด้วย Google)
       if (!payload.containsKey('sPasswordHash') || payload['sPasswordHash'] == null) {
         payload['sPasswordHash'] = '';
+      }
+      if (payload['nUserId'] != null && (payload['nUserId'] as num) <= 0) {
+        payload.remove('nUserId');
       }
 
       await client!.from('TbUsers').upsert(

@@ -59,6 +59,21 @@ class ProfileApiService {
     return false;
   }
 
+  /// ดึงข้อมูลโปรไฟล์ล่าสุดของผู้ใช้จาก Supabase
+  static Future<TbUser?> fetchUserProfile(String email) async {
+    try {
+      if (SupabaseService.instance.isInitialized) {
+        final userData = await SupabaseService.instance.getUserByEmail(email);
+        if (userData != null) {
+          return TbUser.fromMap(userData);
+        }
+      }
+    } catch (e) {
+      debugPrint('[API EXCEPTION] fetchUserProfile failed: $e');
+    }
+    return null;
+  }
+
   /// ลบบัญชีผู้ใช้ถาวร (Delete Account)
   static Future<Map<String, dynamic>> deleteAccount({
     required int userId,

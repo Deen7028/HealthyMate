@@ -88,9 +88,9 @@ class NotificationService {
       final sKcalText = nCaloriesBurned.toStringAsFixed(1);
       final sDistText = nDistanceKm.toStringAsFixed(2);
 
-      // จัดรูปแบบตัวหนังสือแบบ 2 คอลัมน์ (ก้าวเดิน | แคลอรี) สวยงามตามต้นฉบับ
-      final sTitle = '👣  $nSteps ก้าว        │        🔥  $sKcalText Kcal';
-      final sBody = 'เป้าหมาย $nValidTarget ก้าว ($nPercent%)   •   📍 $sDistText กม.';
+      // จัดรูปแบบตัวหนังสือแบบแยกฝั่งซ้าย-ขวา (Space-Between Layout)
+      final sTitle = '👣 $nSteps ก้าว                         🔥 $sKcalText Kcal';
+      final sBody = 'เป้าหมาย $nValidTarget ก้าว ($nPercent%)   📍 $sDistText กม.';
 
       final bigTextStyleInfo = BigTextStyleInformation(
         sBody,
@@ -116,6 +116,11 @@ class NotificationService {
         enableVibration: false,
         playSound: false,
         showWhen: false,
+        silent: true,
+        channelShowBadge: false,
+        category: AndroidNotificationCategory.status,
+        visibility: NotificationVisibility.public,
+        ticker: 'กำลังติดตามก้าวเดินประจำวัน',
       );
 
       const iosDetails = DarwinNotificationDetails(

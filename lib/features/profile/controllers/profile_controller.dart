@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:healthymate/core/database/app_database.dart';
 import 'package:healthymate/core/services/api_service.dart';
 import 'package:healthymate/core/services/auth_service.dart';
+import 'package:healthymate/core/services/supabase_service.dart';
 import 'package:healthymate/core/services/export/data_export_service.dart';
 import 'package:healthymate/core/services/sync/sync_service.dart';
 import 'package:healthymate/features/health_calculator/models/user_model.dart';
